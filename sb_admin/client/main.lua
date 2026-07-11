@@ -3,6 +3,9 @@ local selectedIndex = 1
 local currentMenu = 'main'
 local menuItems = {}
 local playerRefreshToken = 0
+local selectedPlayerId = nil
+local selectedPlayerListIndex = 1
+local selectedPlayerName = nil
 
 local function notify(description, notifyType)
     lib.notify({
@@ -28,6 +31,10 @@ end
 local function getMenuTitle()
     if currentMenu == 'players' then
         return 'Spillere'
+    end
+
+    if currentMenu == 'playerDetails' then
+        return selectedPlayerName or 'Spilleroplysninger'
     end
 
     return 'Adminmenu'
@@ -66,6 +73,9 @@ local function closeMenu()
     selectedIndex = 1
     menuItems = {}
     playerRefreshToken = playerRefreshToken + 1
+    selectedPlayerId = nil
+    selectedPlayerName = nil
+    selectedPlayerListIndex = 1
 
     SendNUIMessage({
         action = 'close'
@@ -140,7 +150,79 @@ local function refreshPlayers(keepSelection)
     return true
 end
 
-local function openPlayerMenu()
+
+local openPlayerMenu
+
+local function buildPlayerDetailItems(player)
+    return {
+        {
+            label = 'Server-ID',
+            description = tostring(player.id),
+            icon = 'id',
+            readonly = true
+        },
+        {
+            label = 'Navn',
+            description = player.name or 'Ukendt',
+            icon = 'player',
+            readonly = true
+        },
+        {
+            label = 'Ping',
+            description = ('%sms'):format(player.ping or 0),
+            icon = 'ping',
+            readonly = true
+        },
+        {
+            label = 'Job',
+            description = player.job or 'Ukendt',
+            icon = 'job',
+            readonly = true
+        },
+        {
+            label = 'Jobgrad',
+            description = player.jobGrade or 'Ukendt',
+            icon = 'grade',
+            readonly = true
+        },
+        {
+            label = 'ESX-gruppe',
+            description = player.group or 'user',
+            icon = 'shield',
+            readonly = true
+        }
+    }
+end
+
+local function openPlayerDetails(playerId, listIndex)
+    selectedPlayerId = playerId
+    selectedPlayerListIndex = listIndex or selectedIndex
+    playerRefreshToken = playerRefreshToken + 1
+
+    setMenu('playerDetails', {
+        {
+            label = 'Indlæser spilleroplysninger...',
+            description = 'Vent et øjeblik.',
+            icon = 'player',
+            disabled = true
+        }
+    })
+
+    local player = lib.callback.await('sb_admin:server:getPlayerDetails', false, playerId)
+
+    if not player then
+        notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+        selectedPlayerId = nil
+        selectedPlayerName = nil
+        openPlayerMenu()
+        return
+    end
+
+    selectedPlayerName = ('[%s] %s'):format(player.id, player.name)
+    setMenu('playerDetails', buildPlayerDetailItems(player), 1)
+end
+
+openPlayerMenu = function()
     setMenu('players', {
         {
             label = 'Indlæser spillere...',
@@ -232,10 +314,29 @@ local function activateSelectedItem()
         return
     end
 
-    -- Valg af en bestemt spiller får først en funktion i næste trin.
+    if currentMenu == 'players' and item.action == 'player' then
+        openPlayerDetails(item.playerId, selectedIndex)
+        return
+    end
 end
 
 local function goBack()
+    if currentMenu == 'playerDetails' then
+        selectedPlayerId = nil
+        selectedPlayerName = nil
+        openPlayerMenu()
+
+        if #menuItems > 0 then
+            selectedIndex = math.min(math.max(selectedPlayerListIndex, 1), #menuItems)
+            SendNUIMessage({
+                action = 'select',
+                selectedIndex = selectedIndex
+            })
+        end
+
+        return
+    end
+
     if currentMenu == 'players' then
         playerRefreshToken = playerRefreshToken + 1
         setMenu('main', getMainMenuItems(), 1)

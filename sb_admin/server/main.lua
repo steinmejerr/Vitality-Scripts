@@ -58,3 +58,37 @@ lib.callback.register('sb_admin:server:getPlayers', function(source)
 
     return players
 end)
+
+
+lib.callback.register('sb_admin:server:getPlayerDetails', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local xPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not xPlayer then
+        return nil
+    end
+
+    local job = xPlayer.getJob and xPlayer.getJob() or xPlayer.job or {}
+    local group = getPlayerGroup(xPlayer) or 'user'
+    local playerName = xPlayer.getName and xPlayer.getName() or GetPlayerName(targetId)
+
+    return {
+        id = targetId,
+        name = playerName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId),
+        ping = GetPlayerPing(targetId),
+        job = job.label or job.name or 'Ukendt',
+        jobGrade = job.grade_label or tostring(job.grade or 0),
+        group = group
+    }
+end)

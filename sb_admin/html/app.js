@@ -24,6 +24,29 @@ const icons = {
             <path d="M4.5 21c.5-4.1 3.2-6.5 7.5-6.5s7 2.4 7.5 6.5"></path>
         </svg>
     `,
+    id: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+            <path d="M7 9h4M7 13h7M17 9h.01"></path>
+        </svg>
+    `,
+    ping: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12.5a10 10 0 0 1 14 0M8 16a6 6 0 0 1 8 0"></path>
+            <circle cx="12" cy="19" r="1"></circle>
+        </svg>
+    `,
+    job: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="7" width="18" height="13" rx="2"></rect>
+            <path d="M8 7V5h8v2M3 12h18"></path>
+        </svg>
+    `,
+    grade: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path>
+        </svg>
+    `,
     shield: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3 19 6v5c0 4.5-2.8 7.6-7 9.2C7.8 18.6 5 15.5 5 11V6l7-3Z"></path>
@@ -42,7 +65,8 @@ function renderItems() {
         element.className = [
             'menu-item',
             itemIndex === selectedIndex ? 'selected' : '',
-            item.disabled ? 'disabled' : ''
+            item.disabled ? 'disabled' : '',
+            item.readonly ? 'readonly' : ''
         ].filter(Boolean).join(' ');
 
         element.innerHTML = `
@@ -51,7 +75,7 @@ function renderItems() {
                 <div class="item-label">${escapeHtml(item.label || '')}</div>
                 <div class="item-description">${escapeHtml(item.description || '')}</div>
             </div>
-            <div class="item-arrow">${item.disabled ? '•' : '›'}</div>
+            <div class="item-arrow">${item.disabled || item.readonly ? '•' : '›'}</div>
         `;
 
         menuList.appendChild(element);

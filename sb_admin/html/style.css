@@ -32,8 +32,8 @@ body {
     position: absolute;
     top: 50%;
     right: 2.4vw;
-    width: min(410px, 27vw);
-    min-width: 350px;
+    width: min(450px, 30vw);
+    min-width: 390px;
     transform: translateY(-48%) translateX(20px);
     opacity: 0;
     visibility: hidden;
@@ -98,7 +98,7 @@ p {
 
 h1 {
     color: var(--text);
-    font-size: 18px;
+    font-size: 21px;
     font-weight: 730;
     letter-spacing: 0.01em;
     line-height: 1.1;
@@ -118,13 +118,13 @@ h1 {
 
 .section-heading h2 {
     color: var(--text);
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 670;
 }
 
 .item-count {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 650;
     letter-spacing: 0.08em;
 }
@@ -139,11 +139,11 @@ h1 {
 .menu-item {
     position: relative;
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 18px;
+    grid-template-columns: 40px minmax(0, 1fr) 18px;
     align-items: center;
     gap: 12px;
-    min-height: 64px;
-    padding: 10px 12px;
+    min-height: 72px;
+    padding: 12px 14px;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -173,10 +173,14 @@ h1 {
     opacity: 0.82;
 }
 
+.menu-item.readonly {
+    cursor: default;
+}
+
 .item-icon {
     display: grid;
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     place-items: center;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 7px;
@@ -185,7 +189,7 @@ h1 {
 }
 
 .item-icon svg {
-    width: 17px;
+    width: 19px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.75;
@@ -201,7 +205,7 @@ h1 {
     margin-bottom: 4px;
     overflow: hidden;
     color: var(--text);
-    font-size: 12px;
+    font-size: 15px;
     font-weight: 680;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -210,8 +214,8 @@ h1 {
 .item-description {
     overflow: hidden;
     color: var(--muted);
-    font-size: 10px;
-    line-height: 1.35;
+    font-size: 12px;
+    line-height: 1.4;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -266,7 +270,7 @@ kbd {
 @media (max-width: 1280px) {
     .admin-menu {
         right: 2vw;
-        width: 360px;
+        width: 400px;
         min-width: 0;
     }
 }
