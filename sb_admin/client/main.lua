@@ -170,6 +170,13 @@ local function buildPlayerDetailItems(player)
             icon = 'bring'
         },
         {
+            action = 'freezePlayer',
+            playerId = player.id,
+            label = player.frozen and 'Frigiv spiller' or 'Frys spiller',
+            description = player.frozen and 'Tillad den valgte spiller at bevæge sig igen.' or 'Forhindr den valgte spiller i at bevæge sig.',
+            icon = 'freeze'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -379,6 +386,25 @@ local function activateSelectedItem()
         notify(('%s blev teleporteret hen til dig.'):format(result.name or 'Spilleren'), 'success')
         return
     end
+
+    if currentMenu == 'playerDetails' and item.action == 'freezePlayer' then
+        local result = lib.callback.await('sb_admin:server:toggleFreezePlayer', false, item.playerId)
+
+        if not result then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        notify(
+            result.frozen
+                and ('%s er nu frosset.'):format(result.name or 'Spilleren')
+                or ('%s er nu frigivet.'):format(result.name or 'Spilleren'),
+            'success'
+        )
+
+        openPlayerDetails(item.playerId, selectedPlayerListIndex)
+        return
+    end
 end
 
 RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
@@ -407,6 +433,24 @@ RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
     SetEntityHeading(entity, heading)
 
     notify(('Du blev teleporteret til %s.'):format(data.adminName or 'en administrator'), 'inform')
+end)
+
+RegisterNetEvent('sb_admin:client:setFrozen', function(frozen, adminName)
+    frozen = frozen == true
+
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, frozen)
+
+    if IsPedInAnyVehicle(ped, false) then
+        local vehicle = GetVehiclePedIsIn(ped, false)
+        FreezeEntityPosition(vehicle, frozen)
+    end
+
+    if frozen then
+        notify(('Du er blevet frosset af %s.'):format(adminName or 'en administrator'), 'error')
+    else
+        notify(('Du er blevet frigivet af %s.'):format(adminName or 'en administrator'), 'inform')
+    end
 end)
 
 local function goBack()

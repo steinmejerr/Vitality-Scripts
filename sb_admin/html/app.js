@@ -38,6 +38,14 @@ const icons = {
             <path d="M13 17h8"></path>
         </svg>
     `,
+    freeze: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2v20M4.2 6.5l15.6 9M19.8 6.5l-15.6 9"></path>
+            <path d="m12 2 2 2M12 2l-2 2M12 22l2-2M12 22l-2-2"></path>
+            <path d="m4.2 6.5 2.7.2M4.2 6.5l1.1-2.5M19.8 17.5l-2.7-.2M19.8 17.5l-1.1 2.5"></path>
+            <path d="m19.8 6.5-2.7.2M19.8 6.5 18.7 4M4.2 17.5l2.7-.2M4.2 17.5l1.1 2.5"></path>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>

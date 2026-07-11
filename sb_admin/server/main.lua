@@ -1,4 +1,5 @@
 local ESX = exports['es_extended']:getSharedObject()
+local frozenPlayers = {}
 
 local function getPlayerGroup(xPlayer)
     if not xPlayer then
@@ -89,7 +90,8 @@ lib.callback.register('sb_admin:server:getPlayerDetails', function(source, targe
         ping = GetPlayerPing(targetId),
         job = job.label or job.name or 'Ukendt',
         jobGrade = job.grade_label or tostring(job.grade or 0),
-        group = group
+        group = group,
+        frozen = frozenPlayers[targetId] == true
     }
 end)
 
@@ -178,5 +180,43 @@ lib.callback.register('sb_admin:server:bringPlayer', function(source, targetId)
     return {
         name = targetName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId)
     }
+end)
+
+lib.callback.register('sb_admin:server:toggleFreezePlayer', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local adminPlayer = ESX.GetPlayerFromId(source)
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not adminPlayer or not targetPlayer then
+        return nil
+    end
+
+    local frozen = frozenPlayers[targetId] ~= true
+    frozenPlayers[targetId] = frozen or nil
+
+    local adminName = adminPlayer.getName and adminPlayer.getName() or GetPlayerName(source)
+    local targetName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId)
+
+    TriggerClientEvent('sb_admin:client:setFrozen', targetId, frozen, adminName or 'en administrator')
+
+    return {
+        name = targetName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId),
+        frozen = frozen
+    }
+end)
+
+AddEventHandler('playerDropped', function()
+    frozenPlayers[source] = nil
 end)
 
