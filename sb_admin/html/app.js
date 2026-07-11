@@ -4,11 +4,26 @@ document.body.style.background = 'transparent';
 const menu = document.getElementById('admin-menu');
 const menuList = document.getElementById('menu-list');
 const itemCount = document.getElementById('item-count');
+const menuTitle = document.getElementById('menu-title');
 
 let items = [];
 let selectedIndex = 1;
 
 const icons = {
+    players: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 20v-1.5c0-2.2-1.8-4-4-4H7c-2.2 0-4 1.8-4 4V20"></path>
+            <circle cx="9.5" cy="7.5" r="3.5"></circle>
+            <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"></path>
+            <path d="M18 14.7c1.8.7 3 2.2 3 3.8V20"></path>
+        </svg>
+    `,
+    player: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4.5 21c.5-4.1 3.2-6.5 7.5-6.5s7 2.4 7.5 6.5"></path>
+        </svg>
+    `,
     shield: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3 19 6v5c0 4.5-2.8 7.6-7 9.2C7.8 18.6 5 15.5 5 11V6l7-3Z"></path>
@@ -62,6 +77,7 @@ window.addEventListener('message', (event) => {
     switch (data.action) {
         case 'setMenu':
             items = Array.isArray(data.items) ? data.items : [];
+            menuTitle.textContent = data.title || 'Adminmenu';
             selectedIndex = Number(data.selectedIndex) || 1;
             renderItems();
 

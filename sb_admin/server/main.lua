@@ -1,13 +1,60 @@
 local ESX = exports['es_extended']:getSharedObject()
 
-lib.callback.register('sb_admin:server:hasPermission', function(source)
-    local xPlayer = ESX.GetPlayerFromId(source)
-
+local function getPlayerGroup(xPlayer)
     if not xPlayer then
-        return false
+        return nil
     end
 
-    local group = xPlayer.getGroup and xPlayer.getGroup() or xPlayer.group
+    if xPlayer.getGroup then
+        return xPlayer.getGroup()
+    end
 
-    return Config.AllowedGroups[group] == true, group
+    return xPlayer.group
+end
+
+local function hasPermission(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local group = getPlayerGroup(xPlayer)
+
+    return xPlayer ~= nil and Config.AllowedGroups[group] == true, group
+end
+
+lib.callback.register('sb_admin:server:hasPermission', function(source)
+    return hasPermission(source)
+end)
+
+lib.callback.register('sb_admin:server:getPlayers', function(source)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    local players = {}
+
+    for _, playerId in ipairs(GetPlayers()) do
+        local serverId = tonumber(playerId)
+        local xPlayer = ESX.GetPlayerFromId(serverId)
+
+        if xPlayer then
+            local job = xPlayer.getJob and xPlayer.getJob() or xPlayer.job or {}
+            local group = getPlayerGroup(xPlayer) or 'user'
+            local playerName = xPlayer.getName and xPlayer.getName() or GetPlayerName(serverId)
+
+            players[#players + 1] = {
+                id = serverId,
+                name = playerName or GetPlayerName(serverId) or ('Spiller %s'):format(serverId),
+                ping = GetPlayerPing(serverId),
+                job = job.label or job.name or 'Ukendt',
+                jobGrade = job.grade_label or tostring(job.grade or 0),
+                group = group
+            }
+        end
+    end
+
+    table.sort(players, function(a, b)
+        return a.id < b.id
+    end)
+
+    return players
 end)

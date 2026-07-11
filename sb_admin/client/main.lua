@@ -1,14 +1,8 @@
 local menuOpen = false
 local selectedIndex = 1
-
-local menuItems = {
-    {
-        label = 'Adminmenu',
-        description = 'Menuens fundament er installeret og virker.',
-        icon = 'shield',
-        disabled = true
-    }
-}
+local currentMenu = 'main'
+local menuItems = {}
+local playerRefreshToken = 0
 
 local function notify(description, notifyType)
     lib.notify({
@@ -20,13 +14,46 @@ local function notify(description, notifyType)
     })
 end
 
+local function getMainMenuItems()
+    return {
+        {
+            action = 'players',
+            label = 'Spillere',
+            description = 'Se alle spillere, der er online på serveren.',
+            icon = 'players'
+        }
+    }
+end
+
+local function getMenuTitle()
+    if currentMenu == 'players' then
+        return 'Spillere'
+    end
+
+    return 'Adminmenu'
+end
+
 local function sendMenuState()
     SendNUIMessage({
         action = 'setMenu',
         visible = menuOpen,
+        title = getMenuTitle(),
         selectedIndex = selectedIndex,
         items = menuItems
     })
+end
+
+local function setMenu(menuName, items, preferredIndex)
+    currentMenu = menuName
+    menuItems = items or {}
+
+    if #menuItems == 0 then
+        selectedIndex = 1
+    else
+        selectedIndex = math.min(math.max(preferredIndex or 1, 1), #menuItems)
+    end
+
+    sendMenuState()
 end
 
 local function closeMenu()
@@ -35,11 +62,110 @@ local function closeMenu()
     end
 
     menuOpen = false
+    currentMenu = 'main'
     selectedIndex = 1
+    menuItems = {}
+    playerRefreshToken = playerRefreshToken + 1
 
     SendNUIMessage({
         action = 'close'
     })
+end
+
+local function buildPlayerItems(players)
+    local items = {}
+
+    for _, player in ipairs(players or {}) do
+        items[#items + 1] = {
+            action = 'player',
+            playerId = player.id,
+            label = ('[%s] %s'):format(player.id, player.name),
+            description = ('%s - %s | %sms | %s'):format(
+                player.job,
+                player.jobGrade,
+                player.ping,
+                player.group
+            ),
+            icon = 'player'
+        }
+    end
+
+    if #items == 0 then
+        items[1] = {
+            label = 'Ingen spillere online',
+            description = 'Spillerlisten er tom.',
+            icon = 'player',
+            disabled = true
+        }
+    end
+
+    return items
+end
+
+local function refreshPlayers(keepSelection)
+    if not menuOpen or currentMenu ~= 'players' then
+        return false
+    end
+
+    local players = lib.callback.await('sb_admin:server:getPlayers', false)
+
+    if not players then
+        notify('Du har ikke længere adgang til adminmenuen.', 'error')
+        closeMenu()
+        return false
+    end
+
+    local previousPlayerId
+    local previousItem = menuItems[selectedIndex]
+
+    if keepSelection and previousItem then
+        previousPlayerId = previousItem.playerId
+    end
+
+    local newItems = buildPlayerItems(players)
+    local newIndex = 1
+
+    if previousPlayerId then
+        for index, item in ipairs(newItems) do
+            if item.playerId == previousPlayerId then
+                newIndex = index
+                break
+            end
+        end
+    elseif keepSelection then
+        newIndex = math.min(selectedIndex, #newItems)
+    end
+
+    setMenu('players', newItems, newIndex)
+    return true
+end
+
+local function openPlayerMenu()
+    setMenu('players', {
+        {
+            label = 'Indlæser spillere...',
+            description = 'Vent et øjeblik.',
+            icon = 'player',
+            disabled = true
+        }
+    })
+
+    if not refreshPlayers(false) then
+        return
+    end
+
+    playerRefreshToken = playerRefreshToken + 1
+    local token = playerRefreshToken
+
+    CreateThread(function()
+        while menuOpen and currentMenu == 'players' and token == playerRefreshToken do
+            Wait(3000)
+
+            if menuOpen and currentMenu == 'players' and token == playerRefreshToken then
+                refreshPlayers(true)
+            end
+        end
+    end)
 end
 
 local function openMenu()
@@ -56,10 +182,10 @@ local function openMenu()
     end
 
     menuOpen = true
+    currentMenu = 'main'
     selectedIndex = 1
+    menuItems = getMainMenuItems()
 
-    -- NUI får ikke tastatur- eller musefokus.
-    -- Spilleren kan derfor stadig bevæge sig rundt.
     SetNuiFocus(false, false)
     sendMenuState()
 end
@@ -70,9 +196,11 @@ local function moveSelection(direction)
     end
 
     local newIndex = selectedIndex
+    local attempts = 0
 
     repeat
         newIndex = newIndex + direction
+        attempts = attempts + 1
 
         if newIndex > #menuItems then
             newIndex = 1
@@ -80,12 +208,11 @@ local function moveSelection(direction)
             newIndex = #menuItems
         end
 
-        if newIndex == selectedIndex then
+        if not menuItems[newIndex].disabled then
+            selectedIndex = newIndex
             break
         end
-    until not menuItems[newIndex].disabled
-
-    selectedIndex = newIndex
+    until attempts >= #menuItems
 
     SendNUIMessage({
         action = 'select',
@@ -100,7 +227,22 @@ local function activateSelectedItem()
         return
     end
 
-    -- De første rigtige adminfunktioner tilføjes her senere.
+    if currentMenu == 'main' and item.action == 'players' then
+        openPlayerMenu()
+        return
+    end
+
+    -- Valg af en bestemt spiller får først en funktion i næste trin.
+end
+
+local function goBack()
+    if currentMenu == 'players' then
+        playerRefreshToken = playerRefreshToken + 1
+        setMenu('main', getMainMenuItems(), 1)
+        return
+    end
+
+    closeMenu()
 end
 
 RegisterCommand(Config.Command, function()
@@ -121,17 +263,14 @@ CreateThread(function()
         else
             Wait(0)
 
-            -- Piletaster
             DisableControlAction(0, 172, true) -- Arrow Up
             DisableControlAction(0, 173, true) -- Arrow Down
             DisableControlAction(0, 174, true) -- Arrow Left
             DisableControlAction(0, 175, true) -- Arrow Right
-
-            -- Enter, Backspace og Pause/Escape
-            DisableControlAction(0, 191, true)
-            DisableControlAction(0, 201, true)
-            DisableControlAction(0, 177, true)
-            DisableControlAction(0, 200, true)
+            DisableControlAction(0, 191, true) -- Enter
+            DisableControlAction(0, 201, true) -- Enter
+            DisableControlAction(0, 177, true) -- Backspace
+            DisableControlAction(0, 200, true) -- Escape/Pause
 
             if IsDisabledControlJustPressed(0, 172) then
                 moveSelection(-1)
@@ -140,8 +279,9 @@ CreateThread(function()
             elseif IsDisabledControlJustPressed(0, 191)
                 or IsDisabledControlJustPressed(0, 201) then
                 activateSelectedItem()
-            elseif IsDisabledControlJustPressed(0, 177)
-                or IsDisabledControlJustPressed(0, 200) then
+            elseif IsDisabledControlJustPressed(0, 177) then
+                goBack()
+            elseif IsDisabledControlJustPressed(0, 200) then
                 closeMenu()
             end
         end
