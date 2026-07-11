@@ -80,6 +80,12 @@ local function getMainMenuItems()
             icon = 'repairvehicle'
         },
         {
+            action = 'spawnVehicle',
+            label = 'Spawn køretøj',
+            description = 'Indtast et modelnavn og spawn et køretøj.',
+            icon = 'spawnvehicle'
+        },
+        {
             action = 'teleportWaypoint',
             label = 'Teleportér til waypoint',
             description = 'Teleportér til din markering på kortet.',
@@ -1199,6 +1205,95 @@ local function repairNearbyVehicle()
     return true
 end
 
+local function spawnAdminVehicle()
+    local input = lib.inputDialog('Spawn køretøj', {
+        {
+            type = 'input',
+            label = 'Modelnavn',
+            description = 'Eksempel: adder, sultan eller police',
+            placeholder = 'adder',
+            required = true,
+            min = 1,
+            max = 50
+        }
+    })
+
+    if not input or not input[1] then
+        return false
+    end
+
+    local modelName = tostring(input[1]):lower():gsub('^%s+', ''):gsub('%s+$', '')
+
+    if modelName == '' then
+        notify('Du skal indtaste et modelnavn.', 'error')
+        return false
+    end
+
+    local model = joaat(modelName)
+
+    if not IsModelInCdimage(model) or not IsModelValid(model) or not IsModelAVehicle(model) then
+        notify(('Køretøjsmodellen "%s" findes ikke.'):format(modelName), 'error')
+        return false
+    end
+
+    RequestModel(model)
+
+    local timeout = GetGameTimer() + ((Config.SpawnVehicle and Config.SpawnVehicle.loadTimeout) or 5000)
+
+    while not HasModelLoaded(model) and GetGameTimer() < timeout do
+        Wait(0)
+    end
+
+    if not HasModelLoaded(model) then
+        notify('Køretøjsmodellen kunne ikke indlæses.', 'error')
+        SetModelAsNoLongerNeeded(model)
+        return false
+    end
+
+    local ped = PlayerPedId()
+    local heading = GetEntityHeading(ped)
+    local distance = (Config.SpawnVehicle and Config.SpawnVehicle.distance) or 4.0
+    local spawnCoords = GetOffsetFromEntityInWorldCoords(ped, 0.0, distance, 0.5)
+
+    RequestCollisionAtCoord(spawnCoords.x, spawnCoords.y, spawnCoords.z)
+
+    local vehicle = CreateVehicle(
+        model,
+        spawnCoords.x,
+        spawnCoords.y,
+        spawnCoords.z,
+        heading,
+        true,
+        true
+    )
+
+    if not vehicle or vehicle == 0 or not DoesEntityExist(vehicle) then
+        notify('Køretøjet kunne ikke spawnes.', 'error')
+        SetModelAsNoLongerNeeded(model)
+        return false
+    end
+
+    SetEntityAsMissionEntity(vehicle, true, true)
+    SetVehicleOnGroundProperly(vehicle)
+    SetVehicleEngineOn(vehicle, true, true, false)
+    SetVehicleRadioEnabled(vehicle, false)
+    SetVehRadioStation(vehicle, 'OFF')
+    SetVehicleNumberPlateText(vehicle, 'SBADMIN')
+
+    local networkId = NetworkGetNetworkIdFromEntity(vehicle)
+
+    if networkId and networkId ~= 0 then
+        SetNetworkIdExistsOnAllMachines(networkId, true)
+        SetNetworkIdCanMigrate(networkId, true)
+    end
+
+    SetPedIntoVehicle(ped, vehicle, -1)
+    SetModelAsNoLongerNeeded(model)
+
+    notify(('Køretøjet %s blev spawnet.'):format(modelName), 'success')
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -1303,6 +1398,22 @@ local function activateSelectedItem()
         repairNearbyVehicle()
 
         -- Menuen forbliver åben efter handlingen.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'spawnVehicle' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        spawnAdminVehicle()
+
+        -- Menuen forbliver åben, også efter inputfeltet lukkes.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end

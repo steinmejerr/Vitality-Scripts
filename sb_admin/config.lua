@@ -45,3 +45,12 @@ Config.RepairVehicle = {
     -- Afstand i meter, når administratoren ikke sidder i et køretøj.
     distance = 6.0
 }
+
+
+Config.SpawnVehicle = {
+    -- Hvor langt foran administratoren køretøjet spawnes.
+    distance = 4.0,
+
+    -- Maksimal ventetid på indlæsning af køretøjsmodellen.
+    loadTimeout = 5000
+}

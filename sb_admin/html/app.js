@@ -63,6 +63,13 @@ const icons = {
             <path d="M18.5 3.5 21 6l-5.5 5.5-3-3L18 3l.5.5Z"></path>
         </svg>
     `,
+    spawnvehicle: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 9h14l1.5 4.5V18H19v2h-2v-2H7v2H5v-2H3.5v-4.5L5 9Z"></path>
+            <path d="m7 9 1.5-4h7L17 9M6 14h2M16 14h2"></path>
+            <path d="M12 11v6M9 14h6"></path>
+        </svg>
+    `,
     waypoint: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"></path>
