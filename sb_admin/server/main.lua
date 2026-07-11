@@ -1,14 +1,13 @@
-local function hasAdminPermission(source)
+local ESX = exports['es_extended']:getSharedObject()
+
+lib.callback.register('sb_admin:server:hasPermission', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
 
     if not xPlayer then
         return false
     end
 
-    local group = xPlayer.getGroup()
-    return Config.AdminGroups[group] == true
-end
+    local group = xPlayer.getGroup and xPlayer.getGroup() or xPlayer.group
 
-lib.callback.register('sb_admin:server:hasPermission', function(source)
-    return hasAdminPermission(source)
+    return Config.AllowedGroups[group] == true, group
 end)

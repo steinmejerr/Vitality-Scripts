@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SB Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="admin-menu" class="admin-menu" aria-hidden="true">
+        <header class="menu-header">
+            <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2.5 20 6v5.4c0 5.1-3.3 8.5-8 10.1-4.7-1.6-8-5-8-10.1V6l8-3.5Z"/>
+                    <path class="shield-line" d="m8.8 12 2.1 2.1 4.5-4.7"/>
+                </svg>
+            </div>
+
+            <div class="header-copy">
+                <span class="eyebrow">STAFF CONTROL</span>
+                <h1>SB ADMIN</h1>
+            </div>
+
+            <div class="status">
+                <span class="status-dot"></span>
+                ONLINE
+            </div>
+        </header>
+
+        <section class="menu-content">
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">OVERSIGT</span>
+                    <h2>Adminmenu</h2>
+                </div>
+                <span id="item-count" class="item-count">0 / 0</span>
+            </div>
+
+            <div id="menu-list" class="menu-list"></div>
+        </section>
+
+        <footer class="menu-footer">
+            <div class="key-help">
+                <span class="key-group"><kbd>↑</kbd><kbd>↓</kbd> Navigér</span>
+                <span class="key-group"><kbd>ENTER</kbd> Vælg</span>
+                <span class="key-group"><kbd>BACKSPACE</kbd> Luk</span>
+            </div>
+        </footer>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,17 +1,15 @@
 fx_version 'cerulean'
 game 'gta5'
 
-lua54 'yes'
-
 author 'Steinmejer'
-description 'ESX Legacy adminmenu med ox_lib'
+description 'Custom ESX Legacy admin menu'
 version '1.0.0'
+
+lua54 'yes'
 
 shared_scripts {
     '@ox_lib/init.lua',
-    '@es_extended/imports.lua',
-    'config.lua',
-    'locales/*.lua'
+    'config.lua'
 }
 
 client_scripts {
@@ -22,7 +20,15 @@ server_scripts {
     'server/main.lua'
 }
 
+ui_page 'html/index.html'
+
+files {
+    'html/index.html',
+    'html/style.css',
+    'html/app.js'
+}
+
 dependencies {
-    'ox_lib',
-    'es_extended'
+    'es_extended',
+    'ox_lib'
 }
