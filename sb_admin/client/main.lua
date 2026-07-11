@@ -196,6 +196,13 @@ local function buildPlayerDetailItems(player)
             icon = 'spectate'
         },
         {
+            action = 'kickPlayer',
+            playerId = player.id,
+            label = 'Kick spiller',
+            description = 'Fjern den valgte spiller fra serveren.',
+            icon = 'kick'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -567,6 +574,54 @@ local function activateSelectedItem()
             closeMenu()
         end
 
+        return
+    end
+
+    if currentMenu == 'playerDetails' and item.action == 'kickPlayer' then
+        local targetId = tonumber(item.playerId)
+
+        if not targetId then
+            notify('Spilleren kunne ikke findes.', 'error')
+            return
+        end
+
+        if targetId == GetPlayerServerId(PlayerId()) then
+            notify('Du kan ikke kicke dig selv.', 'error')
+            return
+        end
+
+        local input = lib.inputDialog('Kick spiller', {
+            {
+                type = 'textarea',
+                label = 'Grund',
+                description = 'Skriv hvorfor spilleren bliver fjernet fra serveren.',
+                placeholder = 'Ingen grund angivet',
+                required = false,
+                min = 1,
+                max = 200
+            }
+        })
+
+        if not input then
+            return
+        end
+
+        local reason = tostring(input[1] or '')
+        reason = reason:gsub('^%s+', ''):gsub('%s+$', '')
+
+        if reason == '' then
+            reason = 'Ingen grund angivet'
+        end
+
+        local result = lib.callback.await('sb_admin:server:kickPlayer', false, targetId, reason)
+
+        if not result then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        closeMenu()
+        notify(('%s blev kicket.'):format(result.name or 'Spilleren'), 'success')
         return
     end
 end

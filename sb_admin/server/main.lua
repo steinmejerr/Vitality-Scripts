@@ -288,6 +288,50 @@ lib.callback.register('sb_admin:server:getSpectateTarget', function(source, targ
     }
 end)
 
+
+lib.callback.register('sb_admin:server:kickPlayer', function(source, targetId, reason)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or targetId == source or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local adminPlayer = ESX.GetPlayerFromId(source)
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not adminPlayer or not targetPlayer then
+        return nil
+    end
+
+    reason = type(reason) == 'string' and reason or 'Ingen grund angivet'
+    reason = reason:gsub('^%s+', ''):gsub('%s+$', '')
+    reason = reason:sub(1, 200)
+
+    if reason == '' then
+        reason = 'Ingen grund angivet'
+    end
+
+    local adminName = adminPlayer.getName and adminPlayer.getName() or GetPlayerName(source) or 'En administrator'
+    local targetName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId) or ('Spiller %s'):format(targetId)
+
+    local kickMessage = ('Du er blevet fjernet fra serveren af %s.'):format(adminName)
+        .. '\nGrund: '
+        .. reason
+
+    DropPlayer(targetId, kickMessage)
+
+    return {
+        name = targetName,
+        reason = reason
+    }
+end)
+
 AddEventHandler('playerDropped', function()
     frozenPlayers[source] = nil
 end)

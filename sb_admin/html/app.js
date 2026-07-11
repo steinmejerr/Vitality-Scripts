@@ -63,6 +63,13 @@ const icons = {
             <circle cx="12" cy="12" r="3"></circle>
         </svg>
     `,
+    kick: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"></path>
+            <path d="M16 8l4 4-4 4"></path>
+            <path d="M20 12H9"></path>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>
