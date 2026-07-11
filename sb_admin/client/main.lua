@@ -361,10 +361,15 @@ local function buildInventoryItems(inventory)
         end
 
         items[#items + 1] = {
+            action = 'removeInventoryItem',
+            playerId = selectedPlayerId,
+            itemName = entry.name,
+            itemLabel = entry.label or entry.name or 'Ukendt item',
+            itemCount = tonumber(entry.count) or 0,
+            itemSlot = entry.slot,
             label = entry.label or entry.name or 'Ukendt item',
             description = description,
-            icon = 'item',
-            readonly = true
+            icon = 'item'
         }
     end
 
@@ -380,7 +385,7 @@ local function buildInventoryItems(inventory)
     return items
 end
 
-local function openPlayerInventory(playerId, returnIndex)
+local function openPlayerInventory(playerId, returnIndex, preferredIndex)
     playerDetailsReturnIndex = returnIndex or selectedIndex
     selectedPlayerId = playerId
 
@@ -402,7 +407,7 @@ local function openPlayerInventory(playerId, returnIndex)
     end
 
     selectedPlayerName = ('[%s] %s'):format(result.id, result.name)
-    setMenu('playerInventory', buildInventoryItems(result.items), 1)
+    setMenu('playerInventory', buildInventoryItems(result.items), preferredIndex or 1)
 end
 
 openPlayerDetails = function(playerId, listIndex, preferredDetailIndex)
@@ -1995,6 +2000,50 @@ local function activateSelectedItem()
         return
     end
 
+    if currentMenu == 'playerInventory' and item.action == 'removeInventoryItem' then
+        local maxAmount = math.max(tonumber(item.itemCount) or 0, 1)
+        local input = lib.inputDialog('Fjern item', {
+            {
+                type = 'number',
+                label = 'Antal',
+                description = ('Fjern %s fra %s. Spilleren har %s.'):format(
+                    item.itemLabel or item.itemName or 'item',
+                    selectedPlayerName or 'spilleren',
+                    maxAmount
+                ),
+                default = 1,
+                required = true,
+                min = 1,
+                max = maxAmount
+            }
+        })
+
+        if not input or not input[1] then
+            setMenu('playerInventory', menuItems, selectedIndex)
+            return
+        end
+
+        local amount = math.floor(tonumber(input[1]) or 0)
+        local result = lib.callback.await(
+            'sb_admin:server:removePlayerInventoryItem',
+            false,
+            item.playerId or selectedPlayerId,
+            item.itemName,
+            amount,
+            item.itemSlot
+        )
+
+        if not result or not result.success then
+            notify(result and result.message or 'Itemet kunne ikke fjernes.', 'error')
+            openPlayerInventory(selectedPlayerId, playerDetailsReturnIndex, selectedIndex)
+            return
+        end
+
+        notify(result.message or 'Itemet blev fjernet.', 'success')
+        openPlayerInventory(selectedPlayerId, playerDetailsReturnIndex, selectedIndex)
+        return
+    end
+
     if currentMenu == 'playerDetails' and item.action == 'giveVehicle' then
         -- OP Garages V3 eksponerer getAllGarages som server-export.
         -- Garage-listen hentes derfor sikkert gennem sb_admins server-callback.
@@ -2178,6 +2227,19 @@ RegisterNetEvent('sb_admin:client:reviveNotification', function(adminName)
     end
 
     notify(('Du blev genoplivet af %s.'):format(adminName or 'en administrator'), 'success')
+end)
+
+RegisterNetEvent('sb_admin:client:inventoryItemRemoved', function(data)
+    data = type(data) == 'table' and data or {}
+
+    notify(
+        ('%s x %s blev fjernet fra dit inventory af %s.'):format(
+            tonumber(data.amount) or 0,
+            data.label or data.name or 'item',
+            data.adminName or 'en administrator'
+        ),
+        'inform'
+    )
 end)
 
 RegisterNetEvent('sb_admin:client:setFrozen', function(frozen, adminName)

@@ -658,6 +658,126 @@ lib.callback.register('sb_admin:server:getPlayerInventory', function(source, tar
     }
 end)
 
+lib.callback.register('sb_admin:server:removePlayerInventoryItem', function(source, targetId, itemName, amount, slot)
+    if not hasPermission(source) then
+        return { success = false, message = 'Du har ikke adgang til funktionen.' }
+    end
+
+    targetId = tonumber(targetId)
+    amount = math.floor(tonumber(amount) or 0)
+    slot = tonumber(slot)
+    itemName = type(itemName) == 'string' and itemName or nil
+
+    if not targetId or not itemName or itemName == '' or amount < 1 then
+        return { success = false, message = 'Item eller antal er ugyldigt.' }
+    end
+
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not targetPlayer or not GetPlayerName(targetId) then
+        return { success = false, message = 'Spilleren er ikke længere online.' }
+    end
+
+    local removed = false
+    local itemLabel = itemName
+
+    if GetResourceState('ox_inventory') == 'started' then
+        local ok, inventoryItems = pcall(function()
+            return exports.ox_inventory:GetInventoryItems(targetId)
+        end)
+
+        if not ok or type(inventoryItems) ~= 'table' then
+            return { success = false, message = 'Spillerens inventory kunne ikke læses.' }
+        end
+
+        local available = 0
+        local matchedSlot
+
+        for key, inventoryItem in pairs(inventoryItems) do
+            if type(inventoryItem) == 'table' then
+                local currentSlot = tonumber(inventoryItem.slot or key)
+                local currentName = tostring(inventoryItem.name or '')
+
+                if currentName == itemName and (not slot or currentSlot == slot) then
+                    available = tonumber(inventoryItem.count) or 0
+                    matchedSlot = currentSlot
+                    itemLabel = tostring(inventoryItem.label or itemName)
+                    break
+                end
+            end
+        end
+
+        if available < amount then
+            return {
+                success = false,
+                message = ('Spilleren har kun %s x %s.'):format(available, itemLabel)
+            }
+        end
+
+        local removeOk, success, response = pcall(function()
+            return exports.ox_inventory:RemoveItem(
+                targetId,
+                itemName,
+                amount,
+                nil,
+                matchedSlot,
+                false,
+                true
+            )
+        end)
+
+        removed = removeOk and success == true
+
+        if not removed then
+            return {
+                success = false,
+                message = type(response) == 'string' and response or 'Itemet kunne ikke fjernes fra ox_inventory.'
+            }
+        end
+    else
+        local inventoryItem = targetPlayer.getInventoryItem and targetPlayer.getInventoryItem(itemName)
+        local available = inventoryItem and tonumber(inventoryItem.count) or 0
+        itemLabel = inventoryItem and tostring(inventoryItem.label or itemName) or itemName
+
+        if available < amount then
+            return {
+                success = false,
+                message = ('Spilleren har kun %s x %s.'):format(available, itemLabel)
+            }
+        end
+
+        if not targetPlayer.removeInventoryItem then
+            return { success = false, message = 'ESX inventory understøtter ikke fjernelse af items.' }
+        end
+
+        targetPlayer.removeInventoryItem(itemName, amount)
+        removed = true
+    end
+
+    if not removed then
+        return { success = false, message = 'Itemet kunne ikke fjernes.' }
+    end
+
+    local adminPlayer = ESX.GetPlayerFromId(source)
+    local adminName = adminPlayer and adminPlayer.getName and adminPlayer.getName() or GetPlayerName(source) or 'en administrator'
+
+    TriggerClientEvent('sb_admin:client:inventoryItemRemoved', targetId, {
+        name = itemName,
+        label = itemLabel,
+        amount = amount,
+        adminName = adminName
+    })
+
+    return {
+        success = true,
+        message = ('Fjernede %s x %s fra %s.'):format(
+            amount,
+            itemLabel,
+            targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId) or ('spiller %s'):format(targetId)
+        )
+    }
+end)
+
 lib.callback.register('sb_admin:server:giveVehicle', function(source, targetId, vehicleData)
     local allowed = hasPermission(source)
 
