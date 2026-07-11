@@ -24,6 +24,29 @@ lib.callback.register('sb_admin:server:hasPermission', function(source)
     return hasPermission(source)
 end)
 
+lib.callback.register('sb_admin:server:sendAnnouncement', function(source, message)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return false
+    end
+
+    message = tostring(message or '')
+    message = message:gsub('^%s+', ''):gsub('%s+$', '')
+
+    local maxLength = (Config.Announcement and Config.Announcement.maxLength) or 300
+
+    if message == '' or #message > maxLength then
+        return false
+    end
+
+    TriggerClientEvent('sb_admin:client:showAnnouncement', -1, {
+        message = message
+    })
+
+    return true
+end)
+
 lib.callback.register('sb_admin:server:getPlayers', function(source)
     local allowed = hasPermission(source)
 

@@ -36,6 +36,12 @@ local function getMainMenuItems()
             icon = 'players'
         },
         {
+            action = 'announcement',
+            label = 'Announcement',
+            description = 'Send en servermeddelelse til alle online spillere.',
+            icon = 'announcement'
+        },
+        {
             action = 'toggleNoclip',
             label = noclipEnabled and 'Deaktivér noclip' or 'Aktivér noclip',
             description = noclipEnabled
@@ -1345,6 +1351,36 @@ local function activateSelectedItem()
         return
     end
 
+    if currentMenu == 'main' and item.action == 'announcement' then
+        local input = lib.inputDialog('Servermeddelelse', {
+            {
+                type = 'textarea',
+                label = 'Besked',
+                description = 'Beskeden bliver vist til alle online spillere.',
+                placeholder = 'Skriv servermeddelelsen her...',
+                required = true,
+                min = 1,
+                max = (Config.Announcement and Config.Announcement.maxLength) or 300
+            }
+        })
+
+        if not input or not input[1] then
+            setMenu('main', getMainMenuItems(), selectedIndex)
+            return
+        end
+
+        local result = lib.callback.await('sb_admin:server:sendAnnouncement', false, input[1])
+
+        if not result then
+            notify('Meddelelsen kunne ikke sendes, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        notify('Servermeddelelsen blev sendt.', 'success')
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
     if currentMenu == 'main' and item.action == 'toggleNoclip' then
         local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
 
@@ -1610,6 +1646,26 @@ local function activateSelectedItem()
     end
 
 end
+
+RegisterNetEvent('sb_admin:client:showAnnouncement', function(data)
+    if type(data) ~= 'table' then
+        return
+    end
+
+    local message = tostring(data.message or '')
+
+    if message == '' then
+        return
+    end
+
+    lib.notify({
+        title = 'Servermeddelelse',
+        description = message,
+        type = 'inform',
+        position = (Config.Announcement and Config.Announcement.position) or 'top',
+        duration = (Config.Announcement and Config.Announcement.duration) or 10000
+    })
+end)
 
 RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
     if type(data) ~= 'table' or type(data.coords) ~= 'table' then

@@ -23,6 +23,14 @@ const icons = {
             <path d="M18 14.7c1.8.7 3 2.2 3 3.8V20"></path>
         </svg>
     `,
+    announcement: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 10v4"></path>
+            <path d="M7 9v6l9 4V5L7 9Z"></path>
+            <path d="M9 15l1.5 5h3L12 16"></path>
+            <path d="M19 8.5a5 5 0 0 1 0 7"></path>
+        </svg>
+    `,
     noclip: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 12h16M12 4v16"></path>

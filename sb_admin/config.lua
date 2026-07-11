@@ -60,3 +60,15 @@ Config.FlipVehicle = {
     -- Afstand i meter, når administratoren ikke sidder i et køretøj.
     distance = 6.0
 }
+
+
+Config.Announcement = {
+    -- Maksimalt antal tegn i en servermeddelelse.
+    maxLength = 300,
+
+    -- Hvor længe meddelelsen vises hos spillerne.
+    duration = 10000,
+
+    -- Placering af ox_lib-meddelelsen.
+    position = 'top'
+}
