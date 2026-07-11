@@ -23,6 +23,12 @@ const icons = {
             <path d="M18 14.7c1.8.7 3 2.2 3 3.8V20"></path>
         </svg>
     `,
+    noclip: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 12h16M12 4v16"></path>
+            <path d="m16 8 4 4-4 4M8 8l-4 4 4 4M8 8l4-4 4 4M8 16l4 4 4-4"></path>
+        </svg>
+    `,
     player: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="4"></circle>
@@ -61,13 +67,6 @@ const icons = {
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
             <circle cx="12" cy="12" r="3"></circle>
-        </svg>
-    `,
-    kick: `
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"></path>
-            <path d="M16 8l4 4-4 4"></path>
-            <path d="M20 12H9"></path>
         </svg>
     `,
     id: `

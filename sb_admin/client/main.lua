@@ -9,6 +9,8 @@ local selectedPlayerName = nil
 local spectating = false
 local spectateTargetId = nil
 local spectateReturn = nil
+local noclipEnabled = false
+local noclipEntity = nil
 
 local function notify(description, notifyType)
     lib.notify({
@@ -27,6 +29,14 @@ local function getMainMenuItems()
             label = 'Spillere',
             description = 'Se alle spillere, der er online på serveren.',
             icon = 'players'
+        },
+        {
+            action = 'toggleNoclip',
+            label = noclipEnabled and 'Deaktivér noclip' or 'Aktivér noclip',
+            description = noclipEnabled
+                and 'Slå fri bevægelse fra og vend tilbage til normal styring.'
+                or 'Flyv frit i den retning, kameraet peger.',
+            icon = 'noclip'
         }
     }
 end
@@ -194,13 +204,6 @@ local function buildPlayerDetailItems(player)
                 and 'Stop overvågning og vend tilbage til din tidligere position.'
                 or 'Overvåg den valgte spiller uden at teleportere permanent.',
             icon = 'spectate'
-        },
-        {
-            action = 'kickPlayer',
-            playerId = player.id,
-            label = 'Kick spiller',
-            description = 'Fjern den valgte spiller fra serveren.',
-            icon = 'kick'
         },
         {
             label = 'Server-ID',
@@ -460,6 +463,182 @@ local function startSpectate(targetId, targetName, coords)
     return true
 end
 
+local function rotationToDirection(rotation)
+    local pitch = math.rad(rotation.x)
+    local yaw = math.rad(rotation.z)
+    local cosPitch = math.cos(pitch)
+
+    return vector3(
+        -math.sin(yaw) * cosPitch,
+        math.cos(yaw) * cosPitch,
+        math.sin(pitch)
+    )
+end
+
+local function getNoclipEntity()
+    local ped = PlayerPedId()
+
+    if IsPedInAnyVehicle(ped, false) then
+        return GetVehiclePedIsIn(ped, false)
+    end
+
+    return ped
+end
+
+local function disableNoclip(showNotification)
+    if not noclipEnabled then
+        return
+    end
+
+    local entity = noclipEntity
+
+    if entity and entity ~= 0 and DoesEntityExist(entity) then
+        FreezeEntityPosition(entity, false)
+        SetEntityCollision(entity, true, true)
+        SetEntityInvincible(entity, false)
+        SetEntityVisible(entity, true, false)
+        SetEntityVelocity(entity, 0.0, 0.0, 0.0)
+    end
+
+    local ped = PlayerPedId()
+    SetEntityCollision(ped, true, true)
+    SetEntityInvincible(ped, false)
+    SetEntityVisible(ped, true, false)
+    FreezeEntityPosition(ped, false)
+
+    noclipEnabled = false
+    noclipEntity = nil
+
+    if showNotification then
+        notify('Noclip blev deaktiveret.', 'inform')
+    end
+end
+
+local function enableNoclip()
+    if spectating then
+        notify('Stop spectate, før du aktiverer noclip.', 'error')
+        return false
+    end
+
+    noclipEntity = getNoclipEntity()
+
+    if not noclipEntity or noclipEntity == 0 or not DoesEntityExist(noclipEntity) then
+        notify('Din karakter kunne ikke findes.', 'error')
+        return false
+    end
+
+    noclipEnabled = true
+    FreezeEntityPosition(noclipEntity, true)
+    SetEntityCollision(noclipEntity, false, false)
+    SetEntityInvincible(noclipEntity, true)
+    SetEntityVisible(noclipEntity, false, false)
+    SetEntityVelocity(noclipEntity, 0.0, 0.0, 0.0)
+
+    notify('Noclip blev aktiveret.', 'success')
+    return true
+end
+
+local function toggleNoclip()
+    if noclipEnabled then
+        disableNoclip(true)
+        return
+    end
+
+    enableNoclip()
+end
+
+CreateThread(function()
+    while true do
+        if not noclipEnabled then
+            Wait(300)
+        else
+            Wait(0)
+
+            local entity = noclipEntity
+
+            if not entity or entity == 0 or not DoesEntityExist(entity) then
+                disableNoclip(false)
+            else
+                DisableControlAction(0, 30, true) -- A/D
+                DisableControlAction(0, 31, true) -- W/S
+                DisableControlAction(0, 21, true) -- Shift
+                DisableControlAction(0, 22, true) -- Space
+                DisableControlAction(0, 36, true) -- Ctrl
+
+                local camRotation = GetGameplayCamRot(2)
+                local forward = rotationToDirection(camRotation)
+                local yaw = math.rad(camRotation.z)
+                local right = vector3(math.cos(yaw), math.sin(yaw), 0.0)
+                local up = vector3(0.0, 0.0, 1.0)
+                local movement = vector3(0.0, 0.0, 0.0)
+
+                if IsDisabledControlPressed(0, 32) then -- W
+                    movement = movement + forward
+                end
+
+                if IsDisabledControlPressed(0, 33) then -- S
+                    movement = movement - forward
+                end
+
+                if IsDisabledControlPressed(0, 34) then -- A
+                    movement = movement - right
+                end
+
+                if IsDisabledControlPressed(0, 35) then -- D
+                    movement = movement + right
+                end
+
+                if IsDisabledControlPressed(0, 22) then -- Space
+                    movement = movement + up
+                end
+
+                if IsDisabledControlPressed(0, 36) then -- Ctrl
+                    movement = movement - up
+                end
+
+                local length = math.sqrt(
+                    movement.x * movement.x
+                    + movement.y * movement.y
+                    + movement.z * movement.z
+                )
+
+                if length > 0.0 then
+                    movement = movement / length
+
+                    local speed = Config.Noclip.speed
+
+                    if IsDisabledControlPressed(0, 21) then
+                        speed = Config.Noclip.fastSpeed
+                    elseif IsControlPressed(0, 19) then -- Left Alt
+                        speed = Config.Noclip.slowSpeed
+                    end
+
+                    local coords = GetEntityCoords(entity)
+                    local frameMultiplier = GetFrameTime() * 60.0
+                    local nextCoords = coords + movement * speed * frameMultiplier
+
+                    SetEntityCoordsNoOffset(
+                        entity,
+                        nextCoords.x,
+                        nextCoords.y,
+                        nextCoords.z,
+                        true,
+                        true,
+                        true
+                    )
+                end
+
+                SetEntityHeading(entity, camRotation.z)
+                FreezeEntityPosition(entity, true)
+                SetEntityCollision(entity, false, false)
+                SetEntityInvincible(entity, true)
+                SetEntityVisible(entity, false, false)
+                SetEntityVelocity(entity, 0.0, 0.0, 0.0)
+            end
+        end
+    end
+end)
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -469,6 +648,20 @@ local function activateSelectedItem()
 
     if currentMenu == 'main' and item.action == 'players' then
         openPlayerMenu()
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'toggleNoclip' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        toggleNoclip()
+        closeMenu()
         return
     end
 
@@ -577,53 +770,6 @@ local function activateSelectedItem()
         return
     end
 
-    if currentMenu == 'playerDetails' and item.action == 'kickPlayer' then
-        local targetId = tonumber(item.playerId)
-
-        if not targetId then
-            notify('Spilleren kunne ikke findes.', 'error')
-            return
-        end
-
-        if targetId == GetPlayerServerId(PlayerId()) then
-            notify('Du kan ikke kicke dig selv.', 'error')
-            return
-        end
-
-        local input = lib.inputDialog('Kick spiller', {
-            {
-                type = 'textarea',
-                label = 'Grund',
-                description = 'Skriv hvorfor spilleren bliver fjernet fra serveren.',
-                placeholder = 'Ingen grund angivet',
-                required = false,
-                min = 1,
-                max = 200
-            }
-        })
-
-        if not input then
-            return
-        end
-
-        local reason = tostring(input[1] or '')
-        reason = reason:gsub('^%s+', ''):gsub('%s+$', '')
-
-        if reason == '' then
-            reason = 'Ingen grund angivet'
-        end
-
-        local result = lib.callback.await('sb_admin:server:kickPlayer', false, targetId, reason)
-
-        if not result then
-            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
-            return
-        end
-
-        closeMenu()
-        notify(('%s blev kicket.'):format(result.name or 'Spilleren'), 'success')
-        return
-    end
 end
 
 RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
@@ -761,5 +907,6 @@ AddEventHandler('onResourceStop', function(resourceName)
     end
 
     restoreSpectateState(false)
+    disableNoclip(false)
     SetNuiFocus(false, false)
 end)

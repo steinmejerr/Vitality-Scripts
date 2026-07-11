@@ -22,3 +22,10 @@ Config.Notify = {
 -- Revive-integrationen bruger Piotreq Ambulance Job v2's officielle event.
 -- Resource-navnet er normalt p_ambulancejob.
 Config.AmbulanceResource = 'p_ambulancejob'
+
+
+Config.Noclip = {
+    speed = 0.65,
+    fastSpeed = 2.5,
+    slowSpeed = 0.2
+}
