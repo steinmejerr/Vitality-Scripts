@@ -30,6 +30,14 @@ const icons = {
             <circle cx="12" cy="9" r="2.5"></circle>
         </svg>
     `,
+    bring: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="7" cy="7" r="3"></circle>
+            <path d="M2.5 17.5c.4-3.1 2-5 4.5-5 1.3 0 2.4.5 3.2 1.4"></path>
+            <path d="M13 8h8M17 4l4 4-4 4"></path>
+            <path d="M13 17h8"></path>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>

@@ -133,3 +133,50 @@ lib.callback.register('sb_admin:server:gotoPlayer', function(source, targetId)
         heading = heading
     }
 end)
+
+lib.callback.register('sb_admin:server:bringPlayer', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local adminPlayer = ESX.GetPlayerFromId(source)
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not adminPlayer or not targetPlayer then
+        return nil
+    end
+
+    local adminPed = GetPlayerPed(source)
+
+    if not adminPed or adminPed == 0 or not DoesEntityExist(adminPed) then
+        return nil
+    end
+
+    local coords = GetEntityCoords(adminPed)
+    local heading = GetEntityHeading(adminPed)
+    local adminName = adminPlayer.getName and adminPlayer.getName() or GetPlayerName(source)
+    local targetName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId)
+
+    TriggerClientEvent('sb_admin:client:bringToAdmin', targetId, {
+        coords = {
+            x = coords.x,
+            y = coords.y,
+            z = coords.z
+        },
+        heading = heading,
+        adminName = adminName or GetPlayerName(source) or 'en administrator'
+    })
+
+    return {
+        name = targetName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId)
+    }
+end)
+

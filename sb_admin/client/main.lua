@@ -163,6 +163,13 @@ local function buildPlayerDetailItems(player)
             icon = 'location'
         },
         {
+            action = 'bringPlayer',
+            playerId = player.id,
+            label = 'Bring spiller',
+            description = 'Teleportér den valgte spiller hen til dig.',
+            icon = 'bring'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -359,7 +366,48 @@ local function activateSelectedItem()
         notify(('Du blev teleporteret til %s.'):format(result.name or 'spilleren'), 'success')
         return
     end
+
+    if currentMenu == 'playerDetails' and item.action == 'bringPlayer' then
+        local result = lib.callback.await('sb_admin:server:bringPlayer', false, item.playerId)
+
+        if not result then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        closeMenu()
+        notify(('%s blev teleporteret hen til dig.'):format(result.name or 'Spilleren'), 'success')
+        return
+    end
 end
+
+RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
+    if type(data) ~= 'table' or type(data.coords) ~= 'table' then
+        return
+    end
+
+    local x = tonumber(data.coords.x)
+    local y = tonumber(data.coords.y)
+    local z = tonumber(data.coords.z)
+    local heading = tonumber(data.heading) or 0.0
+
+    if not x or not y or not z then
+        return
+    end
+
+    local ped = PlayerPedId()
+    local entity = ped
+
+    if IsPedInAnyVehicle(ped, false) then
+        entity = GetVehiclePedIsIn(ped, false)
+    end
+
+    RequestCollisionAtCoord(x, y, z)
+    SetEntityCoordsNoOffset(entity, x + 1.5, y + 1.5, z, false, false, false)
+    SetEntityHeading(entity, heading)
+
+    notify(('Du blev teleporteret til %s.'):format(data.adminName or 'en administrator'), 'inform')
+end)
 
 local function goBack()
     if currentMenu == 'playerDetails' then
