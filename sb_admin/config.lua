@@ -54,3 +54,9 @@ Config.SpawnVehicle = {
     -- Maksimal ventetid på indlæsning af køretøjsmodellen.
     loadTimeout = 5000
 }
+
+
+Config.FlipVehicle = {
+    -- Afstand i meter, når administratoren ikke sidder i et køretøj.
+    distance = 6.0
+}

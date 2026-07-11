@@ -80,6 +80,12 @@ local function getMainMenuItems()
             icon = 'repairvehicle'
         },
         {
+            action = 'flipVehicle',
+            label = 'Vend køretøj',
+            description = 'Vend køretøjet korrekt tilbage på hjulene.',
+            icon = 'flipvehicle'
+        },
+        {
             action = 'spawnVehicle',
             label = 'Spawn køretøj',
             description = 'Indtast et modelnavn og spawn et køretøj.',
@@ -1205,6 +1211,39 @@ local function repairNearbyVehicle()
     return true
 end
 
+local function flipNearbyVehicle()
+    local maxDistance = (Config.FlipVehicle and Config.FlipVehicle.distance)
+        or (Config.RepairVehicle and Config.RepairVehicle.distance)
+        or (Config.DeleteVehicle and Config.DeleteVehicle.distance)
+        or 6.0
+    local vehicle = getClosestVehicleWithinDistance(maxDistance)
+
+    if vehicle == 0 or not DoesEntityExist(vehicle) then
+        notify(('Der blev ikke fundet et køretøj inden for %.0f meter.'):format(maxDistance), 'error')
+        return false
+    end
+
+    if not requestEntityControl(vehicle, 2000) then
+        notify('Køretøjet kunne ikke overtages og blev derfor ikke vendt.', 'error')
+        return false
+    end
+
+    local heading = GetEntityHeading(vehicle)
+    local coords = GetEntityCoords(vehicle)
+
+    SetEntityAsMissionEntity(vehicle, true, true)
+    FreezeEntityPosition(vehicle, true)
+    SetEntityVelocity(vehicle, 0.0, 0.0, 0.0)
+    SetEntityRotation(vehicle, 0.0, 0.0, heading, 2, true)
+    SetEntityCoordsNoOffset(vehicle, coords.x, coords.y, coords.z + 0.35, false, false, false)
+    SetVehicleOnGroundProperly(vehicle)
+    FreezeEntityPosition(vehicle, false)
+    SetVehicleUndriveable(vehicle, false)
+
+    notify('Køretøjet blev vendt korrekt på hjulene.', 'success')
+    return true
+end
+
 local function spawnAdminVehicle()
     local input = lib.inputDialog('Spawn køretøj', {
         {
@@ -1396,6 +1435,22 @@ local function activateSelectedItem()
         end
 
         repairNearbyVehicle()
+
+        -- Menuen forbliver åben efter handlingen.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'flipVehicle' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        flipNearbyVehicle()
 
         -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
