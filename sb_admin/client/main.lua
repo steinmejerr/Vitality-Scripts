@@ -17,6 +17,7 @@ local playerIdsEnabled = false
 local invisibleVehicle = nil
 local returnPosition = nil
 
+
 local function notify(description, notifyType)
     lib.notify({
         title = 'SB Admin',
@@ -289,6 +290,13 @@ local function buildPlayerDetailItems(player)
                 and 'Stop overvågning og vend tilbage til din tidligere position.'
                 or 'Overvåg den valgte spiller uden at teleportere permanent.',
             icon = 'spectate'
+        },
+        {
+            action = 'giveVehicle',
+            playerId = player.id,
+            label = 'Giv køretøj',
+            description = 'Gem et permanent køretøj på den valgte spiller.',
+            icon = 'givevehicle'
         },
         {
             label = 'Server-ID',
@@ -1914,6 +1922,92 @@ local function activateSelectedItem()
     end
 
 
+    if currentMenu == 'playerDetails' and item.action == 'giveVehicle' then
+        -- OP Garages V3 eksponerer getAllGarages som server-export.
+        -- Garage-listen hentes derfor sikkert gennem sb_admins server-callback.
+        local garageResult = lib.callback.await('sb_admin:server:getGiveVehicleGarages', false)
+
+        if not garageResult or not garageResult.success or type(garageResult.garages) ~= 'table' then
+            notify(
+                garageResult and garageResult.message or 'Garagerne kunne ikke hentes fra OP Garages.',
+                'error'
+            )
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
+            return
+        end
+
+        local garageOptions = garageResult.garages
+
+        local input = lib.inputDialog('Giv køretøj', {
+            {
+                type = 'input',
+                label = 'Modelnavn',
+                description = 'Eksempel: adder, sultan eller police.',
+                placeholder = 'adder',
+                required = true,
+                min = 1,
+                max = 50
+            },
+            {
+                type = 'input',
+                label = 'Nummerplade',
+                description = 'Valgfrit. Efterlad tomt for automatisk nummerplade.',
+                placeholder = 'Automatisk',
+                required = false,
+                max = 8
+            },
+            {
+                type = 'select',
+                label = 'Garage',
+                description = 'Vælg den garage, køretøjet skal placeres i.',
+                required = true,
+                searchable = true,
+                options = garageOptions
+            }
+        })
+
+        if not input or not input[1] then
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
+            return
+        end
+
+        local modelName = tostring(input[1]):lower():gsub('^%s+', ''):gsub('%s+$', '')
+        local modelHash = joaat(modelName)
+
+        if modelName == '' or not IsModelInCdimage(modelHash) or not IsModelAVehicle(modelHash) then
+            notify('Køretøjsmodellen findes ikke eller er ikke et køretøj.', 'error')
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
+            return
+        end
+
+        local selectedGarageId = tostring(input[3] or '')
+        local result = lib.callback.await('sb_admin:server:giveVehicle', false, item.playerId, {
+            model = modelHash,
+            modelName = modelName,
+            plate = input[2] or '',
+            garageId = selectedGarageId,
+            garageLabel = garageLabels and garageLabels[selectedGarageId] or ('Garage #' .. selectedGarageId)
+        })
+
+        if not result or not result.success then
+            notify(result and result.message or 'Køretøjet kunne ikke gives.', 'error')
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
+            return
+        end
+
+        notify(
+            ('%s modtog %s med nummerpladen %s.'):format(
+                result.name or 'Spilleren',
+                result.modelName or modelName,
+                result.plate or 'ukendt'
+            ),
+            'success'
+        )
+
+        openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
+        return
+    end
+
     if currentMenu == 'playerDetails' and item.action == 'spectatePlayer' then
         if spectating and spectateTargetId == tonumber(item.playerId) then
             restoreSpectateState(true)
@@ -1936,6 +2030,20 @@ local function activateSelectedItem()
     end
 
 end
+
+RegisterNetEvent('sb_admin:client:vehicleReceived', function(data)
+    if type(data) ~= 'table' then
+        return
+    end
+
+    notify(
+        ('Du har modtaget køretøjet %s med nummerpladen %s. Det kan findes i din garage.'):format(
+            tostring(data.modelName or 'ukendt'),
+            tostring(data.plate or 'ukendt')
+        ),
+        'success'
+    )
+end)
 
 RegisterNetEvent('sb_admin:client:showAnnouncement', function(data)
     if type(data) ~= 'table' then

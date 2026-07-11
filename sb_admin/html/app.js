@@ -150,6 +150,13 @@ const icons = {
             <circle cx="12" cy="12" r="3"></circle>
         </svg>
     `,
+    givevehicle: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 9h14l1.5 4.5V18H19v2h-2v-2H7v2H5v-2H3.5v-4.5L5 9Z"></path>
+            <path d="m7 9 1.5-4h7L17 9M6 14h2M16 14h2"></path>
+            <path d="M18 3v5M15.5 5.5h5"></path>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>

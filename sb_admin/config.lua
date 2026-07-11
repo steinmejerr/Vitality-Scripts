@@ -91,3 +91,24 @@ Config.CopyCoordinates = {
     -- Antal decimaler i de kopierede koordinater.
     decimals = 2
 }
+
+
+-- Permanent køretøjstildeling til OP Garages V3.
+Config.GiveVehicle = {
+    -- Resource-mappen skal normalt hedde præcis 'op-garages'.
+    resource = 'op-garages',
+    table = 'owned_vehicles',
+
+    -- Lad være nil for automatisk registrering. Hvis det fejler, skriv navnet på
+    -- OP Garages-tabellen her, fx 'op_garages'.
+    garageTable = nil,
+
+    -- Valgfri fallback. Normalt vælger adminen garage i dropdown-menuen.
+    defaultGarageId = nil,
+
+    plateLength = 8,
+    platePrefix = 'SB',
+
+    -- Kun eksisterende kolonner bliver tilføjet.
+    extraColumns = {}
+}
