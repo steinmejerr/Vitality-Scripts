@@ -156,6 +156,13 @@ local openPlayerMenu
 local function buildPlayerDetailItems(player)
     return {
         {
+            action = 'gotoPlayer',
+            playerId = player.id,
+            label = 'Gå til spiller',
+            description = 'Teleportér hen til den valgte spiller.',
+            icon = 'location'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -316,6 +323,40 @@ local function activateSelectedItem()
 
     if currentMenu == 'players' and item.action == 'player' then
         openPlayerDetails(item.playerId, selectedIndex)
+        return
+    end
+
+    if currentMenu == 'playerDetails' and item.action == 'gotoPlayer' then
+        local result = lib.callback.await('sb_admin:server:gotoPlayer', false, item.playerId)
+
+        if not result or not result.coords then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        local ped = PlayerPedId()
+        local entity = ped
+
+        if IsPedInAnyVehicle(ped, false) then
+            entity = GetVehiclePedIsIn(ped, false)
+        end
+
+        local x = tonumber(result.coords.x)
+        local y = tonumber(result.coords.y)
+        local z = tonumber(result.coords.z)
+        local heading = tonumber(result.heading) or 0.0
+
+        if not x or not y or not z then
+            notify('Spillerens position kunne ikke hentes.', 'error')
+            return
+        end
+
+        RequestCollisionAtCoord(x, y, z)
+        SetEntityCoordsNoOffset(entity, x + 1.0, y + 1.0, z, false, false, false)
+        SetEntityHeading(entity, heading)
+
+        closeMenu()
+        notify(('Du blev teleporteret til %s.'):format(result.name or 'spilleren'), 'success')
         return
     end
 end

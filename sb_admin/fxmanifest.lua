@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'Steinmejer'
 description 'Custom ESX Legacy admin menu'
-version '1.0.0'
+version '1.1.0'
 
 lua54 'yes'
 

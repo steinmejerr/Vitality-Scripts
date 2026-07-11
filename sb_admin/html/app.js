@@ -24,6 +24,12 @@ const icons = {
             <path d="M4.5 21c.5-4.1 3.2-6.5 7.5-6.5s7 2.4 7.5 6.5"></path>
         </svg>
     `,
+    location: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"></path>
+            <circle cx="12" cy="9" r="2.5"></circle>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>
