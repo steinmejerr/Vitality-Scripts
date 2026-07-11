@@ -1,12 +1,14 @@
 :root {
-    --panel: rgba(15, 18, 22, 0.97);
-    --panel-soft: rgba(24, 28, 34, 0.96);
-    --border: rgba(255, 255, 255, 0.075);
-    --border-strong: rgba(82, 255, 170, 0.35);
-    --text: #f4f7f6;
-    --muted: #8f9995;
-    --accent: #52ffaa;
-    --accent-soft: rgba(82, 255, 170, 0.11);
+    --panel: rgba(17, 20, 24, 0.96);
+    --panel-2: rgba(24, 28, 33, 0.96);
+    --header: rgba(255, 255, 255, 0.02);
+    --border: rgba(255, 255, 255, 0.07);
+    --border-strong: rgba(88, 196, 133, 0.45);
+    --text: #eef2f3;
+    --muted: #95a0a8;
+    --accent: #58c485;
+    --accent-soft: rgba(88, 196, 133, 0.12);
+    --shadow: rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -20,8 +22,8 @@ body {
     height: 100%;
     margin: 0;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0) !important;
-    background-color: rgba(0, 0, 0, 0) !important;
+    background: transparent !important;
+    background-color: transparent !important;
     font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
 
@@ -29,25 +31,18 @@ body {
     display: none;
     position: absolute;
     top: 50%;
-    right: 2.7vw;
-    width: min(420px, 28vw);
+    right: 2.4vw;
+    width: min(410px, 27vw);
     min-width: 350px;
-    transform: translateY(-48%) translateX(36px);
+    transform: translateY(-48%) translateX(20px);
     opacity: 0;
     visibility: hidden;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 14px;
-    background:
-        linear-gradient(145deg, rgba(255,255,255,0.025), transparent 38%),
-        var(--panel);
-    box-shadow:
-        0 28px 80px rgba(0, 0, 0, 0.48),
-        inset 0 1px 0 rgba(255, 255, 255, 0.035);
-    transition:
-        opacity 160ms ease,
-        transform 160ms ease,
-        visibility 160ms ease;
+    border-radius: 10px;
+    background: var(--panel);
+    box-shadow: 0 16px 42px var(--shadow);
+    transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
 }
 
 .admin-menu.visible {
@@ -60,34 +55,34 @@ body {
 .menu-header {
     display: flex;
     align-items: center;
-    gap: 13px;
-    min-height: 82px;
-    padding: 17px 19px;
+    gap: 12px;
+    min-height: 76px;
+    padding: 16px 18px;
     border-bottom: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.015);
+    background: var(--header);
 }
 
 .brand-mark {
     display: grid;
-    width: 45px;
-    height: 45px;
+    width: 42px;
+    height: 42px;
     place-items: center;
-    border: 1px solid rgba(82, 255, 170, 0.22);
-    border-radius: 11px;
-    background: var(--accent-soft);
+    border: 1px solid rgba(88, 196, 133, 0.18);
+    border-radius: 8px;
+    background: rgba(88, 196, 133, 0.08);
 }
 
 .brand-mark svg {
-    width: 24px;
+    width: 22px;
     fill: none;
     stroke: var(--accent);
-    stroke-width: 1.6;
+    stroke-width: 1.7;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .brand-mark .shield-line {
-    stroke-width: 1.9;
+    stroke-width: 2;
 }
 
 .header-copy {
@@ -97,11 +92,12 @@ body {
 .eyebrow,
 .section-kicker {
     display: block;
-    margin-bottom: 3px;
-    color: var(--accent);
+    margin-bottom: 4px;
+    color: var(--muted);
     font-size: 9px;
-    font-weight: 750;
-    letter-spacing: 0.19em;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
 }
 
 h1,
@@ -112,32 +108,36 @@ p {
 
 h1 {
     color: var(--text);
-    font-size: 19px;
-    font-weight: 760;
-    letter-spacing: 0.03em;
+    font-size: 18px;
+    font-weight: 730;
+    letter-spacing: 0.01em;
 }
 
 .status {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     margin-left: auto;
-    color: #aeb7b3;
-    font-size: 9px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: #c8d0d5;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.025);
 }
 
 .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 10px rgba(82, 255, 170, 0.75);
 }
 
 .menu-content {
-    padding: 19px;
+    padding: 18px;
 }
 
 .section-heading {
@@ -149,7 +149,7 @@ h1 {
 
 .section-heading h2 {
     color: var(--text);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 670;
 }
 
@@ -163,65 +163,63 @@ h1 {
 .menu-list {
     display: flex;
     flex-direction: column;
-    gap: 7px;
-    min-height: 76px;
+    gap: 8px;
+    min-height: 72px;
 }
 
 .menu-item {
     position: relative;
     display: grid;
-    grid-template-columns: 38px minmax(0, 1fr) 22px;
+    grid-template-columns: 36px minmax(0, 1fr) 18px;
     align-items: center;
-    gap: 11px;
-    min-height: 68px;
-    padding: 10px 13px;
+    gap: 12px;
+    min-height: 64px;
+    padding: 10px 12px;
     overflow: hidden;
     border: 1px solid var(--border);
-    border-radius: 9px;
-    background: var(--panel-soft);
+    border-radius: 8px;
+    background: var(--panel-2);
 }
 
 .menu-item::before {
     position: absolute;
-    inset: 0 auto 0 0;
-    width: 2px;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 3px;
     background: transparent;
     content: "";
 }
 
 .menu-item.selected {
     border-color: var(--border-strong);
-    background:
-        linear-gradient(90deg, rgba(82,255,170,0.09), transparent 65%),
-        var(--panel-soft);
-    box-shadow: 0 0 0 1px rgba(82,255,170,0.035);
+    background: rgba(31, 37, 42, 0.98);
 }
 
 .menu-item.selected::before {
     background: var(--accent);
-    box-shadow: 0 0 12px rgba(82, 255, 170, 0.7);
 }
 
 .menu-item.disabled {
-    opacity: 0.72;
+    opacity: 0.82;
 }
 
 .item-icon {
     display: grid;
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.065);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.025);
     color: var(--accent);
 }
 
 .item-icon svg {
-    width: 18px;
+    width: 17px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.7;
+    stroke-width: 1.75;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -250,19 +248,19 @@ h1 {
 }
 
 .item-arrow {
-    color: #68716e;
-    font-size: 18px;
+    color: #7d888f;
+    font-size: 16px;
     text-align: right;
 }
 
 .menu-item.selected .item-arrow {
-    color: var(--accent);
+    color: #d8dde1;
 }
 
 .menu-footer {
-    padding: 12px 19px;
+    padding: 11px 18px;
     border-top: 1px solid var(--border);
-    background: rgba(0, 0, 0, 0.13);
+    background: rgba(255, 255, 255, 0.015);
 }
 
 .key-help {
@@ -270,8 +268,8 @@ h1 {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    color: #717b77;
-    font-size: 8px;
+    color: var(--muted);
+    font-size: 9px;
     font-weight: 650;
     text-transform: uppercase;
 }
@@ -279,20 +277,19 @@ h1 {
 .key-group {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     white-space: nowrap;
 }
 
 kbd {
     min-width: 20px;
-    padding: 3px 5px;
-    border: 1px solid rgba(255,255,255,0.09);
-    border-bottom-color: rgba(255,255,255,0.15);
+    padding: 3px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
     border-radius: 4px;
-    background: rgba(255,255,255,0.045);
-    color: #b9c1be;
+    background: rgba(255, 255, 255, 0.04);
+    color: #d3d9dd;
     font-family: inherit;
-    font-size: 7px;
+    font-size: 8px;
     line-height: 1;
     text-align: center;
 }
