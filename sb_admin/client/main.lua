@@ -104,6 +104,12 @@ local function getMainMenuItems()
             icon = 'waypoint'
         },
         {
+            action = 'teleportCoordinates',
+            label = 'Teleportér til koordinater',
+            description = 'Indtast X, Y, Z og valgfri heading.',
+            icon = 'coordinates'
+        },
+        {
             action = 'returnPosition',
             label = 'Returnér',
             description = returnPosition
@@ -1339,6 +1345,116 @@ local function spawnAdminVehicle()
     return true
 end
 
+local function teleportToCoordinates()
+    local ped = PlayerPedId()
+    local entity = ped
+
+    if IsPedInAnyVehicle(ped, false) then
+        entity = GetVehiclePedIsIn(ped, false)
+    end
+
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        notify('Din karakter eller dit køretøj kunne ikke findes.', 'error')
+        return false
+    end
+
+    local currentCoords = GetEntityCoords(entity)
+    local currentHeading = GetEntityHeading(entity)
+
+    local input = lib.inputDialog('Teleportér til koordinater', {
+        {
+            type = 'number',
+            label = 'X',
+            description = 'X-koordinaten for destinationen.',
+            default = tonumber(('%0.3f'):format(currentCoords.x)),
+            required = true
+        },
+        {
+            type = 'number',
+            label = 'Y',
+            description = 'Y-koordinaten for destinationen.',
+            default = tonumber(('%0.3f'):format(currentCoords.y)),
+            required = true
+        },
+        {
+            type = 'number',
+            label = 'Z',
+            description = 'Z-koordinaten for destinationen.',
+            default = tonumber(('%0.3f'):format(currentCoords.z)),
+            required = true
+        },
+        {
+            type = 'number',
+            label = 'Heading',
+            description = 'Valgfri retning fra 0 til 360 grader.',
+            default = tonumber(('%0.2f'):format(currentHeading)),
+            min = 0,
+            max = 360,
+            required = false
+        }
+    })
+
+    if not input then
+        return false
+    end
+
+    local x = tonumber(input[1])
+    local y = tonumber(input[2])
+    local z = tonumber(input[3])
+    local heading = tonumber(input[4]) or currentHeading
+
+    if not x or not y or not z then
+        notify('Koordinaterne er ugyldige.', 'error')
+        return false
+    end
+
+    -- Undgå åbenlyst ugyldige værdier, der kan sende spilleren langt uden for GTA-kortet.
+    local limit = (Config.TeleportCoordinates and Config.TeleportCoordinates.coordinateLimit) or 10000.0
+
+    if math.abs(x) > limit or math.abs(y) > limit or math.abs(z) > limit then
+        notify(('Koordinaterne må højst være mellem -%s og %s.'):format(limit, limit), 'error')
+        return false
+    end
+
+    saveReturnPosition(entity)
+
+    DoScreenFadeOut(200)
+
+    local fadeTimeout = GetGameTimer() + 1200
+    while not IsScreenFadedOut() and GetGameTimer() < fadeTimeout do
+        Wait(0)
+    end
+
+    local wasFrozenByNoclip = noclipEnabled and entity == noclipEntity
+
+    if not wasFrozenByNoclip then
+        FreezeEntityPosition(entity, true)
+    end
+
+    RequestCollisionAtCoord(x, y, z)
+    NewLoadSceneStartSphere(x, y, z, 50.0, 0)
+    SetEntityCoordsNoOffset(entity, x, y, z, false, false, false)
+    SetEntityHeading(entity, heading % 360.0)
+    SetEntityVelocity(entity, 0.0, 0.0, 0.0)
+
+    local collisionTimeout = GetGameTimer() + ((Config.TeleportCoordinates and Config.TeleportCoordinates.collisionTimeout) or 2500)
+
+    while not HasCollisionLoadedAroundEntity(entity) and GetGameTimer() < collisionTimeout do
+        RequestCollisionAtCoord(x, y, z)
+        Wait(50)
+    end
+
+    NewLoadSceneStop()
+
+    if not wasFrozenByNoclip then
+        FreezeEntityPosition(entity, false)
+    end
+
+    DoScreenFadeIn(200)
+    notify(('Teleporteret til %.2f, %.2f, %.2f.'):format(x, y, z), 'success')
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -1521,6 +1637,22 @@ local function activateSelectedItem()
         teleportToWaypoint()
 
         -- Menuen forbliver åben, og markeringen bliver på waypoint-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'teleportCoordinates' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        teleportToCoordinates()
+
+        -- Menuen forbliver åben, og markeringen bliver på koordinat-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end

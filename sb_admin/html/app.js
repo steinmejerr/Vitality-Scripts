@@ -91,6 +91,13 @@ const icons = {
             <circle cx="12" cy="9" r="2.5"></circle>
         </svg>
     `,
+    coordinates: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path>
+            <path d="M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19"></path>
+        </svg>
+    `,
     return: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 7 4 12l5 5"></path>

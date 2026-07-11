@@ -72,3 +72,12 @@ Config.Announcement = {
     -- Placering af ox_lib-meddelelsen.
     position = 'top'
 }
+
+
+Config.TeleportCoordinates = {
+    -- Sikkerhedsgrænse for X, Y og Z.
+    coordinateLimit = 10000.0,
+
+    -- Maksimal ventetid på collision ved destinationen.
+    collisionTimeout = 2500
+}
