@@ -39,3 +39,9 @@ Config.DeleteVehicle = {
     -- Afstand i meter, når administratoren ikke sidder i et køretøj.
     distance = 6.0
 }
+
+
+Config.RepairVehicle = {
+    -- Afstand i meter, når administratoren ikke sidder i et køretøj.
+    distance = 6.0
+}

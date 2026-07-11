@@ -74,6 +74,12 @@ local function getMainMenuItems()
             icon = 'deletevehicle'
         },
         {
+            action = 'repairVehicle',
+            label = 'Reparér køretøj',
+            description = 'Reparér køretøjet, du sidder i eller står tæt på.',
+            icon = 'repairvehicle'
+        },
+        {
             action = 'teleportWaypoint',
             label = 'Teleportér til waypoint',
             description = 'Teleportér til din markering på kortet.',
@@ -1159,6 +1165,40 @@ local function deleteNearbyVehicle()
     return true
 end
 
+local function repairNearbyVehicle()
+    local maxDistance = (Config.RepairVehicle and Config.RepairVehicle.distance)
+        or (Config.DeleteVehicle and Config.DeleteVehicle.distance)
+        or 6.0
+    local vehicle = getClosestVehicleWithinDistance(maxDistance)
+
+    if vehicle == 0 or not DoesEntityExist(vehicle) then
+        notify(('Der blev ikke fundet et køretøj inden for %.0f meter.'):format(maxDistance), 'error')
+        return false
+    end
+
+    if not requestEntityControl(vehicle, 2000) then
+        notify('Køretøjet kunne ikke overtages og blev derfor ikke repareret.', 'error')
+        return false
+    end
+
+    SetEntityAsMissionEntity(vehicle, true, true)
+    SetVehicleFixed(vehicle)
+    SetVehicleDeformationFixed(vehicle)
+    SetVehicleEngineHealth(vehicle, 1000.0)
+    SetVehicleBodyHealth(vehicle, 1000.0)
+    SetVehiclePetrolTankHealth(vehicle, 1000.0)
+    SetVehicleEngineOn(vehicle, true, true, false)
+    SetVehicleUndriveable(vehicle, false)
+    SetVehicleDirtLevel(vehicle, 0.0)
+
+    for tyreIndex = 0, 7 do
+        SetVehicleTyreFixed(vehicle, tyreIndex)
+    end
+
+    notify('Køretøjet blev repareret.', 'success')
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -1245,6 +1285,22 @@ local function activateSelectedItem()
         end
 
         deleteNearbyVehicle()
+
+        -- Menuen forbliver åben efter handlingen.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'repairVehicle' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        repairNearbyVehicle()
 
         -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
