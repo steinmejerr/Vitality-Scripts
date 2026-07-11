@@ -16,6 +16,7 @@ local invisibilityEnabled = false
 local playerIdsEnabled = false
 local invisibleVehicle = nil
 local returnPosition = nil
+local playerDetailsReturnIndex = 1
 
 
 local function notify(description, notifyType)
@@ -136,6 +137,10 @@ local function getMenuTitle()
         return selectedPlayerName or 'Spilleroplysninger'
     end
 
+    if currentMenu == 'playerInventory' then
+        return selectedPlayerName and ('Inventory - %s'):format(selectedPlayerName) or 'Inventory'
+    end
+
     return 'Adminmenu'
 end
 
@@ -251,6 +256,7 @@ end
 
 
 local openPlayerMenu
+local openPlayerDetails
 
 local function buildPlayerDetailItems(player)
     return {
@@ -299,6 +305,13 @@ local function buildPlayerDetailItems(player)
             icon = 'givevehicle'
         },
         {
+            action = 'viewInventory',
+            playerId = player.id,
+            label = 'Se inventory',
+            description = 'Se hvilke items den valgte spiller har på sig.',
+            icon = 'inventory'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -337,7 +350,62 @@ local function buildPlayerDetailItems(player)
     }
 end
 
-local function openPlayerDetails(playerId, listIndex, preferredDetailIndex)
+local function buildInventoryItems(inventory)
+    local items = {}
+
+    for _, entry in ipairs(inventory or {}) do
+        local description = ('Antal: %s'):format(entry.count or 0)
+
+        if entry.slot then
+            description = ('%s | Slot: %s'):format(description, entry.slot)
+        end
+
+        items[#items + 1] = {
+            label = entry.label or entry.name or 'Ukendt item',
+            description = description,
+            icon = 'item',
+            readonly = true
+        }
+    end
+
+    if #items == 0 then
+        items[1] = {
+            label = 'Tomt inventory',
+            description = 'Spilleren har ingen items på sig.',
+            icon = 'inventory',
+            readonly = true
+        }
+    end
+
+    return items
+end
+
+local function openPlayerInventory(playerId, returnIndex)
+    playerDetailsReturnIndex = returnIndex or selectedIndex
+    selectedPlayerId = playerId
+
+    setMenu('playerInventory', {
+        {
+            label = 'Indlæser inventory...',
+            description = 'Vent et øjeblik.',
+            icon = 'inventory',
+            disabled = true
+        }
+    })
+
+    local result = lib.callback.await('sb_admin:server:getPlayerInventory', false, playerId)
+
+    if not result then
+        notify('Inventory kunne ikke hentes, eller spilleren er ikke længere online.', 'error')
+        openPlayerDetails(playerId, selectedPlayerListIndex, playerDetailsReturnIndex)
+        return
+    end
+
+    selectedPlayerName = ('[%s] %s'):format(result.id, result.name)
+    setMenu('playerInventory', buildInventoryItems(result.items), 1)
+end
+
+openPlayerDetails = function(playerId, listIndex, preferredDetailIndex)
     selectedPlayerId = playerId
     selectedPlayerListIndex = listIndex or selectedIndex
     playerRefreshToken = playerRefreshToken + 1
@@ -1922,6 +1990,11 @@ local function activateSelectedItem()
     end
 
 
+    if currentMenu == 'playerDetails' and item.action == 'viewInventory' then
+        openPlayerInventory(item.playerId, selectedIndex)
+        return
+    end
+
     if currentMenu == 'playerDetails' and item.action == 'giveVehicle' then
         -- OP Garages V3 eksponerer getAllGarages som server-export.
         -- Garage-listen hentes derfor sikkert gennem sb_admins server-callback.
@@ -2126,6 +2199,11 @@ RegisterNetEvent('sb_admin:client:setFrozen', function(frozen, adminName)
 end)
 
 local function goBack()
+    if currentMenu == 'playerInventory' then
+        openPlayerDetails(selectedPlayerId, selectedPlayerListIndex, playerDetailsReturnIndex)
+        return
+    end
+
     if currentMenu == 'playerDetails' then
         selectedPlayerId = nil
         selectedPlayerName = nil

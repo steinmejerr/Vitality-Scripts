@@ -580,6 +580,84 @@ lib.callback.register('sb_admin:server:getGiveVehicleGarages', function(source)
     return { success = true, garages = options }
 end)
 
+local function normalizeInventoryItems(rawItems)
+    local items = {}
+
+    for key, item in pairs(rawItems or {}) do
+        if type(item) == 'table' then
+            local count = tonumber(item.count or item.amount or item.quantity) or 0
+            local name = tostring(item.name or key or 'unknown')
+
+            if count > 0 then
+                items[#items + 1] = {
+                    name = name,
+                    label = tostring(item.label or name),
+                    count = count,
+                    slot = tonumber(item.slot)
+                }
+            end
+        end
+    end
+
+    table.sort(items, function(a, b)
+        local left = (a.label or a.name):lower()
+        local right = (b.label or b.name):lower()
+
+        if left == right then
+            return (a.slot or 0) < (b.slot or 0)
+        end
+
+        return left < right
+    end)
+
+    return items
+end
+
+lib.callback.register('sb_admin:server:getPlayerInventory', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+    local targetPlayer = targetId and ESX.GetPlayerFromId(targetId)
+
+    if not targetPlayer or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local rawItems
+
+    -- Brug ox_inventory, når det er aktivt. Kaldet er beskyttet, så
+    -- standard ESX inventory stadig fungerer, hvis exporten ikke findes.
+    if GetResourceState('ox_inventory') == 'started' then
+        local ok, result = pcall(function()
+            return exports.ox_inventory:GetInventoryItems(targetId)
+        end)
+
+        if ok and type(result) == 'table' then
+            rawItems = result
+        end
+    end
+
+    if type(rawItems) ~= 'table' then
+        if targetPlayer.getInventory then
+            rawItems = targetPlayer.getInventory()
+        else
+            rawItems = targetPlayer.inventory or {}
+        end
+    end
+
+    local playerName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId)
+
+    return {
+        id = targetId,
+        name = playerName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId),
+        items = normalizeInventoryItems(rawItems)
+    }
+end)
+
 lib.callback.register('sb_admin:server:giveVehicle', function(source, targetId, vehicleData)
     local allowed = hasPermission(source)
 

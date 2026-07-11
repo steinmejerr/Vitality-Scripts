@@ -157,6 +157,19 @@ const icons = {
             <path d="M18 3v5M15.5 5.5h5"></path>
         </svg>
     `,
+    inventory: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 8h14l1 12H4L5 8Z"></path>
+            <path d="M8 8V6a4 4 0 0 1 8 0v2"></path>
+            <path d="M9 12h6"></path>
+        </svg>
+    `,
+    item: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"></path>
+            <path d="m4 7.5 8 4.5 8-4.5M12 12v9"></path>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>
