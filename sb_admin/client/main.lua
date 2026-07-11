@@ -46,6 +46,12 @@ local function getMainMenuItems()
                 and 'Slå usårlighed fra og modtag skade normalt igen.'
                 or 'Gør din karakter usårlig over for skade.',
             icon = 'godmode'
+        },
+        {
+            action = 'teleportWaypoint',
+            label = 'Teleportér til waypoint',
+            description = 'Teleportér til din markering på kortet.',
+            icon = 'waypoint'
         }
     }
 end
@@ -714,6 +720,97 @@ CreateThread(function()
     end
 end)
 
+local function teleportToWaypoint()
+    local waypoint = GetFirstBlipInfoId(8)
+
+    if not waypoint or waypoint == 0 or not DoesBlipExist(waypoint) then
+        notify('Du har ikke sat et waypoint på kortet.', 'error')
+        return false
+    end
+
+    local waypointCoords = GetBlipInfoIdCoord(waypoint)
+    local x = waypointCoords.x
+    local y = waypointCoords.y
+    local ped = PlayerPedId()
+    local entity = ped
+
+    if IsPedInAnyVehicle(ped, false) then
+        entity = GetVehiclePedIsIn(ped, false)
+    end
+
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        notify('Din karakter eller dit køretøj kunne ikke findes.', 'error')
+        return false
+    end
+
+    DoScreenFadeOut(250)
+
+    local fadeTimeout = GetGameTimer() + 1500
+    while not IsScreenFadedOut() and GetGameTimer() < fadeTimeout do
+        Wait(0)
+    end
+
+    local wasFrozenByNoclip = noclipEnabled and entity == noclipEntity
+
+    if not wasFrozenByNoclip then
+        FreezeEntityPosition(entity, true)
+    end
+
+    SetEntityCoordsNoOffset(entity, x, y, 1000.0, false, false, false)
+    RequestCollisionAtCoord(x, y, 1000.0)
+
+    local groundFound = false
+    local groundZ = 0.0
+    local searchHeights = {
+        1000.0, 900.0, 800.0, 700.0, 600.0, 500.0,
+        400.0, 300.0, 250.0, 200.0, 150.0, 100.0,
+        75.0, 50.0, 25.0, 0.0
+    }
+
+    for _, height in ipairs(searchHeights) do
+        SetEntityCoordsNoOffset(entity, x, y, height, false, false, false)
+        RequestCollisionAtCoord(x, y, height)
+        Wait(75)
+
+        local found, z = GetGroundZFor_3dCoord(x, y, height, false)
+
+        if found then
+            groundFound = true
+            groundZ = z
+            break
+        end
+    end
+
+    if groundFound then
+        SetEntityCoordsNoOffset(entity, x, y, groundZ + 1.0, false, false, false)
+        RequestCollisionAtCoord(x, y, groundZ)
+    else
+        -- Fallback, hvis området endnu ikke har leveret ground-data.
+        SetEntityCoordsNoOffset(entity, x, y, 1000.0, false, false, false)
+    end
+
+    local collisionTimeout = GetGameTimer() + 2000
+    while not HasCollisionLoadedAroundEntity(entity) and GetGameTimer() < collisionTimeout do
+        RequestCollisionAtCoord(x, y, groundFound and groundZ or 1000.0)
+        Wait(50)
+    end
+
+    if not wasFrozenByNoclip then
+        FreezeEntityPosition(entity, false)
+    end
+
+    SetEntityVelocity(entity, 0.0, 0.0, 0.0)
+    DoScreenFadeIn(250)
+
+    if not groundFound then
+        notify('Waypointet blev fundet, men jorden kunne ikke indlæses. Du blev placeret over området.', 'warning')
+    else
+        notify('Du blev teleporteret til dit waypoint.', 'success')
+    end
+
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -754,6 +851,22 @@ local function activateSelectedItem()
         toggleGodmode()
 
         -- Behold menuen åben og opdatér teksten på godmode-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'teleportWaypoint' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        teleportToWaypoint()
+
+        -- Menuen forbliver åben, og markeringen bliver på waypoint-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
