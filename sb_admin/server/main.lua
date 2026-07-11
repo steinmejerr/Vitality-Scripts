@@ -316,3 +316,42 @@ AddEventHandler('playerDropped', function()
     frozenPlayers[source] = nil
 end)
 
+
+
+RegisterNetEvent('sb_admin:server:teleportToCoordinates', function(x, y, z, heading)
+    local source = source
+    local xPlayer = ESX.GetPlayerFromId(source)
+
+    if not xPlayer then
+        return
+    end
+
+    local group = xPlayer.getGroup and xPlayer.getGroup() or xPlayer.group
+    if Config.AllowedGroups[group] ~= true then
+        return
+    end
+
+    x = tonumber(x)
+    y = tonumber(y)
+    z = tonumber(z)
+    heading = tonumber(heading) or 0.0
+
+    if not x or not y or not z then
+        return
+    end
+
+    local settings = Config.TeleportCoordinates or {}
+    local xyLimit = tonumber(settings.xyLimit) or 8000.0
+    local minZ = tonumber(settings.minZ) or -250.0
+    local maxZ = tonumber(settings.maxZ) or 2500.0
+
+    if math.abs(x) > xyLimit or math.abs(y) > xyLimit then
+        return
+    end
+
+    if z < minZ or z > maxZ then
+        return
+    end
+
+    TriggerClientEvent('sb_admin:client:teleportToCoordinates', source, x, y, z, heading % 360.0)
+end)

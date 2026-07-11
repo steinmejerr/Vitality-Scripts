@@ -1353,19 +1353,14 @@ end
 
 local function teleportToCoordinates()
     local ped = PlayerPedId()
-    local entity = ped
 
-    if IsPedInAnyVehicle(ped, false) then
-        entity = GetVehiclePedIsIn(ped, false)
-    end
-
-    if not entity or entity == 0 or not DoesEntityExist(entity) then
-        notify('Din karakter eller dit køretøj kunne ikke findes.', 'error')
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        notify('Din karakter kunne ikke findes.', 'error')
         return false
     end
 
-    local currentCoords = GetEntityCoords(entity)
-    local currentHeading = GetEntityHeading(entity)
+    local currentCoords = GetEntityCoords(ped)
+    local currentHeading = GetEntityHeading(ped)
 
     local input = lib.inputDialog('Teleportér til koordinater', {
         {
@@ -1409,58 +1404,128 @@ local function teleportToCoordinates()
     local z = tonumber(input[3])
     local heading = tonumber(input[4]) or currentHeading
 
-    if not x or not y or not z then
-        notify('Koordinaterne er ugyldige.', 'error')
+    local function isFinite(value)
+        return value ~= nil
+            and value == value
+            and value ~= math.huge
+            and value ~= -math.huge
+    end
+
+    if not isFinite(x) or not isFinite(y) or not isFinite(z) or not isFinite(heading) then
+        notify('Koordinaterne indeholder en ugyldig værdi.', 'error')
         return false
     end
 
-    -- Undgå åbenlyst ugyldige værdier, der kan sende spilleren langt uden for GTA-kortet.
-    local limit = (Config.TeleportCoordinates and Config.TeleportCoordinates.coordinateLimit) or 10000.0
+    local settings = Config.TeleportCoordinates or {}
+    local xyLimit = tonumber(settings.xyLimit) or 8000.0
+    local minZ = tonumber(settings.minZ) or -250.0
+    local maxZ = tonumber(settings.maxZ) or 2500.0
 
-    if math.abs(x) > limit or math.abs(y) > limit or math.abs(z) > limit then
-        notify(('Koordinaterne må højst være mellem -%s og %s.'):format(limit, limit), 'error')
+    if math.abs(x) > xyLimit or math.abs(y) > xyLimit then
+        notify(('X og Y skal være mellem -%s og %s.'):format(xyLimit, xyLimit), 'error')
         return false
+    end
+
+    if z < minZ or z > maxZ then
+        notify(('Z skal være mellem %s og %s.'):format(minZ, maxZ), 'error')
+        return false
+    end
+
+    local entity = ped
+    if IsPedInAnyVehicle(ped, false) then
+        entity = GetVehiclePedIsIn(ped, false)
     end
 
     saveReturnPosition(entity)
 
-    DoScreenFadeOut(200)
+    TriggerServerEvent(
+        'sb_admin:server:teleportToCoordinates',
+        x + 0.0,
+        y + 0.0,
+        z + 0.0,
+        (heading % 360.0) + 0.0
+    )
 
-    local fadeTimeout = GetGameTimer() + 1200
-    while not IsScreenFadedOut() and GetGameTimer() < fadeTimeout do
-        Wait(0)
-    end
-
-    local wasFrozenByNoclip = noclipEnabled and entity == noclipEntity
-
-    if not wasFrozenByNoclip then
-        FreezeEntityPosition(entity, true)
-    end
-
-    RequestCollisionAtCoord(x, y, z)
-    NewLoadSceneStartSphere(x, y, z, 50.0, 0)
-    SetEntityCoordsNoOffset(entity, x, y, z, false, false, false)
-    SetEntityHeading(entity, heading % 360.0)
-    SetEntityVelocity(entity, 0.0, 0.0, 0.0)
-
-    local collisionTimeout = GetGameTimer() + ((Config.TeleportCoordinates and Config.TeleportCoordinates.collisionTimeout) or 2500)
-
-    while not HasCollisionLoadedAroundEntity(entity) and GetGameTimer() < collisionTimeout do
-        RequestCollisionAtCoord(x, y, z)
-        Wait(50)
-    end
-
-    NewLoadSceneStop()
-
-    if not wasFrozenByNoclip then
-        FreezeEntityPosition(entity, false)
-    end
-
-    DoScreenFadeIn(200)
-    notify(('Teleporteret til %.2f, %.2f, %.2f.'):format(x, y, z), 'success')
     return true
 end
 
+RegisterNetEvent('sb_admin:client:teleportToCoordinates', function(x, y, z, heading)
+    x = tonumber(x)
+    y = tonumber(y)
+    z = tonumber(z)
+    heading = tonumber(heading) or 0.0
+
+    if not x or not y or not z then
+        notify('Teleporteringen modtog ugyldige koordinater.', 'error')
+        return
+    end
+
+    local ped = PlayerPedId()
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        notify('Din karakter kunne ikke findes.', 'error')
+        return
+    end
+
+    local vehicle = GetVehiclePedIsIn(ped, false)
+    local hasVehicle = vehicle and vehicle ~= 0 and DoesEntityExist(vehicle)
+
+    DoScreenFadeOut(500)
+    while not IsScreenFadedOut() do
+        Wait(0)
+    end
+
+    -- Samme sikre teleport-princip som txAdmin:
+    -- 1) flyt til destinationens X/Y i en neutral højde
+    -- 2) vent på world collision
+    -- 3) flyt til den endelige Z-værdi
+    SetPedCoordsKeepVehicle(ped, x, y, 100.0)
+
+    if hasVehicle then
+        FreezeEntityPosition(vehicle, true)
+    else
+        FreezeEntityPosition(ped, true)
+    end
+
+    local collisionDeadline = GetGameTimer()
+        + ((Config.TeleportCoordinates and Config.TeleportCoordinates.collisionTimeout) or 10000)
+
+    while IsEntityWaitingForWorldCollision(ped)
+        and GetGameTimer() < collisionDeadline do
+        Wait(100)
+    end
+
+    ped = PlayerPedId()
+    SetPedCoordsKeepVehicle(ped, x, y, z)
+    SetEntityHeading(ped, heading)
+
+    if hasVehicle then
+        vehicle = GetVehiclePedIsIn(ped, false)
+
+        if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+            SetEntityAlpha(vehicle, 125, false)
+            SetEntityCoords(vehicle, x, y, z + 0.5, false, false, false, false)
+            SetEntityHeading(vehicle, heading)
+            SetPedIntoVehicle(ped, vehicle, -1)
+            SetVehicleOnGroundProperly(vehicle)
+            SetEntityCollision(vehicle, true, true)
+            FreezeEntityPosition(vehicle, false)
+
+            CreateThread(function()
+                Wait(2000)
+                if DoesEntityExist(vehicle) then
+                    ResetEntityAlpha(vehicle)
+                end
+            end)
+        end
+    else
+        FreezeEntityPosition(ped, false)
+    end
+
+    SetGameplayCamRelativeHeading(0.0)
+    DoScreenFadeIn(500)
+
+    notify(('Teleporteret til %.2f, %.2f, %.2f.'):format(x, y, z), 'success')
+end)
 
 local function copyCurrentCoordinates()
     local ped = PlayerPedId()

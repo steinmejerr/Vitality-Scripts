@@ -75,11 +75,15 @@ Config.Announcement = {
 
 
 Config.TeleportCoordinates = {
-    -- Sikkerhedsgrænse for X, Y og Z.
-    coordinateLimit = 10000.0,
+    -- GTA V-kortets sikre område for X og Y.
+    xyLimit = 8000.0,
 
-    -- Maksimal ventetid på collision ved destinationen.
-    collisionTimeout = 2500
+    -- Sikre grænser for højden.
+    minZ = -250.0,
+    maxZ = 2500.0,
+
+    -- Maksimal ventetid på GTA's indbyggede teleport-system.
+    teleportTimeout = 5000
 }
 
 
