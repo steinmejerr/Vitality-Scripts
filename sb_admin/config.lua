@@ -81,3 +81,9 @@ Config.TeleportCoordinates = {
     -- Maksimal ventetid på collision ved destinationen.
     collisionTimeout = 2500
 }
+
+
+Config.CopyCoordinates = {
+    -- Antal decimaler i de kopierede koordinater.
+    decimals = 2
+}

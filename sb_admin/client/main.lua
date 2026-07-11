@@ -110,6 +110,12 @@ local function getMainMenuItems()
             icon = 'coordinates'
         },
         {
+            action = 'copyCoordinates',
+            label = 'Kopiér koordinater',
+            description = 'Kopiér din aktuelle position i det ønskede format.',
+            icon = 'copycoordinates'
+        },
+        {
             action = 'returnPosition',
             label = 'Returnér',
             description = returnPosition
@@ -1455,6 +1461,77 @@ local function teleportToCoordinates()
     return true
 end
 
+
+local function copyCurrentCoordinates()
+    local ped = PlayerPedId()
+
+    if not ped or ped == 0 or not DoesEntityExist(ped) then
+        notify('Din karakter kunne ikke findes.', 'error')
+        return false
+    end
+
+    local coords = GetEntityCoords(ped)
+    local heading = GetEntityHeading(ped)
+    local decimals = (Config.CopyCoordinates and Config.CopyCoordinates.decimals) or 2
+
+    decimals = math.min(math.max(math.floor(tonumber(decimals) or 2), 0), 6)
+
+    local input = lib.inputDialog('Kopiér koordinater', {
+        {
+            type = 'select',
+            label = 'Format',
+            description = 'Vælg hvordan koordinaterne skal kopieres.',
+            required = true,
+            default = 'vector4',
+            options = {
+                { value = 'vector3', label = 'vector3(x, y, z)' },
+                { value = 'vector4', label = 'vector4(x, y, z, heading)' },
+                { value = 'plain', label = 'x, y, z' },
+                { value = 'table', label = '{ x = ..., y = ..., z = ..., w = ... }' }
+            }
+        }
+    })
+
+    if not input or not input[1] then
+        return false
+    end
+
+    local format = tostring(input[1])
+    local numberFormat = '%.' .. decimals .. 'f'
+    local x = numberFormat:format(coords.x)
+    local y = numberFormat:format(coords.y)
+    local z = numberFormat:format(coords.z)
+    local h = numberFormat:format(heading)
+    local clipboardText
+
+    if format == 'vector3' then
+        clipboardText = ('vector3(%s, %s, %s)'):format(x, y, z)
+    elseif format == 'plain' then
+        clipboardText = ('%s, %s, %s'):format(x, y, z)
+    elseif format == 'table' then
+        clipboardText = ('{ x = %s, y = %s, z = %s, w = %s }'):format(x, y, z, h)
+    else
+        clipboardText = ('vector4(%s, %s, %s, %s)'):format(x, y, z, h)
+    end
+
+    SendNUIMessage({
+        action = 'copyToClipboard',
+        text = clipboardText
+    })
+
+    return true
+end
+
+RegisterNUICallback('clipboardResult', function(data, cb)
+    if data and data.success then
+        notify('Koordinaterne blev kopieret til udklipsholderen.', 'success')
+    else
+        notify('Koordinaterne kunne ikke kopieres automatisk.', 'error')
+    end
+
+    cb({ ok = true })
+end)
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -1653,6 +1730,22 @@ local function activateSelectedItem()
         teleportToCoordinates()
 
         -- Menuen forbliver åben, og markeringen bliver på koordinat-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'copyCoordinates' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        copyCurrentCoordinates()
+
+        -- Menuen forbliver åben, og markeringen bliver på kopiér-koordinater-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end

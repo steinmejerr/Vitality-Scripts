@@ -98,6 +98,12 @@ const icons = {
             <path d="M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19"></path>
         </svg>
     `,
+    copycoordinates: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="8" y="8" width="11" height="11" rx="2"></rect>
+            <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
+        </svg>
+    `,
     return: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 7 4 12l5 5"></path>
@@ -241,6 +247,44 @@ function escapeHtml(value) {
         .replaceAll("'", '&#039;');
 }
 
+
+async function copyToClipboard(text) {
+    let success = false;
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            success = true;
+        }
+    } catch (_) {
+        success = false;
+    }
+
+    if (!success) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            success = document.execCommand('copy');
+        } catch (_) {
+            success = false;
+        }
+
+        textarea.remove();
+    }
+
+    fetch(`https://${GetParentResourceName()}/clipboardResult`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ success })
+    }).catch(() => {});
+}
+
 window.addEventListener('message', (event) => {
     const data = event.data || {};
 
@@ -259,6 +303,10 @@ window.addEventListener('message', (event) => {
         case 'select':
             selectedIndex = Number(data.selectedIndex) || 1;
             renderItems();
+            break;
+
+        case 'copyToClipboard':
+            copyToClipboard(String(data.text || ''));
             break;
 
         case 'close':
