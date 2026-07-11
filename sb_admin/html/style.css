@@ -274,3 +274,8 @@ kbd {
         min-width: 0;
     }
 }
+
+/* Menuen bruger intern tastaturnavigation og viser højst syv rækker ad gangen. */
+.menu-list {
+    overflow: hidden;
+}

@@ -8,6 +8,11 @@ const menuTitle = document.getElementById('menu-title');
 
 let items = [];
 let selectedIndex = 1;
+let windowStart = 1;
+
+// Antallet af menupunkter, der må være synlige på samme tid.
+// Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
+const MAX_VISIBLE_ITEMS = 7;
 
 const icons = {
     players: `
@@ -83,12 +88,38 @@ const icons = {
     `
 };
 
+function clampWindowStart() {
+    const total = items.length;
+    const maxStart = Math.max(1, total - MAX_VISIBLE_ITEMS + 1);
+    windowStart = Math.min(Math.max(windowStart, 1), maxStart);
+}
+
+function ensureSelectionVisible() {
+    if (selectedIndex < windowStart) {
+        windowStart = selectedIndex;
+    } else if (selectedIndex > windowStart + MAX_VISIBLE_ITEMS - 1) {
+        windowStart = selectedIndex - MAX_VISIBLE_ITEMS + 1;
+    }
+
+    clampWindowStart();
+}
+
+function resetScrollForMenu() {
+    windowStart = 1;
+    ensureSelectionVisible();
+}
+
 function renderItems() {
     menuList.innerHTML = '';
 
-    items.forEach((item, index) => {
+    ensureSelectionVisible();
+
+    const firstArrayIndex = windowStart - 1;
+    const visibleItems = items.slice(firstArrayIndex, firstArrayIndex + MAX_VISIBLE_ITEMS);
+
+    visibleItems.forEach((item, visibleIndex) => {
         const element = document.createElement('div');
-        const itemIndex = index + 1;
+        const itemIndex = windowStart + visibleIndex;
 
         element.className = [
             'menu-item',
@@ -131,6 +162,7 @@ window.addEventListener('message', (event) => {
             items = Array.isArray(data.items) ? data.items : [];
             menuTitle.textContent = data.title || 'Adminmenu';
             selectedIndex = Number(data.selectedIndex) || 1;
+            resetScrollForMenu();
             renderItems();
 
             menu.classList.toggle('visible', Boolean(data.visible));
@@ -143,6 +175,7 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'close':
+            windowStart = 1;
             menu.classList.remove('visible');
             menu.setAttribute('aria-hidden', 'true');
             break;
