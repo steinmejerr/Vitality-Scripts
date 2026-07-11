@@ -41,6 +41,12 @@ const icons = {
             <circle cx="12" cy="9" r="2.5"></circle>
         </svg>
     `,
+    return: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 7 4 12l5 5"></path>
+            <path d="M4 12h10a6 6 0 0 1 6 6"></path>
+        </svg>
+    `,
     player: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="4"></circle>

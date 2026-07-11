@@ -12,6 +12,7 @@ local spectateReturn = nil
 local noclipEnabled = false
 local noclipEntity = nil
 local godmodeEnabled = false
+local returnPosition = nil
 
 local function notify(description, notifyType)
     lib.notify({
@@ -52,6 +53,14 @@ local function getMainMenuItems()
             label = 'Teleportér til waypoint',
             description = 'Teleportér til din markering på kortet.',
             icon = 'waypoint'
+        },
+        {
+            action = 'returnPosition',
+            label = 'Returnér',
+            description = returnPosition
+                and 'Teleportér tilbage til din senest gemte position.'
+                or 'Der er endnu ikke gemt en tidligere position.',
+            icon = 'return'
         }
     }
 end
@@ -720,6 +729,80 @@ CreateThread(function()
     end
 end)
 
+local function saveReturnPosition(entity)
+    entity = entity or PlayerPedId()
+
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        return false
+    end
+
+    local coords = GetEntityCoords(entity)
+
+    returnPosition = {
+        coords = {
+            x = coords.x,
+            y = coords.y,
+            z = coords.z
+        },
+        heading = GetEntityHeading(entity),
+        wasInVehicle = IsEntityAVehicle(entity)
+    }
+
+    return true
+end
+
+local function returnToPreviousPosition()
+    if not returnPosition or not returnPosition.coords then
+        notify('Der er ikke gemt en tidligere position endnu.', 'error')
+        return false
+    end
+
+    local ped = PlayerPedId()
+    local entity = ped
+
+    if IsPedInAnyVehicle(ped, false) then
+        entity = GetVehiclePedIsIn(ped, false)
+    end
+
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        notify('Din karakter eller dit køretøj kunne ikke findes.', 'error')
+        return false
+    end
+
+    local coords = returnPosition.coords
+    local x = tonumber(coords.x)
+    local y = tonumber(coords.y)
+    local z = tonumber(coords.z)
+
+    if not x or not y or not z then
+        returnPosition = nil
+        notify('Den gemte position var ugyldig og er blevet slettet.', 'error')
+        return false
+    end
+
+    DoScreenFadeOut(200)
+
+    local fadeTimeout = GetGameTimer() + 1200
+    while not IsScreenFadedOut() and GetGameTimer() < fadeTimeout do
+        Wait(0)
+    end
+
+    RequestCollisionAtCoord(x, y, z)
+    SetEntityCoordsNoOffset(entity, x, y, z, false, false, false)
+    SetEntityHeading(entity, tonumber(returnPosition.heading) or 0.0)
+    SetEntityVelocity(entity, 0.0, 0.0, 0.0)
+
+    local collisionTimeout = GetGameTimer() + 2000
+    while not HasCollisionLoadedAroundEntity(entity) and GetGameTimer() < collisionTimeout do
+        RequestCollisionAtCoord(x, y, z)
+        Wait(50)
+    end
+
+    DoScreenFadeIn(200)
+    notify('Du blev teleporteret tilbage til din tidligere position.', 'success')
+    return true
+end
+
 local function teleportToWaypoint()
     local waypoint = GetFirstBlipInfoId(8)
 
@@ -743,6 +826,7 @@ local function teleportToWaypoint()
         return false
     end
 
+    saveReturnPosition(entity)
     DoScreenFadeOut(250)
 
     local fadeTimeout = GetGameTimer() + 1500
@@ -871,6 +955,22 @@ local function activateSelectedItem()
         return
     end
 
+    if currentMenu == 'main' and item.action == 'returnPosition' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        returnToPreviousPosition()
+
+        -- Menuen forbliver åben efter returnering.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
     if currentMenu == 'players' and item.action == 'player' then
         openPlayerDetails(item.playerId, selectedIndex)
         return
@@ -901,6 +1001,7 @@ local function activateSelectedItem()
             return
         end
 
+        saveReturnPosition(entity)
         RequestCollisionAtCoord(x, y, z)
         SetEntityCoordsNoOffset(entity, x + 1.0, y + 1.0, z, false, false, false)
         SetEntityHeading(entity, heading)
