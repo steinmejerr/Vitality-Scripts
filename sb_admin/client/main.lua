@@ -6,6 +6,9 @@ local playerRefreshToken = 0
 local selectedPlayerId = nil
 local selectedPlayerListIndex = 1
 local selectedPlayerName = nil
+local spectating = false
+local spectateTargetId = nil
+local spectateReturn = nil
 
 local function notify(description, notifyType)
     lib.notify({
@@ -184,6 +187,15 @@ local function buildPlayerDetailItems(player)
             icon = 'revive'
         },
         {
+            action = 'spectatePlayer',
+            playerId = player.id,
+            label = spectating and spectateTargetId == player.id and 'Stop spectate' or 'Spectate spiller',
+            description = spectating and spectateTargetId == player.id
+                and 'Stop overvågning og vend tilbage til din tidligere position.'
+                or 'Overvåg den valgte spiller uden at teleportere permanent.',
+            icon = 'spectate'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -330,6 +342,117 @@ local function moveSelection(direction)
     })
 end
 
+
+local function restoreSpectateState(showNotification)
+    if not spectating then
+        return
+    end
+
+    local ped = PlayerPedId()
+
+    NetworkSetInSpectatorMode(false, ped)
+    SetEntityVisible(ped, true, false)
+    SetEntityCollision(ped, true, true)
+    SetEntityInvincible(ped, false)
+    FreezeEntityPosition(ped, false)
+
+    if spectateReturn and spectateReturn.coords then
+        local coords = spectateReturn.coords
+        RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+        SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z, false, false, false)
+        SetEntityHeading(ped, spectateReturn.heading or 0.0)
+    end
+
+    spectating = false
+    spectateTargetId = nil
+    spectateReturn = nil
+
+    if showNotification then
+        notify('Spectate blev stoppet.', 'inform')
+    end
+end
+
+local function startSpectate(targetId, targetName, coords)
+    targetId = tonumber(targetId)
+
+    if not targetId or targetId == GetPlayerServerId(PlayerId()) then
+        notify('Du kan ikke spectate dig selv.', 'error')
+        return false
+    end
+
+    if spectating then
+        restoreSpectateState(false)
+        Wait(250)
+    end
+
+    local ped = PlayerPedId()
+    local currentCoords = GetEntityCoords(ped)
+
+    spectateReturn = {
+        coords = {
+            x = currentCoords.x,
+            y = currentCoords.y,
+            z = currentCoords.z
+        },
+        heading = GetEntityHeading(ped)
+    }
+
+    spectating = true
+    spectateTargetId = targetId
+
+    FreezeEntityPosition(ped, true)
+    SetEntityInvincible(ped, true)
+    SetEntityCollision(ped, false, false)
+    SetEntityVisible(ped, false, false)
+
+    if coords then
+        RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+        SetEntityCoordsNoOffset(ped, coords.x, coords.y, coords.z + 10.0, false, false, false)
+    end
+
+    local timeout = GetGameTimer() + 5000
+    local targetPlayer = GetPlayerFromServerId(targetId)
+
+    while targetPlayer == -1 and GetGameTimer() < timeout do
+        Wait(100)
+        targetPlayer = GetPlayerFromServerId(targetId)
+    end
+
+    if targetPlayer == -1 then
+        restoreSpectateState(false)
+        notify('Spilleren kunne ikke indlæses til spectate.', 'error')
+        return false
+    end
+
+    local targetPed = GetPlayerPed(targetPlayer)
+
+    if not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then
+        restoreSpectateState(false)
+        notify('Spilleren kunne ikke indlæses til spectate.', 'error')
+        return false
+    end
+
+    NetworkSetInSpectatorMode(true, targetPed)
+    notify(('Du spectater nu %s.'):format(targetName or 'spilleren'), 'success')
+
+    CreateThread(function()
+        local watchedTarget = targetId
+
+        while spectating and spectateTargetId == watchedTarget do
+            Wait(500)
+
+            local player = GetPlayerFromServerId(watchedTarget)
+            if player == -1 or not NetworkIsPlayerActive(player) then
+                restoreSpectateState(false)
+                notify('Spilleren forlod serveren. Spectate blev stoppet.', 'error')
+                break
+            end
+        end
+    end)
+
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -422,6 +545,28 @@ local function activateSelectedItem()
         end
 
         notify(('%s blev genoplivet.'):format(result.name or 'Spilleren'), 'success')
+        return
+    end
+
+
+    if currentMenu == 'playerDetails' and item.action == 'spectatePlayer' then
+        if spectating and spectateTargetId == tonumber(item.playerId) then
+            restoreSpectateState(true)
+            openPlayerDetails(item.playerId, selectedPlayerListIndex)
+            return
+        end
+
+        local result = lib.callback.await('sb_admin:server:getSpectateTarget', false, item.playerId)
+
+        if not result or not result.coords then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        if startSpectate(item.playerId, result.name, result.coords) then
+            closeMenu()
+        end
+
         return
     end
 end
@@ -560,5 +705,6 @@ AddEventHandler('onResourceStop', function(resourceName)
         return
     end
 
+    restoreSpectateState(false)
     SetNuiFocus(false, false)
 end)

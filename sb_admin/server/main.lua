@@ -254,6 +254,40 @@ lib.callback.register('sb_admin:server:toggleFreezePlayer', function(source, tar
     }
 end)
 
+
+lib.callback.register('sb_admin:server:getSpectateTarget', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or targetId == source or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+    local targetPed = GetPlayerPed(targetId)
+
+    if not targetPlayer or not targetPed or targetPed == 0 or not DoesEntityExist(targetPed) then
+        return nil
+    end
+
+    local coords = GetEntityCoords(targetPed)
+    local playerName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId)
+
+    return {
+        name = playerName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId),
+        coords = {
+            x = coords.x,
+            y = coords.y,
+            z = coords.z
+        }
+    }
+end)
+
 AddEventHandler('playerDropped', function()
     frozenPlayers[source] = nil
 end)
