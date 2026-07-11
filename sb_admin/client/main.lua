@@ -11,6 +11,7 @@ local spectateTargetId = nil
 local spectateReturn = nil
 local noclipEnabled = false
 local noclipEntity = nil
+local godmodeEnabled = false
 
 local function notify(description, notifyType)
     lib.notify({
@@ -37,6 +38,14 @@ local function getMainMenuItems()
                 and 'Slå fri bevægelse fra og vend tilbage til normal styring.'
                 or 'Flyv frit i den retning, kameraet peger.',
             icon = 'noclip'
+        },
+        {
+            action = 'toggleGodmode',
+            label = godmodeEnabled and 'Deaktivér godmode' or 'Aktivér godmode',
+            description = godmodeEnabled
+                and 'Slå usårlighed fra og modtag skade normalt igen.'
+                or 'Gør din karakter usårlig over for skade.',
+            icon = 'godmode'
         }
     }
 end
@@ -363,7 +372,9 @@ local function restoreSpectateState(showNotification)
     NetworkSetInSpectatorMode(false, ped)
     SetEntityVisible(ped, true, false)
     SetEntityCollision(ped, true, true)
-    SetEntityInvincible(ped, false)
+    SetEntityInvincible(ped, godmodeEnabled)
+    SetPlayerInvincible(PlayerId(), godmodeEnabled)
+    SetEntityProofs(ped, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled)
     FreezeEntityPosition(ped, false)
 
     if spectateReturn and spectateReturn.coords then
@@ -495,14 +506,16 @@ local function disableNoclip(showNotification)
     if entity and entity ~= 0 and DoesEntityExist(entity) then
         FreezeEntityPosition(entity, false)
         SetEntityCollision(entity, true, true)
-        SetEntityInvincible(entity, false)
+        SetEntityInvincible(entity, godmodeEnabled)
         SetEntityVisible(entity, true, false)
         SetEntityVelocity(entity, 0.0, 0.0, 0.0)
     end
 
     local ped = PlayerPedId()
     SetEntityCollision(ped, true, true)
-    SetEntityInvincible(ped, false)
+    SetEntityInvincible(ped, godmodeEnabled)
+    SetPlayerInvincible(PlayerId(), godmodeEnabled)
+    SetEntityProofs(ped, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled)
     SetEntityVisible(ped, true, false)
     FreezeEntityPosition(ped, false)
 
@@ -546,6 +559,68 @@ local function toggleNoclip()
 
     enableNoclip()
 end
+
+local function applyGodmodeState(enabled)
+    local ped = PlayerPedId()
+
+    SetPlayerInvincible(PlayerId(), enabled)
+    SetEntityInvincible(ped, enabled or noclipEnabled)
+    SetEntityProofs(
+        ped,
+        enabled, -- bullets
+        enabled, -- fire
+        enabled, -- explosions
+        enabled, -- collision
+        enabled, -- melee
+        enabled, -- steam
+        enabled, -- unknown proof
+        enabled  -- drowning
+    )
+
+    if enabled then
+        ClearPedBloodDamage(ped)
+        ResetPedVisibleDamage(ped)
+    end
+end
+
+local function disableGodmode(showNotification)
+    if not godmodeEnabled then
+        return
+    end
+
+    godmodeEnabled = false
+    applyGodmodeState(false)
+
+    if showNotification then
+        notify('Godmode blev deaktiveret.', 'inform')
+    end
+end
+
+local function enableGodmode()
+    godmodeEnabled = true
+    applyGodmodeState(true)
+    notify('Godmode blev aktiveret.', 'success')
+end
+
+local function toggleGodmode()
+    if godmodeEnabled then
+        disableGodmode(true)
+    else
+        enableGodmode()
+    end
+end
+
+-- Genanvend beskyttelsen løbende, da andre resources kan ændre ped-state.
+CreateThread(function()
+    while true do
+        if not godmodeEnabled then
+            Wait(500)
+        else
+            Wait(0)
+            applyGodmodeState(true)
+        end
+    end
+end)
 
 CreateThread(function()
     while true do
@@ -663,6 +738,22 @@ local function activateSelectedItem()
         toggleNoclip()
 
         -- Behold menuen åben og opdatér teksten på noclip-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'toggleGodmode' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        toggleGodmode()
+
+        -- Behold menuen åben og opdatér teksten på godmode-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -910,5 +1001,6 @@ AddEventHandler('onResourceStop', function(resourceName)
 
     restoreSpectateState(false)
     disableNoclip(false)
+    disableGodmode(false)
     SetNuiFocus(false, false)
 end)

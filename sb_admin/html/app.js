@@ -29,6 +29,12 @@ const icons = {
             <path d="m16 8 4 4-4 4M8 8l-4 4 4 4M8 8l4-4 4 4M8 16l4 4 4-4"></path>
         </svg>
     `,
+    godmode: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 19 6v5c0 4.5-2.8 7.6-7 9.2C7.8 18.6 5 15.5 5 11V6l7-3Z"></path>
+            <path d="M12 7v10M8.5 12h7"></path>
+        </svg>
+    `,
     player: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="4"></circle>
