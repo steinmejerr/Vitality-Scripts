@@ -299,7 +299,7 @@ local function buildPlayerDetailItems(player)
     }
 end
 
-local function openPlayerDetails(playerId, listIndex)
+local function openPlayerDetails(playerId, listIndex, preferredDetailIndex)
     selectedPlayerId = playerId
     selectedPlayerListIndex = listIndex or selectedIndex
     playerRefreshToken = playerRefreshToken + 1
@@ -324,7 +324,7 @@ local function openPlayerDetails(playerId, listIndex)
     end
 
     selectedPlayerName = ('[%s] %s'):format(player.id, player.name)
-    setMenu('playerDetails', buildPlayerDetailItems(player), 1)
+    setMenu('playerDetails', buildPlayerDetailItems(player), preferredDetailIndex or 1)
 end
 
 openPlayerMenu = function()
@@ -1374,7 +1374,6 @@ local function activateSelectedItem()
         SetEntityCoordsNoOffset(entity, x + 1.0, y + 1.0, z, false, false, false)
         SetEntityHeading(entity, heading)
 
-        closeMenu()
         notify(('Du blev teleporteret til %s.'):format(result.name or 'spilleren'), 'success')
         return
     end
@@ -1387,7 +1386,6 @@ local function activateSelectedItem()
             return
         end
 
-        closeMenu()
         notify(('%s blev teleporteret hen til dig.'):format(result.name or 'Spilleren'), 'success')
         return
     end
@@ -1407,7 +1405,7 @@ local function activateSelectedItem()
             'success'
         )
 
-        openPlayerDetails(item.playerId, selectedPlayerListIndex)
+        openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
         return
     end
 
@@ -1427,7 +1425,7 @@ local function activateSelectedItem()
     if currentMenu == 'playerDetails' and item.action == 'spectatePlayer' then
         if spectating and spectateTargetId == tonumber(item.playerId) then
             restoreSpectateState(true)
-            openPlayerDetails(item.playerId, selectedPlayerListIndex)
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
             return
         end
 
@@ -1439,7 +1437,7 @@ local function activateSelectedItem()
         end
 
         if startSpectate(item.playerId, result.name, result.coords) then
-            closeMenu()
+            openPlayerDetails(item.playerId, selectedPlayerListIndex, selectedIndex)
         end
 
         return
