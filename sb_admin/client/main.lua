@@ -661,7 +661,9 @@ local function activateSelectedItem()
         end
 
         toggleNoclip()
-        closeMenu()
+
+        -- Behold menuen åben og opdatér teksten på noclip-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
 
