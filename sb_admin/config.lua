@@ -17,3 +17,8 @@ Config.Notify = {
     position = 'top-right',
     duration = 3500
 }
+
+
+-- Revive-integrationen bruger Piotreq Ambulance Job v2's officielle event.
+-- Resource-navnet er normalt p_ambulancejob.
+Config.AmbulanceResource = 'p_ambulancejob'

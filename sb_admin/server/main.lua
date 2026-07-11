@@ -182,6 +182,44 @@ lib.callback.register('sb_admin:server:bringPlayer', function(source, targetId)
     }
 end)
 
+lib.callback.register('sb_admin:server:revivePlayer', function(source, targetId)
+    local allowed = hasPermission(source)
+
+    if not allowed then
+        return nil
+    end
+
+    targetId = tonumber(targetId)
+
+    if not targetId or not GetPlayerName(targetId) then
+        return nil
+    end
+
+    local adminPlayer = ESX.GetPlayerFromId(source)
+    local targetPlayer = ESX.GetPlayerFromId(targetId)
+
+    if not adminPlayer or not targetPlayer then
+        return nil
+    end
+
+    local adminName = adminPlayer.getName and adminPlayer.getName() or GetPlayerName(source)
+    local targetName = targetPlayer.getName and targetPlayer.getName() or GetPlayerName(targetId)
+
+    frozenPlayers[targetId] = nil
+
+    -- Piotreq Ambulance Job v2 har sin egen death-state.
+    -- Derfor skal revive gå gennem ambulancejobbets officielle client-event.
+    TriggerClientEvent('p_ambulancejob/client/death/revive', targetId)
+
+    -- Vores egen event bruges kun til beskeden og til at sikre,
+    -- at en eventuel admin-freeze bliver fjernet.
+    TriggerClientEvent('sb_admin:client:reviveNotification', targetId, adminName or 'en administrator')
+
+    return {
+        name = targetName or GetPlayerName(targetId) or ('Spiller %s'):format(targetId)
+    }
+end)
+
 lib.callback.register('sb_admin:server:toggleFreezePlayer', function(source, targetId)
     local allowed = hasPermission(source)
 

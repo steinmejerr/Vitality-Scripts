@@ -46,6 +46,12 @@ const icons = {
             <path d="m19.8 6.5-2.7.2M19.8 6.5 18.7 4M4.2 17.5l2.7-.2M4.2 17.5l1.1 2.5"></path>
         </svg>
     `,
+    revive: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v18M3 12h18"></path>
+            <circle cx="12" cy="12" r="9"></circle>
+        </svg>
+    `,
     id: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3" y="5" width="18" height="14" rx="2"></rect>

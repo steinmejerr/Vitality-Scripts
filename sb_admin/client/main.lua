@@ -177,6 +177,13 @@ local function buildPlayerDetailItems(player)
             icon = 'freeze'
         },
         {
+            action = 'revivePlayer',
+            playerId = player.id,
+            label = 'Genopliv spiller',
+            description = 'Genopliv den valgte spiller og gendan fuldt liv.',
+            icon = 'revive'
+        },
+        {
             label = 'Server-ID',
             description = tostring(player.id),
             icon = 'id',
@@ -405,6 +412,18 @@ local function activateSelectedItem()
         openPlayerDetails(item.playerId, selectedPlayerListIndex)
         return
     end
+
+    if currentMenu == 'playerDetails' and item.action == 'revivePlayer' then
+        local result = lib.callback.await('sb_admin:server:revivePlayer', false, item.playerId)
+
+        if not result then
+            notify('Spilleren er ikke længere online, eller du har mistet adgang.', 'error')
+            return
+        end
+
+        notify(('%s blev genoplivet.'):format(result.name or 'Spilleren'), 'success')
+        return
+    end
 end
 
 RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
@@ -433,6 +452,20 @@ RegisterNetEvent('sb_admin:client:bringToAdmin', function(data)
     SetEntityHeading(entity, heading)
 
     notify(('Du blev teleporteret til %s.'):format(data.adminName or 'en administrator'), 'inform')
+end)
+
+RegisterNetEvent('sb_admin:client:reviveNotification', function(adminName)
+    local ped = PlayerPedId()
+
+    -- Ambulancejobbet står selv for revive og nulstilling af death-state.
+    -- Her fjerner vi kun en eventuel admin-freeze og viser beskeden.
+    FreezeEntityPosition(ped, false)
+
+    if IsPedInAnyVehicle(ped, false) then
+        FreezeEntityPosition(GetVehiclePedIsIn(ped, false), false)
+    end
+
+    notify(('Du blev genoplivet af %s.'):format(adminName or 'en administrator'), 'success')
 end)
 
 RegisterNetEvent('sb_admin:client:setFrozen', function(frozen, adminName)
