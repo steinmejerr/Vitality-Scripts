@@ -33,3 +33,9 @@ Config.Noclip = {
 Config.PlayerIds = {
     distance = 75.0
 }
+
+
+Config.DeleteVehicle = {
+    -- Afstand i meter, når administratoren ikke sidder i et køretøj.
+    distance = 6.0
+}

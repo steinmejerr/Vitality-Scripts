@@ -49,6 +49,13 @@ const icons = {
             <path d="M17.5 5.5h3v3M20.5 5.5l-4 4"></path>
         </svg>
     `,
+    deletevehicle: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 8h14l1.5 5v5H19v2h-2v-2H7v2H5v-2H3.5v-5L5 8Z"></path>
+            <path d="m7 8 1.5-4h7L17 8M6 13h2M16 13h2"></path>
+            <path d="M4 4l16 16"></path>
+        </svg>
+    `,
     waypoint: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"></path>

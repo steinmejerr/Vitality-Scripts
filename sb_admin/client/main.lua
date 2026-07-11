@@ -68,6 +68,12 @@ local function getMainMenuItems()
             icon = 'playerids'
         },
         {
+            action = 'deleteVehicle',
+            label = 'Slet køretøj',
+            description = 'Fjern køretøjet, du sidder i eller står tæt på.',
+            icon = 'deletevehicle'
+        },
+        {
             action = 'teleportWaypoint',
             label = 'Teleportér til waypoint',
             description = 'Teleportér til din markering på kortet.',
@@ -1051,6 +1057,108 @@ local function teleportToWaypoint()
     return true
 end
 
+
+local function getClosestVehicleWithinDistance(maxDistance)
+    local ped = PlayerPedId()
+
+    if IsPedInAnyVehicle(ped, false) then
+        local currentVehicle = GetVehiclePedIsIn(ped, false)
+
+        if currentVehicle ~= 0 and DoesEntityExist(currentVehicle) then
+            return currentVehicle
+        end
+    end
+
+    local pedCoords = GetEntityCoords(ped)
+    local closestVehicle = 0
+    local closestDistance = maxDistance + 0.01
+
+    for _, vehicle in ipairs(GetGamePool('CVehicle')) do
+        if DoesEntityExist(vehicle) then
+            local distance = #(pedCoords - GetEntityCoords(vehicle))
+
+            if distance < closestDistance then
+                closestVehicle = vehicle
+                closestDistance = distance
+            end
+        end
+    end
+
+    return closestVehicle
+end
+
+local function requestEntityControl(entity, timeoutMs)
+    if entity == 0 or not DoesEntityExist(entity) then
+        return false
+    end
+
+    if not NetworkGetEntityIsNetworked(entity) then
+        return true
+    end
+
+    local networkId = NetworkGetNetworkIdFromEntity(entity)
+    SetNetworkIdCanMigrate(networkId, true)
+    NetworkRequestControlOfEntity(entity)
+
+    local timeout = GetGameTimer() + (timeoutMs or 1500)
+
+    while not NetworkHasControlOfEntity(entity) and GetGameTimer() < timeout do
+        NetworkRequestControlOfEntity(entity)
+        Wait(0)
+    end
+
+    return NetworkHasControlOfEntity(entity)
+end
+
+local function deleteNearbyVehicle()
+    local maxDistance = (Config.DeleteVehicle and Config.DeleteVehicle.distance) or 6.0
+    local vehicle = getClosestVehicleWithinDistance(maxDistance)
+
+    if vehicle == 0 or not DoesEntityExist(vehicle) then
+        notify(('Der blev ikke fundet et køretøj inden for %.0f meter.'):format(maxDistance), 'error')
+        return false
+    end
+
+    if not requestEntityControl(vehicle, 2000) then
+        notify('Køretøjet kunne ikke overtages og blev derfor ikke slettet.', 'error')
+        return false
+    end
+
+    local ped = PlayerPedId()
+
+    if IsPedInVehicle(ped, vehicle, false) then
+        TaskLeaveVehicle(ped, vehicle, 16)
+
+        local leaveTimeout = GetGameTimer() + 1000
+        while IsPedInVehicle(ped, vehicle, false) and GetGameTimer() < leaveTimeout do
+            Wait(0)
+        end
+    end
+
+    SetEntityAsMissionEntity(vehicle, true, true)
+    DeleteVehicle(vehicle)
+
+    if DoesEntityExist(vehicle) then
+        DeleteEntity(vehicle)
+    end
+
+    if DoesEntityExist(vehicle) then
+        notify('Køretøjet kunne ikke slettes.', 'error')
+        return false
+    end
+
+    if invisibleVehicle == vehicle then
+        invisibleVehicle = nil
+    end
+
+    if noclipEntity == vehicle then
+        noclipEntity = nil
+    end
+
+    notify('Køretøjet blev slettet.', 'success')
+    return true
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
@@ -1123,6 +1231,22 @@ local function activateSelectedItem()
         togglePlayerIds()
 
         -- Behold menuen åben og opdatér teksten på spiller-ID-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'deleteVehicle' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        deleteNearbyVehicle()
+
+        -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
