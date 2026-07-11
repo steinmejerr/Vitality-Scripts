@@ -12,6 +12,8 @@ local spectateReturn = nil
 local noclipEnabled = false
 local noclipEntity = nil
 local godmodeEnabled = false
+local invisibilityEnabled = false
+local invisibleVehicle = nil
 local returnPosition = nil
 
 local function notify(description, notifyType)
@@ -47,6 +49,14 @@ local function getMainMenuItems()
                 and 'Slå usårlighed fra og modtag skade normalt igen.'
                 or 'Gør din karakter usårlig over for skade.',
             icon = 'godmode'
+        },
+        {
+            action = 'toggleInvisibility',
+            label = invisibilityEnabled and 'Deaktivér usynlighed' or 'Aktivér usynlighed',
+            description = invisibilityEnabled
+                and 'Gør din karakter og dit køretøj synligt igen.'
+                or 'Skjul din karakter og dit nuværende køretøj.',
+            icon = 'invisibility'
         },
         {
             action = 'teleportWaypoint',
@@ -385,7 +395,9 @@ local function restoreSpectateState(showNotification)
     local ped = PlayerPedId()
 
     NetworkSetInSpectatorMode(false, ped)
-    SetEntityVisible(ped, true, false)
+    SetEntityVisible(ped, not invisibilityEnabled, false)
+    SetEntityAlpha(ped, invisibilityEnabled and 0 or 255, false)
+    NetworkSetEntityInvisibleToNetwork(ped, invisibilityEnabled)
     SetEntityCollision(ped, true, true)
     SetEntityInvincible(ped, godmodeEnabled)
     SetPlayerInvincible(PlayerId(), godmodeEnabled)
@@ -522,7 +534,9 @@ local function disableNoclip(showNotification)
         FreezeEntityPosition(entity, false)
         SetEntityCollision(entity, true, true)
         SetEntityInvincible(entity, godmodeEnabled)
-        SetEntityVisible(entity, true, false)
+        SetEntityVisible(entity, not invisibilityEnabled, false)
+        SetEntityAlpha(entity, invisibilityEnabled and 0 or 255, false)
+        NetworkSetEntityInvisibleToNetwork(entity, invisibilityEnabled)
         SetEntityVelocity(entity, 0.0, 0.0, 0.0)
     end
 
@@ -531,7 +545,9 @@ local function disableNoclip(showNotification)
     SetEntityInvincible(ped, godmodeEnabled)
     SetPlayerInvincible(PlayerId(), godmodeEnabled)
     SetEntityProofs(ped, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled, godmodeEnabled)
-    SetEntityVisible(ped, true, false)
+    SetEntityVisible(ped, not invisibilityEnabled, false)
+    SetEntityAlpha(ped, invisibilityEnabled and 0 or 255, false)
+    NetworkSetEntityInvisibleToNetwork(ped, invisibilityEnabled)
     FreezeEntityPosition(ped, false)
 
     noclipEnabled = false
@@ -574,6 +590,77 @@ local function toggleNoclip()
 
     enableNoclip()
 end
+
+local function setEntityInvisibleState(entity, invisible)
+    if not entity or entity == 0 or not DoesEntityExist(entity) then
+        return
+    end
+
+    SetEntityVisible(entity, not invisible, false)
+    SetEntityAlpha(entity, invisible and 0 or 255, false)
+    NetworkSetEntityInvisibleToNetwork(entity, invisible)
+end
+
+local function applyInvisibilityState()
+    local ped = PlayerPedId()
+    local vehicle = 0
+
+    if IsPedInAnyVehicle(ped, false) then
+        vehicle = GetVehiclePedIsIn(ped, false)
+    end
+
+    if invisibleVehicle and invisibleVehicle ~= 0 and invisibleVehicle ~= vehicle and DoesEntityExist(invisibleVehicle) then
+        local keepHiddenForNoclip = noclipEnabled and noclipEntity == invisibleVehicle
+        setEntityInvisibleState(invisibleVehicle, keepHiddenForNoclip)
+        invisibleVehicle = nil
+    end
+
+    if invisibilityEnabled then
+        setEntityInvisibleState(ped, true)
+
+        if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+            setEntityInvisibleState(vehicle, true)
+            invisibleVehicle = vehicle
+        end
+    else
+        local keepPedHidden = spectating or (noclipEnabled and noclipEntity == ped)
+        setEntityInvisibleState(ped, keepPedHidden)
+
+        if vehicle and vehicle ~= 0 and DoesEntityExist(vehicle) then
+            local keepVehicleHidden = noclipEnabled and noclipEntity == vehicle
+            setEntityInvisibleState(vehicle, keepVehicleHidden)
+        end
+
+        if invisibleVehicle and invisibleVehicle ~= 0 and DoesEntityExist(invisibleVehicle) then
+            local keepHiddenForNoclip = noclipEnabled and noclipEntity == invisibleVehicle
+            setEntityInvisibleState(invisibleVehicle, keepHiddenForNoclip)
+        end
+
+        invisibleVehicle = nil
+    end
+end
+
+local function toggleInvisibility()
+    invisibilityEnabled = not invisibilityEnabled
+    applyInvisibilityState()
+
+    if invisibilityEnabled then
+        notify('Usynlighed blev aktiveret.', 'success')
+    else
+        notify('Usynlighed blev deaktiveret.', 'inform')
+    end
+end
+
+CreateThread(function()
+    while true do
+        if not invisibilityEnabled then
+            Wait(500)
+        else
+            Wait(0)
+            applyInvisibilityState()
+        end
+    end
+end)
 
 local function applyGodmodeState(enabled)
     local ped = PlayerPedId()
@@ -939,6 +1026,22 @@ local function activateSelectedItem()
         return
     end
 
+    if currentMenu == 'main' and item.action == 'toggleInvisibility' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        toggleInvisibility()
+
+        -- Behold menuen åben og opdatér teksten på usynlighedspunktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
     if currentMenu == 'main' and item.action == 'teleportWaypoint' then
         local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
 
@@ -1216,5 +1319,7 @@ AddEventHandler('onResourceStop', function(resourceName)
     restoreSpectateState(false)
     disableNoclip(false)
     disableGodmode(false)
+    invisibilityEnabled = false
+    applyInvisibilityState()
     SetNuiFocus(false, false)
 end)
