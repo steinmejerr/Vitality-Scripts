@@ -42,6 +42,13 @@ const icons = {
             <path d="M4 4l16 16"></path>
         </svg>
     `,
+    playerids: `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.5"></circle>
+            <path d="M5 20c.5-4 3-6 7-6s6.5 2 7 6"></path>
+            <path d="M17.5 5.5h3v3M20.5 5.5l-4 4"></path>
+        </svg>
+    `,
     waypoint: `
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"></path>

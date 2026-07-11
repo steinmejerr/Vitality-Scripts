@@ -13,6 +13,7 @@ local noclipEnabled = false
 local noclipEntity = nil
 local godmodeEnabled = false
 local invisibilityEnabled = false
+local playerIdsEnabled = false
 local invisibleVehicle = nil
 local returnPosition = nil
 
@@ -57,6 +58,14 @@ local function getMainMenuItems()
                 and 'Gør din karakter og dit køretøj synligt igen.'
                 or 'Skjul din karakter og dit nuværende køretøj.',
             icon = 'invisibility'
+        },
+        {
+            action = 'togglePlayerIds',
+            label = playerIdsEnabled and 'Deaktivér spiller-ID’er' or 'Aktivér spiller-ID’er',
+            description = playerIdsEnabled
+                and 'Skjul navne og server-ID’er over spillerne igen.'
+                or 'Vis navn og server-ID over spillere i nærheden.',
+            icon = 'playerids'
         },
         {
             action = 'teleportWaypoint',
@@ -662,6 +671,66 @@ CreateThread(function()
     end
 end)
 
+local function drawPlayerIdText(coords, text)
+    local visible, screenX, screenY = World3dToScreen2d(coords.x, coords.y, coords.z)
+
+    if not visible then
+        return
+    end
+
+    SetTextScale(0.0, 0.31)
+    SetTextFont(4)
+    SetTextProportional(true)
+    SetTextColour(255, 255, 255, 235)
+    SetTextCentre(true)
+    SetTextOutline()
+    SetTextEntry('STRING')
+    AddTextComponentString(text)
+    DrawText(screenX, screenY)
+end
+
+local function togglePlayerIds()
+    playerIdsEnabled = not playerIdsEnabled
+
+    if playerIdsEnabled then
+        notify('Spiller-ID’er blev aktiveret.', 'success')
+    else
+        notify('Spiller-ID’er blev deaktiveret.', 'inform')
+    end
+end
+
+CreateThread(function()
+    while true do
+        if not playerIdsEnabled then
+            Wait(500)
+        else
+            Wait(0)
+
+            local ownPed = PlayerPedId()
+            local ownCoords = GetEntityCoords(ownPed)
+            local maxDistance = (Config.PlayerIds and Config.PlayerIds.distance) or 75.0
+
+            for _, player in ipairs(GetActivePlayers()) do
+                if player ~= PlayerId() and NetworkIsPlayerActive(player) then
+                    local targetPed = GetPlayerPed(player)
+
+                    if targetPed ~= 0 and DoesEntityExist(targetPed) then
+                        local targetCoords = GetEntityCoords(targetPed)
+                        local distance = #(ownCoords - targetCoords)
+
+                        if distance <= maxDistance then
+                            local headCoords = GetPedBoneCoords(targetPed, 0x796E, 0.0, 0.0, 0.35)
+                            local serverId = GetPlayerServerId(player)
+                            local playerName = GetPlayerName(player) or 'Ukendt'
+                            drawPlayerIdText(headCoords, ('[%s] %s'):format(serverId, playerName))
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 local function applyGodmodeState(enabled)
     local ped = PlayerPedId()
 
@@ -1042,6 +1111,22 @@ local function activateSelectedItem()
         return
     end
 
+    if currentMenu == 'main' and item.action == 'togglePlayerIds' then
+        local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+
+        if not allowed then
+            notify('Du har ikke længere adgang til adminmenuen.', 'error')
+            closeMenu()
+            return
+        end
+
+        togglePlayerIds()
+
+        -- Behold menuen åben og opdatér teksten på spiller-ID-punktet.
+        setMenu('main', getMainMenuItems(), selectedIndex)
+        return
+    end
+
     if currentMenu == 'main' and item.action == 'teleportWaypoint' then
         local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
 
@@ -1320,6 +1405,7 @@ AddEventHandler('onResourceStop', function(resourceName)
     disableNoclip(false)
     disableGodmode(false)
     invisibilityEnabled = false
+    playerIdsEnabled = false
     applyInvisibilityState()
     SetNuiFocus(false, false)
 end)

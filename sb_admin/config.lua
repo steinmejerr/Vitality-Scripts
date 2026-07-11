@@ -29,3 +29,7 @@ Config.Noclip = {
     fastSpeed = 2.5,
     slowSpeed = 0.2
 }
+
+Config.PlayerIds = {
+    distance = 75.0
+}
