@@ -17,6 +17,7 @@ local playerIdsEnabled = false
 local invisibleVehicle = nil
 local returnPosition = nil
 local playerDetailsReturnIndex = 1
+local playerNotesReturnIndex = 1
 local activeTab = 'menu'
 local adminChatMessages = {}
 local chatTyping = false
@@ -326,6 +327,15 @@ local function buildPlayerDetailItems(player)
             icon = 'spectate'
         },
         {
+            action = 'viewPlayerNotes',
+            playerId = player.id,
+            label = ('Spillernoter (%s)'):format(player.noteCount or 0),
+            description = player.noteCount and player.noteCount > 0
+                and 'Se noter og opmærksomhedspunkter på spilleren.'
+                or 'Der er ingen aktive noter på spilleren.',
+            icon = 'note'
+        },
+        {
             action = 'giveVehicle',
             playerId = player.id,
             label = 'Giv køretøj',
@@ -464,6 +474,80 @@ openPlayerDetails = function(playerId, listIndex, preferredDetailIndex)
 
     selectedPlayerName = ('[%s] %s'):format(player.id, player.name)
     setMenu('playerDetails', buildPlayerDetailItems(player), preferredDetailIndex or 1)
+end
+
+
+local function formatPlayerNoteDate(value)
+    local text = tostring(value or '')
+
+    if text == '' then
+        return 'Ukendt tidspunkt'
+    end
+
+    -- MySQL kan returnere DATETIME som enten tekst eller et numerisk timestamp.
+    -- FiveM-klienten har ikke adgang til Lua's os.date, så datoen formateres
+    -- primært på serveren. Denne fallback håndterer almindelig DATETIME-tekst.
+    local y, m, d, h, min = text:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)[ T](%d%d):(%d%d)')
+    if y then
+        return ('%s/%s/%s %s:%s'):format(d, m, y, h, min)
+    end
+
+    return text
+end
+
+local function openPlayerNotes(playerId, returnIndex, preferredIndex)
+    playerNotesReturnIndex = returnIndex or selectedIndex
+    setMenu('playerNotes', {
+        {
+            label = 'Indlæser noter...',
+            description = 'Vent et øjeblik.',
+            icon = 'note',
+            disabled = true
+        }
+    })
+
+    local result = lib.callback.await('sb_admin:server:getPlayerNotes', false, playerId)
+    if not result then
+        notify('Noterne kunne ikke hentes, eller spilleren er ikke længere online.', 'error')
+        openPlayerDetails(playerId, selectedPlayerListIndex, playerNotesReturnIndex)
+        return
+    end
+
+    local items = {
+        {
+            action = 'addPlayerNote',
+            playerId = playerId,
+            label = 'Tilføj note',
+            description = 'Opret et nyt opmærksomhedspunkt på spilleren.',
+            icon = 'noteadd'
+        }
+    }
+
+    for _, note in ipairs(result.notes or {}) do
+        items[#items + 1] = {
+            action = 'deletePlayerNote',
+            playerId = playerId,
+            noteId = note.id,
+            label = ('Note #%s • %s'):format(note.id, note.source == 'discord' and 'Discord' or 'FiveM'),
+            description = ('%s — %s • %s'):format(
+                tostring(note.note or ''),
+                tostring(note.created_by_name or 'Ukendt staff'),
+                formatPlayerNoteDate(note.created_at_display or note.created_at)
+            ),
+            icon = 'note'
+        }
+    end
+
+    if #(result.notes or {}) == 0 then
+        items[#items + 1] = {
+            label = 'Ingen noter',
+            description = 'Der er endnu ingen aktive noter på spilleren.',
+            icon = 'note',
+            disabled = true
+        }
+    end
+
+    setMenu('playerNotes', items, preferredIndex or 1)
 end
 
 openPlayerMenu = function()
@@ -2243,6 +2327,52 @@ local function activateSelectedItem()
     end
 
 
+    if currentMenu == 'playerDetails' and item.action == 'viewPlayerNotes' then
+        openPlayerNotes(item.playerId, selectedIndex, 1)
+        return
+    end
+
+    if currentMenu == 'playerNotes' and item.action == 'addPlayerNote' then
+        local input = lib.inputDialog('Tilføj spillernote', {
+            {
+                type = 'textarea',
+                label = 'Note',
+                description = 'Skriv hvad staff skal være opmærksom på.',
+                required = true,
+                min = 1,
+                max = (Config.PlayerNotes and Config.PlayerNotes.maxLength) or 500
+            }
+        })
+
+        if not input or not input[1] then
+            openPlayerNotes(item.playerId, playerNotesReturnIndex, selectedIndex)
+            return
+        end
+
+        local result = lib.callback.await('sb_admin:server:addPlayerNote', false, item.playerId, input[1])
+        notify(result and result.message or 'Noten kunne ikke tilføjes.', result and result.success and 'success' or 'error')
+        openPlayerNotes(item.playerId, playerNotesReturnIndex, 1)
+        return
+    end
+
+    if currentMenu == 'playerNotes' and item.action == 'deletePlayerNote' then
+        local confirm = lib.alertDialog({
+            header = ('Slet note #%s?'):format(item.noteId),
+            content = 'Noten bliver skjult både i FiveM-adminmenuen og Discord-botten.',
+            centered = true,
+            cancel = true,
+            labels = { confirm = 'Slet', cancel = 'Annuller' }
+        })
+
+        if confirm == 'confirm' then
+            local result = lib.callback.await('sb_admin:server:deletePlayerNote', false, item.noteId)
+            notify(result and result.message or 'Noten kunne ikke slettes.', result and result.success and 'success' or 'error')
+        end
+
+        openPlayerNotes(item.playerId, playerNotesReturnIndex, selectedIndex)
+        return
+    end
+
     if currentMenu == 'playerDetails' and item.action == 'viewInventory' then
         openPlayerInventory(item.playerId, selectedIndex)
         return
@@ -2509,6 +2639,11 @@ RegisterNetEvent('sb_admin:client:setFrozen', function(frozen, adminName)
 end)
 
 local function goBack()
+    if currentMenu == 'playerNotes' then
+        openPlayerDetails(selectedPlayerId, selectedPlayerListIndex, playerNotesReturnIndex)
+        return
+    end
+
     if currentMenu == 'playerInventory' then
         openPlayerDetails(selectedPlayerId, selectedPlayerListIndex, playerDetailsReturnIndex)
         return

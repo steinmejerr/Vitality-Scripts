@@ -24,6 +24,48 @@ local function hasPermission(source)
     return xPlayer ~= nil and Config.AllowedGroups[group] == true, group
 end
 
+local function getCharacterIdentifier(xPlayer)
+    if not xPlayer then return nil end
+    if xPlayer.getIdentifier then return xPlayer.getIdentifier() end
+    return xPlayer.identifier
+end
+
+local function cleanNoteText(value)
+    value = tostring(value or '')
+    value = value:gsub('[\r\n]+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
+    local maxLength = (Config.PlayerNotes and Config.PlayerNotes.maxLength) or 500
+    if value == '' or #value > maxLength then return nil end
+    return value
+end
+
+local function ensurePlayerNotesTable()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS sb_admin_player_notes (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            character_identifier VARCHAR(100) NOT NULL,
+            player_name VARCHAR(128) NOT NULL,
+            note VARCHAR(500) NOT NULL,
+            source ENUM('fivem','discord') NOT NULL,
+            created_by_identifier VARCHAR(100) NULL,
+            created_by_name VARCHAR(128) NOT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at DATETIME NULL,
+            deleted_by_identifier VARCHAR(100) NULL,
+            PRIMARY KEY (id),
+            INDEX idx_notes_character (character_identifier, active, created_at),
+            INDEX idx_notes_active (active, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
+end
+
+CreateThread(function()
+    local ok, err = pcall(ensurePlayerNotesTable)
+    if not ok then
+        print(('[sb_admin] Kunne ikke oprette spillernote-tabellen: %s'):format(tostring(err)))
+    end
+end)
+
 lib.callback.register('sb_admin:server:hasPermission', function(source)
     return hasPermission(source)
 end)
@@ -264,6 +306,15 @@ lib.callback.register('sb_admin:server:getPlayerDetails', function(source, targe
     local job = xPlayer.getJob and xPlayer.getJob() or xPlayer.job or {}
     local group = getPlayerGroup(xPlayer) or 'user'
     local playerName = xPlayer.getName and xPlayer.getName() or GetPlayerName(targetId)
+    local characterIdentifier = getCharacterIdentifier(xPlayer)
+    local noteCount = 0
+
+    if characterIdentifier then
+        noteCount = tonumber(MySQL.scalar.await(
+            'SELECT COUNT(*) FROM sb_admin_player_notes WHERE character_identifier = ? AND active = 1',
+            { characterIdentifier }
+        )) or 0
+    end
 
     return {
         id = targetId,
@@ -272,8 +323,101 @@ lib.callback.register('sb_admin:server:getPlayerDetails', function(source, targe
         job = job.label or job.name or 'Ukendt',
         jobGrade = job.grade_label or tostring(job.grade or 0),
         group = group,
-        frozen = frozenPlayers[targetId] == true
+        frozen = frozenPlayers[targetId] == true,
+        characterIdentifier = characterIdentifier,
+        noteCount = noteCount
     }
+end)
+
+
+lib.callback.register('sb_admin:server:getPlayerNotes', function(source, targetId)
+    if not hasPermission(source) then return nil end
+
+    targetId = tonumber(targetId)
+    local target = targetId and ESX.GetPlayerFromId(targetId) or nil
+    if not target then return nil end
+
+    local identifier = getCharacterIdentifier(target)
+    if not identifier then return nil end
+
+    local rows = MySQL.query.await([[
+        SELECT id, note, source, created_by_name, created_at,
+               DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') AS created_at_display
+        FROM sb_admin_player_notes
+        WHERE character_identifier = ? AND active = 1
+        ORDER BY id DESC
+        LIMIT 100
+    ]], { identifier }) or {}
+
+    return {
+        playerId = targetId,
+        playerName = target.getName and target.getName() or GetPlayerName(targetId),
+        notes = rows
+    }
+end)
+
+lib.callback.register('sb_admin:server:addPlayerNote', function(source, targetId, rawNote)
+    local allowed = hasPermission(source)
+    if not allowed then return { success = false, message = 'Du har ikke adgang.' } end
+
+    targetId = tonumber(targetId)
+    local admin = ESX.GetPlayerFromId(source)
+    local target = targetId and ESX.GetPlayerFromId(targetId) or nil
+    if not admin or not target then
+        return { success = false, message = 'Spilleren er ikke længere online.' }
+    end
+
+    local note = cleanNoteText(rawNote)
+    if not note then
+        return { success = false, message = 'Noten er tom eller for lang.' }
+    end
+
+    local targetIdentifier = getCharacterIdentifier(target)
+    if not targetIdentifier then
+        return { success = false, message = 'Spillerens karakteridentifier kunne ikke findes.' }
+    end
+
+    local adminIdentifier = getCharacterIdentifier(admin)
+    local adminName = admin.getName and admin.getName() or GetPlayerName(source) or 'Ukendt admin'
+    local targetName = target.getName and target.getName() or GetPlayerName(targetId) or ('Spiller %s'):format(targetId)
+
+    local noteId = MySQL.insert.await([[
+        INSERT INTO sb_admin_player_notes
+            (character_identifier, player_name, note, source, created_by_identifier, created_by_name)
+        VALUES (?, ?, ?, 'fivem', ?, ?)
+    ]], { targetIdentifier, targetName, note, adminIdentifier, adminName })
+
+    if not noteId then
+        return { success = false, message = 'Noten kunne ikke gemmes.' }
+    end
+
+    return {
+        success = true,
+        id = noteId,
+        message = ('Note #%s blev tilføjet på %s.'):format(noteId, targetName)
+    }
+end)
+
+lib.callback.register('sb_admin:server:deletePlayerNote', function(source, noteId)
+    local allowed = hasPermission(source)
+    if not allowed then return { success = false, message = 'Du har ikke adgang.' } end
+
+    noteId = tonumber(noteId)
+    if not noteId then return { success = false, message = 'Ugyldigt note-ID.' } end
+
+    local admin = ESX.GetPlayerFromId(source)
+    local adminIdentifier = getCharacterIdentifier(admin)
+    local affected = MySQL.update.await([[
+        UPDATE sb_admin_player_notes
+        SET active = 0, deleted_at = NOW(), deleted_by_identifier = ?
+        WHERE id = ? AND active = 1
+    ]], { adminIdentifier, noteId })
+
+    if not affected or affected < 1 then
+        return { success = false, message = 'Noten findes ikke længere.' }
+    end
+
+    return { success = true, message = ('Note #%s blev slettet.'):format(noteId) }
 end)
 
 

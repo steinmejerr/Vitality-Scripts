@@ -137,3 +137,9 @@ Config.AdminChat = {
     -- Hvor længe en skriveindikator må stå uden nyt heartbeat.
     typingTimeoutMs = 5000
 }
+
+
+Config.PlayerNotes = {
+    -- Maksimalt antal tegn i en spillernote.
+    maxLength = 500
+}
