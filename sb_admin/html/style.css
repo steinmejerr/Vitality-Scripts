@@ -635,3 +635,131 @@ body.chat-mouse-active .chat-compose input {
 .ui-button.primary { border-color: rgba(88,196,133,.35); background: var(--accent); color: #102018; }
 .ui-button.secondary { background: rgba(255,255,255,.04); color: #d5dbde; }
 .ui-button.danger { margin-right: auto; border-color: rgba(239,83,80,.3); background: rgba(239,83,80,.1); color: #ff8d8b; }
+
+/* Admins-fane – forbedret læsbarhed og custom scrollbar */
+.admins-heading p,
+.permissions-header p {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.admins-layout {
+    grid-template-columns: 155px minmax(0, 1fr);
+    gap: 14px;
+}
+
+.admin-list-item {
+    padding: 12px 11px;
+}
+
+.admin-list-item strong {
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.admin-list-item span {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.admins-empty {
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.form-grid {
+    gap: 12px;
+}
+
+.form-row {
+    gap: 7px;
+    margin-bottom: 12px;
+}
+
+.form-row label {
+    font-size: 12px;
+}
+
+.form-row input,
+.form-row select {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.permissions-header {
+    margin: 12px 0 12px;
+}
+
+.permissions-header h3 {
+    font-size: 15px;
+}
+
+.permissions-grid {
+    gap: 8px;
+}
+
+.permission-checkbox {
+    gap: 9px;
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.checkbox-visual {
+    flex-basis: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.permission-checkbox input:checked + .checkbox-visual::after {
+    font-size: 12px;
+}
+
+.ui-button {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 11px;
+}
+
+/* Chromium/FiveM NUI scrollbar */
+.admins-sidebar,
+.admins-form {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(88, 196, 133, 0.62) rgba(255, 255, 255, 0.035);
+}
+
+.admins-sidebar::-webkit-scrollbar,
+.admins-form::-webkit-scrollbar {
+    width: 8px;
+}
+
+.admins-sidebar::-webkit-scrollbar-track,
+.admins-form::-webkit-scrollbar-track {
+    margin-block: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.admins-sidebar::-webkit-scrollbar-thumb,
+.admins-form::-webkit-scrollbar-thumb {
+    min-height: 38px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(88, 196, 133, 0.62);
+    background-clip: padding-box;
+}
+
+.admins-sidebar::-webkit-scrollbar-thumb:hover,
+.admins-form::-webkit-scrollbar-thumb:hover {
+    background: rgba(88, 196, 133, 0.82);
+    background-clip: padding-box;
+}
+
+.admins-sidebar::-webkit-scrollbar-corner,
+.admins-form::-webkit-scrollbar-corner {
+    background: transparent;
+}
