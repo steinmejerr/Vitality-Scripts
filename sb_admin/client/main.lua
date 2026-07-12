@@ -2172,7 +2172,7 @@ local function openAdminsMenu()
     local admins=lib.callback.await('sb_admin:server:getAdmins',false)
     if not admins then notify('Du har ikke adgang til at administrere admins.','error'); setMenu('main',getMainMenuItems(),1); return end
     local items={{action='addAdmin',label='Tilføj admin',description='Tilføj en online spiller og vælg rettigheder.',icon='shield'}}
-    for _,a in ipairs(admins) do items[#items+1]={action='editAdmin',admin=a,label=a.display_name,description=(a.active==1 and 'Aktiv' or 'Deaktiveret')..' • '..tostring(a.discord_identifier or a.license_identifier or 'Intet ID'),icon='shield'} end
+    for _,a in ipairs(admins) do items[#items+1]={action='editAdmin',admin=a,label=a.display_name,description=tostring(a.discord_identifier or a.license_identifier or 'Intet ID'),icon='shield'} end
     setMenu('admins',items,1)
 end
 

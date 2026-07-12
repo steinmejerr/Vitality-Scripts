@@ -608,7 +608,6 @@ body.chat-mouse-active .chat-compose input {
 .admins-list { display: flex; flex-direction: column; gap: 6px; }
 .admin-list-item { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); color: var(--text); text-align: left; font-family: inherit; cursor: pointer; }
 .admin-list-item strong { display: block; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.admin-list-item span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
 .admin-list-item.active { border-color: var(--border-strong); box-shadow: inset 3px 0 0 var(--accent); }
 .admins-empty { padding: 16px 8px; color: var(--muted); font-size: 10px; text-align: center; }
 .admins-form { overflow-y: auto; padding-right: 5px; }

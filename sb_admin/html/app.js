@@ -582,7 +582,7 @@ function renderAdminsList() {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `admin-list-item${Number(admin.id) === Number(editingAdminId) ? ' active' : ''}`;
-        button.innerHTML = `<strong>${escapeHtml(admin.display_name || 'Admin')}</strong><span>${admin.active === 1 ? 'Aktiv' : 'Deaktiveret'}</span>`;
+        button.innerHTML = `<strong>${escapeHtml(admin.display_name || 'Admin')}</strong>`;
         button.addEventListener('click', () => selectAdmin(admin));
         adminsList.appendChild(button);
     });

@@ -167,7 +167,10 @@ end)
 lib.callback.register('sb_admin:server:getAdmins', function(source)
     if not hasPermission(source, 'manage_admins') then return nil end
     local rows = MySQL.query.await('SELECT id, display_name, license_identifier, discord_identifier, permissions, active, created_at FROM sb_admin_admins ORDER BY display_name ASC') or {}
-    for _, row in ipairs(rows) do row.permissions = decodePermissions(row.permissions) end
+    for _, row in ipairs(rows) do
+        row.permissions = decodePermissions(row.permissions)
+        row.active = tonumber(row.active) == 1 and 1 or 0
+    end
     return rows
 end)
 
