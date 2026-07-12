@@ -23,6 +23,7 @@ local adminChatMessages = {}
 local chatTyping = false
 local chatMouseEnabled = false
 local adminChatTypingActive = false
+local myPermissions = {}
 local adminChatSoundEnabled = GetResourceKvpString('sb_admin:adminChatSound')
 if adminChatSoundEnabled == nil then
     adminChatSoundEnabled = not (Config.AdminChat and Config.AdminChat.soundDefault == false)
@@ -41,22 +42,44 @@ local function notify(description, notifyType)
     })
 end
 
+local function can(permission)
+    return myPermissions and myPermissions[permission] == true
+end
+
+local function filterPermittedItems(items)
+    local result = {}
+    for _, item in ipairs(items) do
+        if not item.permission or can(item.permission) then result[#result+1] = item end
+    end
+    return result
+end
+
 local function getMainMenuItems()
-    return {
+    local items = {
+        {
+            action = 'admins',
+            permission = 'manage_admins',
+            label = 'Admins',
+            description = 'Tilføj admins og administrér deres rettigheder.',
+            icon = 'shield'
+        },
         {
             action = 'players',
+            permission = 'players_view',
             label = 'Spillere',
             description = 'Se alle spillere, der er online på serveren.',
             icon = 'players'
         },
         {
             action = 'announcement',
+            permission = 'announcement',
             label = 'Announcement',
             description = 'Send en servermeddelelse til alle online spillere.',
             icon = 'announcement'
         },
         {
             action = 'toggleNoclip',
+            permission = 'noclip',
             label = noclipEnabled and 'Deaktivér noclip' or 'Aktivér noclip',
             description = noclipEnabled
                 and 'Slå fri bevægelse fra og vend tilbage til normal styring.'
@@ -65,6 +88,7 @@ local function getMainMenuItems()
         },
         {
             action = 'toggleGodmode',
+            permission = 'godmode',
             label = godmodeEnabled and 'Deaktivér godmode' or 'Aktivér godmode',
             description = godmodeEnabled
                 and 'Slå usårlighed fra og modtag skade normalt igen.'
@@ -73,6 +97,7 @@ local function getMainMenuItems()
         },
         {
             action = 'toggleInvisibility',
+            permission = 'invisibility',
             label = invisibilityEnabled and 'Deaktivér usynlighed' or 'Aktivér usynlighed',
             description = invisibilityEnabled
                 and 'Gør din karakter og dit køretøj synligt igen.'
@@ -81,6 +106,7 @@ local function getMainMenuItems()
         },
         {
             action = 'togglePlayerIds',
+            permission = 'player_ids',
             label = playerIdsEnabled and 'Deaktivér spiller-ID’er' or 'Aktivér spiller-ID’er',
             description = playerIdsEnabled
                 and 'Skjul navne og server-ID’er over spillerne igen.'
@@ -89,48 +115,56 @@ local function getMainMenuItems()
         },
         {
             action = 'deleteVehicle',
+            permission = 'vehicle_delete',
             label = 'Slet køretøj',
             description = 'Fjern køretøjet, du sidder i eller står tæt på.',
             icon = 'deletevehicle'
         },
         {
             action = 'repairVehicle',
+            permission = 'vehicle_repair',
             label = 'Reparér køretøj',
             description = 'Reparér køretøjet, du sidder i eller står tæt på.',
             icon = 'repairvehicle'
         },
         {
             action = 'flipVehicle',
+            permission = 'vehicle_flip',
             label = 'Vend køretøj',
             description = 'Vend køretøjet korrekt tilbage på hjulene.',
             icon = 'flipvehicle'
         },
         {
             action = 'spawnVehicle',
+            permission = 'vehicle_spawn',
             label = 'Spawn køretøj',
             description = 'Indtast et modelnavn og spawn et køretøj.',
             icon = 'spawnvehicle'
         },
         {
             action = 'teleportWaypoint',
+            permission = 'teleport_waypoint',
             label = 'Teleportér til waypoint',
             description = 'Teleportér til din markering på kortet.',
             icon = 'waypoint'
         },
         {
             action = 'teleportCoordinates',
+            permission = 'teleport_coordinates',
             label = 'Teleportér til koordinater',
             description = 'Indtast X, Y, Z og valgfri heading.',
             icon = 'coordinates'
         },
         {
             action = 'copyCoordinates',
+            permission = 'copy_coordinates',
             label = 'Kopiér koordinater',
             description = 'Kopiér din aktuelle position i det ønskede format.',
             icon = 'copycoordinates'
         },
         {
             action = 'returnPosition',
+            permission = 'return_position',
             label = 'Returnér',
             description = returnPosition
                 and 'Teleportér tilbage til din senest gemte position.'
@@ -138,9 +172,19 @@ local function getMainMenuItems()
             icon = 'return'
         }
     }
+
+    return filterPermittedItems(items)
 end
 
 local function getMenuTitle()
+    if currentMenu == 'admins' then
+        return 'Admins'
+    end
+
+    if currentMenu == 'adminEdit' then
+        return 'Adminrettigheder'
+    end
+
     if currentMenu == 'players' then
         return 'Spillere'
     end
@@ -701,13 +745,14 @@ local function openMenu()
         return
     end
 
-    local allowed = lib.callback.await('sb_admin:server:hasPermission', false)
+    local permissions = lib.callback.await('sb_admin:server:getMyPermissions', false)
 
-    if not allowed then
+    if not permissions then
         notify('Du har ikke adgang til adminmenuen.', 'error')
         return
     end
 
+    myPermissions = permissions
     menuOpen = true
     activeTab = 'menu'
     chatTyping = false
@@ -2010,10 +2055,86 @@ RegisterNUICallback('clipboardResult', function(data, cb)
     cb({ ok = true })
 end)
 
+
+local function permissionOptions(selected)
+    local options, defaults = {}, {}
+    for key, label in pairs(Config.AdminPermissions or {}) do
+        if key ~= 'access_menu' then
+            options[#options+1] = { value=key, label=label }
+            if selected and selected[key] == true then defaults[#defaults+1] = key end
+        end
+    end
+    table.sort(options,function(a,b) return a.label < b.label end)
+    return options, defaults
+end
+
+local function openAdminsMenu()
+    setMenu('admins', {{label='Indlæser admins...',description='Vent et øjeblik.',icon='shield',disabled=true}})
+    local admins=lib.callback.await('sb_admin:server:getAdmins',false)
+    if not admins then notify('Du har ikke adgang til at administrere admins.','error'); setMenu('main',getMainMenuItems(),1); return end
+    local items={{action='addAdmin',label='Tilføj admin',description='Tilføj en online spiller og vælg rettigheder.',icon='shield'}}
+    for _,a in ipairs(admins) do items[#items+1]={action='editAdmin',admin=a,label=a.display_name,description=(a.active==1 and 'Aktiv' or 'Deaktiveret')..' • '..tostring(a.discord_identifier or a.license_identifier or 'Intet ID'),icon='shield'} end
+    setMenu('admins',items,1)
+end
+
+local function editAdminDialog(admin)
+    local candidates=lib.callback.await('sb_admin:server:getOnlineAdminCandidates',false) or {}
+    local playerOptions={}
+    for _,p in ipairs(candidates) do playerOptions[#playerOptions+1]={value=tostring(p.id),label=('[%s] %s'):format(p.id,p.name)} end
+    local permOptions, permDefaults = permissionOptions(admin and admin.permissions or nil)
+    local input=lib.inputDialog(admin and 'Redigér admin' or 'Tilføj admin',{
+        {type='select',label='Online spiller',options=playerOptions,required=not admin,searchable=true},
+        {type='input',label='Navn',default=admin and admin.display_name or '',required=admin~=nil},
+        {type='multi-select',label='Rettigheder',options=permOptions,default=permDefaults,required=true}
+    })
+    if not input then openAdminsMenu(); return end
+    local license=admin and admin.license_identifier or nil; local discord=admin and admin.discord_identifier or nil; local name=input[2]
+    if not admin then
+        local sid=tonumber(input[1]); for _,p in ipairs(candidates) do if p.id==sid then license=p.license; discord=p.discord; name=(name and name~='' and name) or p.name break end end
+    end
+    local perms={}; for _,key in ipairs(input[3] or {}) do perms[key]=true end
+    local result=lib.callback.await('sb_admin:server:saveAdmin',false,{id=admin and admin.id or nil,name=name,license=license,discord=discord,permissions=perms})
+    notify(result and result.success and 'Adminen blev gemt.' or (result and result.message or 'Adminen kunne ikke gemmes.'),result and result.success and 'success' or 'error')
+    openAdminsMenu()
+end
+
 local function activateSelectedItem()
     local item = menuItems[selectedIndex]
 
     if not item or item.disabled then
+        return
+    end
+
+    if currentMenu == 'main' and item.action == 'admins' then
+        openAdminsMenu()
+        return
+    end
+
+    if currentMenu == 'admins' and item.action == 'addAdmin' then
+        editAdminDialog(nil)
+        return
+    end
+
+    if currentMenu == 'admins' and item.action == 'editAdmin' then
+        setMenu('adminEdit', {
+            {action='editAdminPermissions', admin=item.admin, label='Redigér rettigheder', description='Vælg præcis hvilke funktioner adminen må bruge.', icon='shield'},
+            {action='deleteAdmin', admin=item.admin, label='Fjern admin', description='Fjern personens adgang til adminmenuen.', icon='deletevehicle'}
+        }, 1)
+        return
+    end
+
+    if currentMenu == 'adminEdit' and item.action == 'editAdminPermissions' then
+        editAdminDialog(item.admin)
+        return
+    end
+
+    if currentMenu == 'adminEdit' and item.action == 'deleteAdmin' then
+        local result=lib.alertDialog({header='Fjern admin',content=('Er du sikker på, at %s skal miste adgang?'):format(item.admin.display_name),centered=true,cancel=true,labels={confirm='Fjern',cancel='Annullér'}})
+        if result=='confirm' then
+            local deleted=lib.callback.await('sb_admin:server:deleteAdmin',false,item.admin.id)
+            notify(deleted and 'Adminen blev fjernet.' or 'Adminen kunne ikke fjernes.',deleted and 'success' or 'error')
+            openAdminsMenu()
+        end
         return
     end
 
@@ -2662,6 +2783,11 @@ local function goBack()
             })
         end
 
+        return
+    end
+
+    if currentMenu == 'admins' or currentMenu == 'adminEdit' then
+        setMenu('main', getMainMenuItems(), 1)
         return
     end
 

@@ -143,3 +143,35 @@ Config.PlayerNotes = {
     -- Maksimalt antal tegn i en spillernote.
     maxLength = 500
 }
+
+
+-- Granulære rettigheder til den interne adminmenu.
+Config.AdminPermissions = {
+    access_menu = 'Åbn adminmenu',
+    manage_admins = 'Administrér admins',
+    admin_chat = 'Live adminchat',
+    players_view = 'Se spillere',
+    announcement = 'Send announcements',
+    noclip = 'Noclip',
+    godmode = 'Godmode',
+    invisibility = 'Usynlighed',
+    player_ids = 'Vis spiller-ID’er',
+    vehicle_delete = 'Slet køretøj',
+    vehicle_repair = 'Reparér køretøj',
+    vehicle_flip = 'Vend køretøj',
+    vehicle_spawn = 'Spawn køretøj',
+    teleport_waypoint = 'Teleportér til waypoint',
+    teleport_coordinates = 'Teleportér til koordinater',
+    copy_coordinates = 'Kopiér koordinater',
+    return_position = 'Returnér til position',
+    player_goto = 'Gå til spiller',
+    player_bring = 'Bring spiller',
+    player_freeze = 'Frys spiller',
+    player_revive = 'Genopliv spiller',
+    player_spectate = 'Spectate spiller',
+    player_notes_view = 'Se spillernoter',
+    player_notes_manage = 'Opret/slet spillernoter',
+    inventory_view = 'Se inventory',
+    inventory_remove = 'Fjern items',
+    vehicle_give = 'Giv permanent køretøj'
+}

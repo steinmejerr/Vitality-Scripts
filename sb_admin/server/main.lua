@@ -17,11 +17,99 @@ local function getPlayerGroup(xPlayer)
     return xPlayer.group
 end
 
-local function hasPermission(source)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    local group = getPlayerGroup(xPlayer)
 
-    return xPlayer ~= nil and Config.AllowedGroups[group] == true, group
+local adminPermissionCache = {}
+local permissionsReady = false
+
+local function getIdentifiers(source)
+    local result = { license = nil, discord = nil }
+    for _, identifier in ipairs(GetPlayerIdentifiers(source)) do
+        if identifier:sub(1, 8) == 'license:' then result.license = identifier end
+        if identifier:sub(1, 8) == 'discord:' then result.discord = identifier end
+    end
+    return result
+end
+
+local function ensureAdminTables()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS sb_admin_admins (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            display_name VARCHAR(100) NOT NULL,
+            license_identifier VARCHAR(100) NULL,
+            discord_identifier VARCHAR(100) NULL,
+            permissions LONGTEXT NOT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_by VARCHAR(100) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_admin_license (license_identifier),
+            UNIQUE KEY uq_admin_discord (discord_identifier)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
+end
+
+CreateThread(function()
+    local ok, err = pcall(ensureAdminTables)
+    if not ok then print(('[sb_admin] Kunne ikke oprette admin-tabellen: %s'):format(err)) end
+    permissionsReady = true
+end)
+
+local function decodePermissions(raw)
+    local ok, data = pcall(json.decode, raw or '{}')
+    return ok and type(data) == 'table' and data or {}
+end
+
+local function loadAdminRecord(source)
+    if not permissionsReady then return nil end
+    local ids = getIdentifiers(source)
+    local cacheKey = ids.license or ids.discord
+    if cacheKey and adminPermissionCache[cacheKey] ~= nil then return adminPermissionCache[cacheKey] or nil end
+
+    local row
+    if ids.license or ids.discord then
+        row = MySQL.single.await([[
+            SELECT * FROM sb_admin_admins
+            WHERE active = 1 AND ((license_identifier IS NOT NULL AND license_identifier = ?)
+              OR (discord_identifier IS NOT NULL AND discord_identifier = ?))
+            LIMIT 1
+        ]], { ids.license, ids.discord })
+    end
+
+    -- Første bootstrap: første ESX-admin bliver ejer, hvis tabellen er tom.
+    if not row then
+        local total = tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM sb_admin_admins')) or 0
+        local xPlayer = ESX.GetPlayerFromId(source)
+        local group = getPlayerGroup(xPlayer)
+        if total == 0 and xPlayer and Config.AllowedGroups[group] == true then
+            local all = {}
+            for key in pairs(Config.AdminPermissions or {}) do all[key] = true end
+            local name = xPlayer.getName and xPlayer.getName() or GetPlayerName(source) or 'Owner'
+            local id = MySQL.insert.await([[
+                INSERT INTO sb_admin_admins (display_name, license_identifier, discord_identifier, permissions, active, created_by)
+                VALUES (?, ?, ?, ?, 1, 'bootstrap')
+            ]], { name, ids.license, ids.discord, json.encode(all) })
+            row = { id=id, display_name=name, license_identifier=ids.license, discord_identifier=ids.discord, permissions=json.encode(all), active=1 }
+            print(('[sb_admin] Bootstrap-ejer oprettet: %s'):format(name))
+        end
+    end
+
+    if row then row.permissions_decoded = decodePermissions(row.permissions) end
+    if cacheKey then adminPermissionCache[cacheKey] = row or false end
+    return row
+end
+
+local function clearAdminCache()
+    adminPermissionCache = {}
+end
+
+local function hasPermission(source, permission)
+    local row = loadAdminRecord(source)
+    if not row then return false, nil end
+    if not permission or permission == 'access_menu' then
+        return row.permissions_decoded.access_menu == true, row.display_name
+    end
+    return row.permissions_decoded.access_menu == true and row.permissions_decoded[permission] == true, row.display_name
 end
 
 local function getCharacterIdentifier(xPlayer)
@@ -66,8 +154,51 @@ CreateThread(function()
     end
 end)
 
-lib.callback.register('sb_admin:server:hasPermission', function(source)
-    return hasPermission(source)
+lib.callback.register('sb_admin:server:hasPermission', function(source, permission)
+    return hasPermission(source, permission)
+end)
+
+lib.callback.register('sb_admin:server:getMyPermissions', function(source)
+    local row = loadAdminRecord(source)
+    if not row or row.permissions_decoded.access_menu ~= true then return nil end
+    return row.permissions_decoded
+end)
+
+lib.callback.register('sb_admin:server:getAdmins', function(source)
+    if not hasPermission(source, 'manage_admins') then return nil end
+    local rows = MySQL.query.await('SELECT id, display_name, license_identifier, discord_identifier, permissions, active, created_at FROM sb_admin_admins ORDER BY display_name ASC') or {}
+    for _, row in ipairs(rows) do row.permissions = decodePermissions(row.permissions) end
+    return rows
+end)
+
+lib.callback.register('sb_admin:server:getOnlineAdminCandidates', function(source)
+    if not hasPermission(source, 'manage_admins') then return nil end
+    local result = {}
+    for _, id in ipairs(GetPlayers()) do
+        local sid=tonumber(id); local xp=ESX.GetPlayerFromId(sid); local ids=getIdentifiers(sid)
+        result[#result+1]={ id=sid, name=(xp and xp.getName and xp.getName()) or GetPlayerName(sid), license=ids.license, discord=ids.discord }
+    end
+    return result
+end)
+
+lib.callback.register('sb_admin:server:saveAdmin', function(source, data)
+    if not hasPermission(source, 'manage_admins') or type(data)~='table' then return {success=false,message='Ingen adgang.'} end
+    local adminId=tonumber(data.id); local name=tostring(data.name or 'Admin'):sub(1,100)
+    local license=data.license and tostring(data.license) or nil; local discord=data.discord and tostring(data.discord) or nil
+    local perms={}; for key in pairs(Config.AdminPermissions or {}) do perms[key]=data.permissions and data.permissions[key]==true or false end
+    perms.access_menu=true
+    if adminId then
+        MySQL.update.await('UPDATE sb_admin_admins SET display_name=?, license_identifier=?, discord_identifier=?, permissions=?, active=1 WHERE id=?',{name,license,discord,json.encode(perms),adminId})
+    else
+        MySQL.insert.await('INSERT INTO sb_admin_admins (display_name,license_identifier,discord_identifier,permissions,active,created_by) VALUES (?,?,?,?,1,?)',{name,license,discord,json.encode(perms),GetPlayerName(source)})
+    end
+    clearAdminCache(); return {success=true}
+end)
+
+lib.callback.register('sb_admin:server:deleteAdmin', function(source, adminId)
+    if not hasPermission(source, 'manage_admins') then return false end
+    MySQL.update.await('UPDATE sb_admin_admins SET active=0 WHERE id=?',{tonumber(adminId)})
+    clearAdminCache(); return true
 end)
 
 
