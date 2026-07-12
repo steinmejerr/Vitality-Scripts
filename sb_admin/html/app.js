@@ -582,7 +582,7 @@ function renderAdminsList() {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `admin-list-item${Number(admin.id) === Number(editingAdminId) ? ' active' : ''}`;
-        button.innerHTML = `<strong>${escapeHtml(admin.display_name || 'Admin')}</strong>`;
+        button.innerHTML = `<strong>${escapeHtml(admin.discord_name || admin.display_name || 'Ukendt Discord-bruger')}</strong>`;
         button.addEventListener('click', () => selectAdmin(admin));
         adminsList.appendChild(button);
     });
@@ -632,7 +632,7 @@ function selectAdmin(admin) {
     editingAdminId = Number(admin.id);
     adminsPlayerRow.classList.add('hidden');
     adminsDelete.classList.remove('hidden');
-    adminsName.value = admin.display_name || '';
+    adminsName.value = admin.discord_name || admin.display_name || '';
     adminsDiscord.value = admin.discord_identifier || '';
     adminsLicense.value = admin.license_identifier || '';
     renderPermissionCheckboxes(admin.permissions || {});
@@ -642,7 +642,7 @@ function selectAdmin(admin) {
 adminsPlayer.addEventListener('change', () => {
     const candidate = adminCandidates.find((item) => String(item.id) === adminsPlayer.value);
     if (!candidate) return;
-    adminsName.value = candidate.name || '';
+    adminsName.value = candidate.discord_name || candidate.name || '';
     adminsDiscord.value = candidate.discord || '';
     adminsLicense.value = candidate.license || '';
 });

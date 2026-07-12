@@ -5,6 +5,63 @@ local adminChatMessageId = 0
 local adminChatLastMessageAt = {}
 local adminChatTyping = {}
 
+local discordNameCache = {}
+
+local function normalizeDiscordId(identifier)
+    if not identifier then return nil end
+    local value = tostring(identifier)
+    value = value:gsub('^discord:', '')
+    if value:match('^%d+$') then return value end
+    return nil
+end
+
+local function fetchDiscordName(discordIdentifier)
+    local discordId = normalizeDiscordId(discordIdentifier)
+    if not discordId then return nil end
+
+    local cached = discordNameCache[discordId]
+    local now = os.time()
+    if cached and cached.expiresAt > now then
+        return cached.name
+    end
+
+    local token = GetConvar('sb_admin_discord_bot_token', '')
+    if token == '' then
+        return nil
+    end
+
+    local request = promise.new()
+    PerformHttpRequest(('https://discord.com/api/v10/users/%s'):format(discordId), function(statusCode, body)
+        if statusCode ~= 200 or not body or body == '' then
+            request:resolve(nil)
+            return
+        end
+
+        local ok, data = pcall(json.decode, body)
+        if not ok or type(data) ~= 'table' then
+            request:resolve(nil)
+            return
+        end
+
+        local name = data.global_name or data.username
+        if name and name ~= '' then
+            discordNameCache[discordId] = {
+                name = name,
+                expiresAt = now + 600
+            }
+            request:resolve(name)
+            return
+        end
+
+        request:resolve(nil)
+    end, 'GET', '', {
+        ['Authorization'] = 'Bot ' .. token,
+        ['Content-Type'] = 'application/json'
+    })
+
+    return Citizen.Await(request)
+end
+
 local function getPlayerGroup(xPlayer)
     if not xPlayer then
         return nil
@@ -170,7 +227,15 @@ lib.callback.register('sb_admin:server:getAdmins', function(source)
     for _, row in ipairs(rows) do
         row.permissions = decodePermissions(row.permissions)
         row.active = tonumber(row.active) == 1 and 1 or 0
+        row.discord_name = fetchDiscordName(row.discord_identifier)
     end
+
+    table.sort(rows, function(a, b)
+        local aName = tostring(a.discord_name or a.display_name or ''):lower()
+        local bName = tostring(b.discord_name or b.display_name or ''):lower()
+        return aName < bName
+    end)
+
     return rows
 end)
 
@@ -179,7 +244,16 @@ lib.callback.register('sb_admin:server:getOnlineAdminCandidates', function(sourc
     local result = {}
     for _, id in ipairs(GetPlayers()) do
         local sid=tonumber(id); local xp=ESX.GetPlayerFromId(sid); local ids=getIdentifiers(sid)
-        result[#result+1]={ id=sid, name=(xp and xp.getName and xp.getName()) or GetPlayerName(sid), license=ids.license, discord=ids.discord }
+        local gameName = (xp and xp.getName and xp.getName()) or GetPlayerName(sid)
+        local discordName = fetchDiscordName(ids.discord)
+        result[#result+1]={
+            id=sid,
+            name=discordName or gameName,
+            game_name=gameName,
+            discord_name=discordName,
+            license=ids.license,
+            discord=ids.discord
+        }
     end
     return result
 end)
@@ -200,6 +274,11 @@ lib.callback.register('sb_admin:server:saveAdmin', function(source, data)
 
     if license == '' then license = nil end
     if discord == '' then discord = nil end
+
+    local discordName = fetchDiscordName(discord)
+    if discordName then
+        name = discordName:sub(1, 100)
+    end
 
     if not adminId and not license and not discord then
         return { success = false, message = 'Spilleren mangler både license- og Discord-identifier.' }
