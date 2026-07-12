@@ -21,6 +21,7 @@ local activeTab = 'menu'
 local adminChatMessages = {}
 local chatTyping = false
 local chatMouseEnabled = false
+local adminChatTypingActive = false
 local adminChatSoundEnabled = GetResourceKvpString('sb_admin:adminChatSound')
 if adminChatSoundEnabled == nil then
     adminChatSoundEnabled = not (Config.AdminChat and Config.AdminChat.soundDefault == false)
@@ -180,11 +181,14 @@ local function setMenu(menuName, items, preferredIndex)
     sendMenuState()
 end
 
+local setOwnAdminChatTyping
+
 local function closeMenu()
     if not menuOpen then
         return
     end
 
+    setOwnAdminChatTyping(false)
     menuOpen = false
     activeTab = 'menu'
     chatTyping = false
@@ -491,6 +495,17 @@ openPlayerMenu = function()
 end
 
 
+setOwnAdminChatTyping = function(isTyping)
+    isTyping = isTyping == true
+
+    if adminChatTypingActive == isTyping then
+        return
+    end
+
+    adminChatTypingActive = isTyping
+    TriggerServerEvent('sb_admin:server:setAdminChatTyping', isTyping)
+end
+
 local function refreshAdminChat()
     local messages = lib.callback.await('sb_admin:server:getAdminChatMessages', false)
 
@@ -515,6 +530,7 @@ local function setActiveTab(tabName)
     end
 
     if chatTyping or chatMouseEnabled then
+        setOwnAdminChatTyping(false)
         chatTyping = false
         chatMouseEnabled = false
         SetNuiFocus(false, false)
@@ -565,6 +581,7 @@ local function setAdminChatMouse(enabled)
         enabled = false
     end
 
+    setOwnAdminChatTyping(false)
     chatMouseEnabled = enabled == true
     chatTyping = false
 
@@ -1842,13 +1859,36 @@ RegisterNetEvent('sb_admin:client:adminChatMessage', function(message)
     end
 end)
 
+RegisterNetEvent('sb_admin:client:adminChatTypingUsers', function(users)
+    local ownServerId = GetPlayerServerId(PlayerId())
+    local visibleUsers = {}
+
+    for _, user in ipairs(type(users) == 'table' and users or {}) do
+        if tonumber(user.id) ~= ownServerId then
+            visibleUsers[#visibleUsers + 1] = user
+        end
+    end
+
+    SendNUIMessage({
+        action = 'setChatTypingUsers',
+        users = visibleUsers
+    })
+end)
+
 RegisterNetEvent('sb_admin:client:adminChatError', function(message)
     notify(message or 'Beskeden kunne ikke sendes.', 'error')
+end)
+
+RegisterNUICallback('adminChatTyping', function(data, cb)
+    local isTyping = data and data.typing == true
+    setOwnAdminChatTyping(isTyping)
+    cb({ ok = true })
 end)
 
 RegisterNUICallback('adminChatSubmit', function(data, cb)
     local message = tostring(data and data.message or '')
 
+    setOwnAdminChatTyping(false)
     chatTyping = false
     SetNuiFocus(chatMouseEnabled, chatMouseEnabled)
     TriggerServerEvent('sb_admin:server:sendAdminChatMessage', message)
@@ -1857,6 +1897,7 @@ RegisterNUICallback('adminChatSubmit', function(data, cb)
 end)
 
 RegisterNUICallback('adminChatCancel', function(_, cb)
+    setOwnAdminChatTyping(false)
     chatTyping = false
     SetNuiFocus(chatMouseEnabled, chatMouseEnabled)
     cb({ ok = true })
@@ -1868,6 +1909,7 @@ RegisterNUICallback('adminChatMouseToggle', function(_, cb)
 end)
 
 RegisterNUICallback('adminChatSwitchTab', function(_, cb)
+    setOwnAdminChatTyping(false)
     chatTyping = false
     setAdminChatMouse(false)
     setActiveTab('menu')
@@ -2572,6 +2614,7 @@ AddEventHandler('onResourceStop', function(resourceName)
     disableGodmode(false)
     invisibilityEnabled = false
     playerIdsEnabled = false
+    setOwnAdminChatTyping(false)
     chatTyping = false
     applyInvisibilityState()
     SetNuiFocus(false, false)

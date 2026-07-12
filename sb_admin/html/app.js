@@ -14,6 +14,8 @@ const chatInput = document.getElementById('chat-input');
 const chatCounter = document.getElementById('chat-counter');
 const chatSoundStatus = document.getElementById('chat-sound-status');
 const chatMouseStatus = document.getElementById('chat-mouse-status');
+const chatTypingIndicator = document.getElementById('chat-typing-indicator');
+const chatTypingText = document.getElementById('chat-typing-text');
 
 let items = [];
 let selectedIndex = 1;
@@ -22,6 +24,8 @@ let activeTab = 'menu';
 let chatItems = [];
 let chatSoundEnabled = true;
 let chatMouseEnabled = false;
+let localTypingActive = false;
+let typingHeartbeat = null;
 
 // Antallet af menupunkter, der må være synlige på samme tid.
 // Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
@@ -411,6 +415,52 @@ function addChatMessage(message) {
     renderChatMessages();
 }
 
+function setLocalTyping(active) {
+    const nextState = Boolean(active);
+
+    if (localTypingActive !== nextState) {
+        localTypingActive = nextState;
+        postNui('adminChatTyping', { typing: localTypingActive });
+    }
+
+    if (typingHeartbeat) {
+        clearInterval(typingHeartbeat);
+        typingHeartbeat = null;
+    }
+
+    if (localTypingActive) {
+        typingHeartbeat = setInterval(() => {
+            postNui('adminChatTyping', { typing: true });
+        }, 2000);
+    }
+}
+
+function setChatTypingUsers(users) {
+    if (!chatTypingIndicator || !chatTypingText) return;
+
+    const names = (Array.isArray(users) ? users : [])
+        .map((user) => String(user && user.name || '').trim())
+        .filter(Boolean);
+
+    if (!names.length) {
+        chatTypingIndicator.classList.remove('visible');
+        chatTypingText.textContent = '';
+        return;
+    }
+
+    let text;
+    if (names.length === 1) {
+        text = `${names[0]} skriver...`;
+    } else if (names.length === 2) {
+        text = `${names[0]} og ${names[1]} skriver...`;
+    } else {
+        text = `${names[0]}, ${names[1]} og ${names.length - 2} andre skriver...`;
+    }
+
+    chatTypingText.textContent = text;
+    chatTypingIndicator.classList.add('visible');
+}
+
 function focusChatInput() {
     chatInput.disabled = false;
     chatInput.placeholder = 'Skriv en besked...';
@@ -419,6 +469,7 @@ function focusChatInput() {
 }
 
 function releaseChatInput(clearInput = false) {
+    setLocalTyping(false);
     if (clearInput) chatInput.value = '';
     chatInput.blur();
     chatInput.placeholder = 'Tryk Enter for at skrive...';
@@ -427,6 +478,7 @@ function releaseChatInput(clearInput = false) {
 
 chatInput.addEventListener('input', () => {
     chatCounter.textContent = `${chatInput.value.length} / ${chatInput.maxLength}`;
+    setLocalTyping(chatInput.value.trim().length > 0);
 });
 
 chatInput.addEventListener('keydown', (event) => {
@@ -512,6 +564,10 @@ window.addEventListener('message', (event) => {
             addChatMessage(data.message);
             break;
 
+        case 'setChatTypingUsers':
+            setChatTypingUsers(data.users);
+            break;
+
         case 'focusChatInput':
             focusChatInput();
             break;
@@ -523,6 +579,7 @@ window.addEventListener('message', (event) => {
         case 'close':
             windowStart = 1;
             releaseChatInput(false);
+            setChatTypingUsers([]);
             setChatMouse(false);
             setActiveTab('menu');
             menu.classList.remove('visible');

@@ -3,6 +3,7 @@ local frozenPlayers = {}
 local adminChatMessages = {}
 local adminChatMessageId = 0
 local adminChatLastMessageAt = {}
+local adminChatTyping = {}
 
 local function getPlayerGroup(xPlayer)
     if not xPlayer then
@@ -48,6 +49,71 @@ local function sendAdminChatToStaff(eventName, payload)
     end
 end
 
+local function buildAdminChatTypingList()
+    local now = GetGameTimer()
+    local users = {}
+
+    for playerId, state in pairs(adminChatTyping) do
+        if state.expiresAt > now and GetPlayerName(playerId) and hasPermission(playerId) then
+            users[#users + 1] = {
+                id = playerId,
+                name = state.name
+            }
+        else
+            adminChatTyping[playerId] = nil
+        end
+    end
+
+    table.sort(users, function(a, b)
+        return tostring(a.name):lower() < tostring(b.name):lower()
+    end)
+
+    return users
+end
+
+local function broadcastAdminChatTyping()
+    sendAdminChatToStaff('sb_admin:client:adminChatTypingUsers', buildAdminChatTypingList())
+end
+
+RegisterNetEvent('sb_admin:server:setAdminChatTyping', function(isTyping)
+    local source = source
+
+    if not hasPermission(source) then
+        return
+    end
+
+    if isTyping == true then
+        adminChatTyping[source] = {
+            name = getAdminChatSenderName(source),
+            expiresAt = GetGameTimer() + ((Config.AdminChat and Config.AdminChat.typingTimeoutMs) or 5000)
+        }
+    else
+        adminChatTyping[source] = nil
+    end
+
+    broadcastAdminChatTyping()
+end)
+
+CreateThread(function()
+    while true do
+        Wait(2000)
+
+        local now = GetGameTimer()
+        local changed = false
+
+        for playerId, state in pairs(adminChatTyping) do
+            if state.expiresAt <= now or not GetPlayerName(playerId) or not hasPermission(playerId) then
+                adminChatTyping[playerId] = nil
+                changed = true
+            end
+        end
+
+        if changed then
+            broadcastAdminChatTyping()
+        end
+    end
+end)
+
 lib.callback.register('sb_admin:server:getAdminChatMessages', function(source)
     if not hasPermission(source) then
         return nil
@@ -83,6 +149,8 @@ RegisterNetEvent('sb_admin:server:sendAdminChatMessage', function(rawMessage)
     end
 
     adminChatLastMessageAt[source] = nowMs
+    adminChatTyping[source] = nil
+    broadcastAdminChatTyping()
     adminChatMessageId = adminChatMessageId + 1
 
     local chatMessage = {
@@ -105,7 +173,13 @@ RegisterNetEvent('sb_admin:server:sendAdminChatMessage', function(rawMessage)
 end)
 
 AddEventHandler('playerDropped', function()
-    adminChatLastMessageAt[source] = nil
+    local playerId = source
+    adminChatLastMessageAt[playerId] = nil
+
+    if adminChatTyping[playerId] then
+        adminChatTyping[playerId] = nil
+        broadcastAdminChatTyping()
+    end
 end)
 
 lib.callback.register('sb_admin:server:sendAnnouncement', function(source, message)

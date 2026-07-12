@@ -132,5 +132,8 @@ Config.AdminChat = {
     historyLimit = 75,
 
     -- Minimumstid mellem beskeder fra samme admin.
-    cooldownMs = 750
+    cooldownMs = 750,
+
+    -- Hvor længe en skriveindikator må stå uden nyt heartbeat.
+    typingTimeoutMs = 5000
 }
