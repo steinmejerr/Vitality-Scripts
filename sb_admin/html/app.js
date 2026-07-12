@@ -5,10 +5,19 @@ const menu = document.getElementById('admin-menu');
 const menuList = document.getElementById('menu-list');
 const itemCount = document.getElementById('item-count');
 const menuTitle = document.getElementById('menu-title');
+const adminView = document.getElementById('admin-view');
+const chatView = document.getElementById('chat-view');
+const menuTab = document.getElementById('menu-tab');
+const chatTab = document.getElementById('chat-tab');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const chatCounter = document.getElementById('chat-counter');
 
 let items = [];
 let selectedIndex = 1;
 let windowStart = 1;
+let activeTab = 'menu';
+let chatItems = [];
 
 // Antallet af menupunkter, der må være synlige på samme tid.
 // Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
@@ -305,6 +314,117 @@ async function copyToClipboard(text) {
     }).catch(() => {});
 }
 
+
+function postNui(endpoint, payload = {}) {
+    return fetch(`https://${GetParentResourceName()}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(payload)
+    }).catch(() => {});
+}
+
+function setActiveTab(tab) {
+    activeTab = tab === 'chat' ? 'chat' : 'menu';
+    const isChat = activeTab === 'chat';
+
+    adminView.classList.toggle('active', !isChat);
+    chatView.classList.toggle('active', isChat);
+    menuTab.classList.toggle('active', !isChat);
+    chatTab.classList.toggle('active', isChat);
+
+    if (isChat) {
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+}
+
+function formatChatTime(timestamp) {
+    const date = new Date(Number(timestamp || 0) * 1000);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return date.toLocaleTimeString('da-DK', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function renderChatMessages() {
+    chatMessages.innerHTML = '';
+
+    if (!chatItems.length) {
+        chatMessages.innerHTML = '<div class="chat-empty">Der er endnu ingen beskeder.</div>';
+        return;
+    }
+
+    chatItems.forEach((message) => {
+        const element = document.createElement('article');
+        element.className = 'chat-message';
+        element.innerHTML = `
+            <div class="chat-message-header">
+                <span class="chat-sender">${escapeHtml(message.senderName || 'Admin')}</span>
+                <span class="chat-group">${escapeHtml(message.group || 'admin')}</span>
+                <span class="chat-time">${escapeHtml(formatChatTime(message.timestamp))}</span>
+            </div>
+            <div class="chat-text">${escapeHtml(message.message || '')}</div>
+        `;
+        chatMessages.appendChild(element);
+    });
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function setChatMessages(messages) {
+    chatItems = Array.isArray(messages) ? messages : [];
+    renderChatMessages();
+}
+
+function addChatMessage(message) {
+    if (!message || typeof message !== 'object') return;
+
+    chatItems.push(message);
+    if (chatItems.length > 75) chatItems.shift();
+    renderChatMessages();
+}
+
+function focusChatInput() {
+    chatInput.disabled = false;
+    chatInput.placeholder = 'Skriv en besked...';
+    chatInput.focus();
+    chatInput.select();
+}
+
+function releaseChatInput(clearInput = false) {
+    if (clearInput) chatInput.value = '';
+    chatInput.blur();
+    chatInput.placeholder = 'Tryk Enter for at skrive...';
+    chatCounter.textContent = `${chatInput.value.length} / ${chatInput.maxLength}`;
+}
+
+chatInput.addEventListener('input', () => {
+    chatCounter.textContent = `${chatInput.value.length} / ${chatInput.maxLength}`;
+});
+
+chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const message = chatInput.value.trim();
+
+        if (!message) return;
+
+        postNui('adminChatSubmit', { message });
+        releaseChatInput(true);
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        postNui('adminChatCancel');
+        releaseChatInput(false);
+    } else if (event.key === 'Tab') {
+        event.preventDefault();
+        postNui('adminChatSwitchTab');
+        releaseChatInput(false);
+    }
+});
+
 window.addEventListener('message', (event) => {
     const data = event.data || {};
 
@@ -316,6 +436,11 @@ window.addEventListener('message', (event) => {
             resetScrollForMenu();
             renderItems();
 
+            if (Array.isArray(data.chatMessages)) {
+                setChatMessages(data.chatMessages);
+            }
+            setActiveTab(data.activeTab || activeTab);
+
             menu.classList.toggle('visible', Boolean(data.visible));
             menu.setAttribute('aria-hidden', String(!data.visible));
             break;
@@ -325,12 +450,30 @@ window.addEventListener('message', (event) => {
             renderItems();
             break;
 
+        case 'setActiveTab':
+            setActiveTab(data.tab);
+            break;
+
+        case 'setChatMessages':
+            setChatMessages(data.messages);
+            break;
+
+        case 'addChatMessage':
+            addChatMessage(data.message);
+            break;
+
+        case 'focusChatInput':
+            focusChatInput();
+            break;
+
         case 'copyToClipboard':
             copyToClipboard(String(data.text || ''));
             break;
 
         case 'close':
             windowStart = 1;
+            releaseChatInput(false);
+            setActiveTab('menu');
             menu.classList.remove('visible');
             menu.setAttribute('aria-hidden', 'true');
             break;

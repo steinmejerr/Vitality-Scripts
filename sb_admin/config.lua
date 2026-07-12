@@ -112,3 +112,15 @@ Config.GiveVehicle = {
     -- Kun eksisterende kolonner bliver tilføjet.
     extraColumns = {}
 }
+
+
+Config.AdminChat = {
+    -- Maksimalt antal tegn i én besked.
+    maxLength = 250,
+
+    -- Antal beskeder, der beholdes i hukommelsen, mens resource kører.
+    historyLimit = 75,
+
+    -- Minimumstid mellem beskeder fra samme admin.
+    cooldownMs = 750
+}

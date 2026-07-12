@@ -1,5 +1,8 @@
 local ESX = exports['es_extended']:getSharedObject()
 local frozenPlayers = {}
+local adminChatMessages = {}
+local adminChatMessageId = 0
+local adminChatLastMessageAt = {}
 
 local function getPlayerGroup(xPlayer)
     if not xPlayer then
@@ -22,6 +25,87 @@ end
 
 lib.callback.register('sb_admin:server:hasPermission', function(source)
     return hasPermission(source)
+end)
+
+
+local function getAdminChatSenderName(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+
+    if xPlayer and xPlayer.getName then
+        return xPlayer.getName()
+    end
+
+    return GetPlayerName(source) or ('Admin %s'):format(source)
+end
+
+local function sendAdminChatToStaff(eventName, payload)
+    for _, playerId in ipairs(GetPlayers()) do
+        local targetId = tonumber(playerId)
+
+        if targetId and hasPermission(targetId) then
+            TriggerClientEvent(eventName, targetId, payload)
+        end
+    end
+end
+
+lib.callback.register('sb_admin:server:getAdminChatMessages', function(source)
+    if not hasPermission(source) then
+        return nil
+    end
+
+    return adminChatMessages
+end)
+
+RegisterNetEvent('sb_admin:server:sendAdminChatMessage', function(rawMessage)
+    local source = source
+    local allowed, group = hasPermission(source)
+
+    if not allowed then
+        return
+    end
+
+    local message = tostring(rawMessage or '')
+    message = message:gsub('[\r\n]+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
+
+    local maxLength = (Config.AdminChat and Config.AdminChat.maxLength) or 250
+    if message == '' or #message > maxLength then
+        TriggerClientEvent('sb_admin:client:adminChatError', source, ('Beskeden skal være mellem 1 og %s tegn.'):format(maxLength))
+        return
+    end
+
+    local nowMs = GetGameTimer()
+    local cooldown = (Config.AdminChat and Config.AdminChat.cooldownMs) or 750
+    local previous = adminChatLastMessageAt[source] or 0
+
+    if nowMs - previous < cooldown then
+        TriggerClientEvent('sb_admin:client:adminChatError', source, 'Du sender beskeder for hurtigt.')
+        return
+    end
+
+    adminChatLastMessageAt[source] = nowMs
+    adminChatMessageId = adminChatMessageId + 1
+
+    local chatMessage = {
+        id = adminChatMessageId,
+        senderId = source,
+        senderName = getAdminChatSenderName(source),
+        group = group or 'admin',
+        message = message,
+        timestamp = os.time()
+    }
+
+    adminChatMessages[#adminChatMessages + 1] = chatMessage
+
+    local historyLimit = (Config.AdminChat and Config.AdminChat.historyLimit) or 75
+    while #adminChatMessages > historyLimit do
+        table.remove(adminChatMessages, 1)
+    end
+
+    sendAdminChatToStaff('sb_admin:client:adminChatMessage', chatMessage)
+end)
+
+AddEventHandler('playerDropped', function()
+    adminChatLastMessageAt[source] = nil
 end)
 
 lib.callback.register('sb_admin:server:sendAnnouncement', function(source, message)

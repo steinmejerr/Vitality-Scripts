@@ -17,6 +17,9 @@ local playerIdsEnabled = false
 local invisibleVehicle = nil
 local returnPosition = nil
 local playerDetailsReturnIndex = 1
+local activeTab = 'menu'
+local adminChatMessages = {}
+local chatTyping = false
 
 
 local function notify(description, notifyType)
@@ -150,7 +153,9 @@ local function sendMenuState()
         visible = menuOpen,
         title = getMenuTitle(),
         selectedIndex = selectedIndex,
-        items = menuItems
+        items = menuItems,
+        activeTab = activeTab,
+        chatMessages = adminChatMessages
     })
 end
 
@@ -173,6 +178,8 @@ local function closeMenu()
     end
 
     menuOpen = false
+    activeTab = 'menu'
+    chatTyping = false
     currentMenu = 'main'
     selectedIndex = 1
     menuItems = {}
@@ -180,6 +187,8 @@ local function closeMenu()
     selectedPlayerId = nil
     selectedPlayerName = nil
     selectedPlayerListIndex = 1
+
+    SetNuiFocus(false, false)
 
     SendNUIMessage({
         action = 'close'
@@ -466,6 +475,64 @@ openPlayerMenu = function()
     end)
 end
 
+
+local function refreshAdminChat()
+    local messages = lib.callback.await('sb_admin:server:getAdminChatMessages', false)
+
+    if not messages then
+        notify('Du har ikke længere adgang til adminchatten.', 'error')
+        return false
+    end
+
+    adminChatMessages = messages
+
+    SendNUIMessage({
+        action = 'setChatMessages',
+        messages = adminChatMessages
+    })
+
+    return true
+end
+
+local function setActiveTab(tabName)
+    if tabName ~= 'menu' and tabName ~= 'chat' then
+        return
+    end
+
+    if chatTyping then
+        chatTyping = false
+        SetNuiFocus(false, false)
+    end
+
+    activeTab = tabName
+
+    if activeTab == 'chat' then
+        refreshAdminChat()
+    end
+
+    SendNUIMessage({
+        action = 'setActiveTab',
+        tab = activeTab
+    })
+end
+
+local function toggleActiveTab()
+    setActiveTab(activeTab == 'menu' and 'chat' or 'menu')
+end
+
+local function beginChatInput()
+    if activeTab ~= 'chat' or chatTyping then
+        return
+    end
+
+    chatTyping = true
+    SetNuiFocus(true, true)
+
+    SendNUIMessage({
+        action = 'focusChatInput'
+    })
+end
+
 local function openMenu()
     if menuOpen then
         closeMenu()
@@ -480,12 +547,15 @@ local function openMenu()
     end
 
     menuOpen = true
+    activeTab = 'menu'
+    chatTyping = false
     currentMenu = 'main'
     selectedIndex = 1
     menuItems = getMainMenuItems()
 
     SetNuiFocus(false, false)
     sendMenuState()
+    refreshAdminChat()
 end
 
 local function moveSelection(direction)
@@ -1668,6 +1738,52 @@ local function copyCurrentCoordinates()
     return true
 end
 
+
+RegisterNetEvent('sb_admin:client:adminChatMessage', function(message)
+    if type(message) ~= 'table' then
+        return
+    end
+
+    adminChatMessages[#adminChatMessages + 1] = message
+
+    local maxMessages = (Config.AdminChat and Config.AdminChat.historyLimit) or 75
+    while #adminChatMessages > maxMessages do
+        table.remove(adminChatMessages, 1)
+    end
+
+    SendNUIMessage({
+        action = 'addChatMessage',
+        message = message
+    })
+end)
+
+RegisterNetEvent('sb_admin:client:adminChatError', function(message)
+    notify(message or 'Beskeden kunne ikke sendes.', 'error')
+end)
+
+RegisterNUICallback('adminChatSubmit', function(data, cb)
+    local message = tostring(data and data.message or '')
+
+    chatTyping = false
+    SetNuiFocus(false, false)
+    TriggerServerEvent('sb_admin:server:sendAdminChatMessage', message)
+
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('adminChatCancel', function(_, cb)
+    chatTyping = false
+    SetNuiFocus(false, false)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('adminChatSwitchTab', function(_, cb)
+    chatTyping = false
+    SetNuiFocus(false, false)
+    setActiveTab('menu')
+    cb({ ok = true })
+end)
+
 RegisterNUICallback('clipboardResult', function(data, cb)
     if data and data.success then
         notify('Koordinaterne blev kopieret til udklipsholderen.', 'success')
@@ -2306,9 +2422,12 @@ CreateThread(function()
     while true do
         if not menuOpen then
             Wait(500)
+        elseif chatTyping then
+            Wait(100)
         else
             Wait(0)
 
+            DisableControlAction(0, 37, true)  -- Tab
             DisableControlAction(0, 172, true) -- Arrow Up
             DisableControlAction(0, 173, true) -- Arrow Down
             DisableControlAction(0, 174, true) -- Arrow Left
@@ -2318,17 +2437,30 @@ CreateThread(function()
             DisableControlAction(0, 177, true) -- Backspace
             DisableControlAction(0, 200, true) -- Escape/Pause
 
-            if IsDisabledControlJustPressed(0, 172) then
-                moveSelection(-1)
-            elseif IsDisabledControlJustPressed(0, 173) then
-                moveSelection(1)
-            elseif IsDisabledControlJustPressed(0, 191)
-                or IsDisabledControlJustPressed(0, 201) then
-                activateSelectedItem()
-            elseif IsDisabledControlJustPressed(0, 177) then
-                goBack()
-            elseif IsDisabledControlJustPressed(0, 200) then
-                closeMenu()
+            if IsDisabledControlJustPressed(0, 37) then
+                toggleActiveTab()
+            elseif activeTab == 'chat' then
+                if IsDisabledControlJustPressed(0, 191)
+                    or IsDisabledControlJustPressed(0, 201) then
+                    beginChatInput()
+                elseif IsDisabledControlJustPressed(0, 177) then
+                    setActiveTab('menu')
+                elseif IsDisabledControlJustPressed(0, 200) then
+                    closeMenu()
+                end
+            else
+                if IsDisabledControlJustPressed(0, 172) then
+                    moveSelection(-1)
+                elseif IsDisabledControlJustPressed(0, 173) then
+                    moveSelection(1)
+                elseif IsDisabledControlJustPressed(0, 191)
+                    or IsDisabledControlJustPressed(0, 201) then
+                    activateSelectedItem()
+                elseif IsDisabledControlJustPressed(0, 177) then
+                    goBack()
+                elseif IsDisabledControlJustPressed(0, 200) then
+                    closeMenu()
+                end
             end
         end
     end
@@ -2344,6 +2476,7 @@ AddEventHandler('onResourceStop', function(resourceName)
     disableGodmode(false)
     invisibilityEnabled = false
     playerIdsEnabled = false
+    chatTyping = false
     applyInvisibilityState()
     SetNuiFocus(false, false)
 end)

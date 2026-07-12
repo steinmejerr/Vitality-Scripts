@@ -21,24 +21,61 @@
             </div>
         </header>
 
-        <section class="menu-content">
-            <div class="section-heading">
-                <div>
-                    <h2 id="menu-title">Adminmenu</h2>
+        <nav class="tab-navigation" aria-label="Adminmenu faner">
+            <div id="menu-tab" class="tab-button active">Adminmenu</div>
+            <div id="chat-tab" class="tab-button">Adminchat</div>
+            <div class="tab-key"><kbd>Tab</kbd> Skift</div>
+        </nav>
+
+        <div id="admin-view" class="tab-view active">
+            <section class="menu-content">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="menu-title">Adminmenu</h2>
+                    </div>
+                    <span id="item-count" class="item-count">0 / 0</span>
                 </div>
-                <span id="item-count" class="item-count">0 / 0</span>
-            </div>
 
-            <div id="menu-list" class="menu-list"></div>
-        </section>
+                <div id="menu-list" class="menu-list"></div>
+            </section>
 
-        <footer class="menu-footer">
-            <div class="key-help">
-                <span class="key-group"><kbd>↑</kbd><kbd>↓</kbd> Navigér</span>
-                <span class="key-group"><kbd>Enter</kbd> Vælg</span>
-                <span class="key-group"><kbd>Backspace</kbd> Luk</span>
-            </div>
-        </footer>
+            <footer class="menu-footer">
+                <div class="key-help">
+                    <span class="key-group"><kbd>↑</kbd><kbd>↓</kbd> Navigér</span>
+                    <span class="key-group"><kbd>Enter</kbd> Vælg</span>
+                    <span class="key-group"><kbd>Backspace</kbd> Tilbage</span>
+                </div>
+            </footer>
+        </div>
+
+        <div id="chat-view" class="tab-view">
+            <section class="chat-content">
+                <div class="section-heading chat-heading">
+                    <div>
+                        <h2>Live adminchat</h2>
+                        <p>Kun synlig for serverens admins.</p>
+                    </div>
+                    <span class="live-indicator"><span></span> Live</span>
+                </div>
+
+                <div id="chat-messages" class="chat-messages">
+                    <div class="chat-empty">Der er endnu ingen beskeder.</div>
+                </div>
+
+                <div class="chat-compose">
+                    <input id="chat-input" type="text" maxlength="250" autocomplete="off" placeholder="Tryk Enter for at skrive...">
+                    <span id="chat-counter" class="chat-counter">0 / 250</span>
+                </div>
+            </section>
+
+            <footer class="menu-footer">
+                <div class="key-help">
+                    <span class="key-group"><kbd>Enter</kbd> Skriv / send</span>
+                    <span class="key-group"><kbd>Tab</kbd> Adminmenu</span>
+                    <span class="key-group"><kbd>Esc</kbd> Luk</span>
+                </div>
+            </footer>
+        </div>
     </main>
 
     <script src="app.js"></script>
