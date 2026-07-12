@@ -510,3 +510,34 @@ kbd {
 .sound-indicator.disabled {
     color: #7f898f;
 }
+
+
+.mouse-indicator {
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.025);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.mouse-indicator.enabled {
+    border-color: rgba(88, 196, 133, 0.28);
+    color: var(--accent);
+}
+
+body.chat-mouse-active,
+body.chat-mouse-active * {
+    cursor: default;
+}
+
+body.chat-mouse-active .chat-messages {
+    cursor: ns-resize;
+}
+
+body.chat-mouse-active .chat-compose input {
+    pointer-events: none;
+}

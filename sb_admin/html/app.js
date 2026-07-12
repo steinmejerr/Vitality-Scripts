@@ -13,6 +13,7 @@ const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const chatCounter = document.getElementById('chat-counter');
 const chatSoundStatus = document.getElementById('chat-sound-status');
+const chatMouseStatus = document.getElementById('chat-mouse-status');
 
 let items = [];
 let selectedIndex = 1;
@@ -20,6 +21,7 @@ let windowStart = 1;
 let activeTab = 'menu';
 let chatItems = [];
 let chatSoundEnabled = true;
+let chatMouseEnabled = false;
 
 // Antallet af menupunkter, der må være synlige på samme tid.
 // Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
@@ -351,6 +353,16 @@ function setChatSound(enabled) {
     chatSoundStatus.classList.toggle('disabled', !chatSoundEnabled);
 }
 
+function setChatMouse(enabled) {
+    chatMouseEnabled = Boolean(enabled);
+    document.body.classList.toggle('chat-mouse-active', chatMouseEnabled);
+
+    if (chatMouseStatus) {
+        chatMouseStatus.textContent = chatMouseEnabled ? 'Mus: Fri' : 'Mus: Låst';
+        chatMouseStatus.classList.toggle('enabled', chatMouseEnabled);
+    }
+}
+
 function formatChatTime(timestamp) {
     const date = new Date(Number(timestamp || 0) * 1000);
     if (Number.isNaN(date.getTime())) return '';
@@ -437,6 +449,21 @@ chatInput.addEventListener('keydown', (event) => {
     }
 });
 
+document.addEventListener('keydown', (event) => {
+    if (activeTab !== 'chat' || event.target === chatInput) return;
+
+    if (event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        postNui('adminChatMouseToggle');
+    } else if (event.key === 'Escape' && chatMouseEnabled) {
+        event.preventDefault();
+        postNui('adminChatMouseToggle');
+    } else if (event.key === 'Tab' && chatMouseEnabled) {
+        event.preventDefault();
+        postNui('adminChatSwitchTab');
+    }
+});
+
 window.addEventListener('message', (event) => {
     const data = event.data || {};
 
@@ -473,6 +500,10 @@ window.addEventListener('message', (event) => {
             setChatSound(data.enabled);
             break;
 
+        case 'setChatMouse':
+            setChatMouse(data.enabled);
+            break;
+
         case 'setChatMessages':
             setChatMessages(data.messages);
             break;
@@ -492,6 +523,7 @@ window.addEventListener('message', (event) => {
         case 'close':
             windowStart = 1;
             releaseChatInput(false);
+            setChatMouse(false);
             setActiveTab('menu');
             menu.classList.remove('visible');
             menu.setAttribute('aria-hidden', 'true');

@@ -20,6 +20,7 @@ local playerDetailsReturnIndex = 1
 local activeTab = 'menu'
 local adminChatMessages = {}
 local chatTyping = false
+local chatMouseEnabled = false
 local adminChatSoundEnabled = GetResourceKvpString('sb_admin:adminChatSound')
 if adminChatSoundEnabled == nil then
     adminChatSoundEnabled = not (Config.AdminChat and Config.AdminChat.soundDefault == false)
@@ -187,6 +188,7 @@ local function closeMenu()
     menuOpen = false
     activeTab = 'menu'
     chatTyping = false
+    chatMouseEnabled = false
     currentMenu = 'main'
     selectedIndex = 1
     menuItems = {}
@@ -196,6 +198,12 @@ local function closeMenu()
     selectedPlayerListIndex = 1
 
     SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+
+    SendNUIMessage({
+        action = 'setChatMouse',
+        enabled = false
+    })
 
     SendNUIMessage({
         action = 'close'
@@ -506,9 +514,16 @@ local function setActiveTab(tabName)
         return
     end
 
-    if chatTyping then
+    if chatTyping or chatMouseEnabled then
         chatTyping = false
+        chatMouseEnabled = false
         SetNuiFocus(false, false)
+        SetNuiFocusKeepInput(false)
+
+        SendNUIMessage({
+            action = 'setChatMouse',
+            enabled = false
+        })
     end
 
     activeTab = tabName
@@ -545,6 +560,27 @@ local function toggleAdminChatSound()
     )
 end
 
+local function setAdminChatMouse(enabled)
+    if activeTab ~= 'chat' then
+        enabled = false
+    end
+
+    chatMouseEnabled = enabled == true
+    chatTyping = false
+
+    SetNuiFocus(chatMouseEnabled, chatMouseEnabled)
+    SetNuiFocusKeepInput(false)
+
+    SendNUIMessage({
+        action = 'setChatMouse',
+        enabled = chatMouseEnabled
+    })
+end
+
+local function toggleAdminChatMouse()
+    setAdminChatMouse(not chatMouseEnabled)
+end
+
 local function beginChatInput()
     if activeTab ~= 'chat' or chatTyping then
         return
@@ -574,6 +610,7 @@ local function openMenu()
     menuOpen = true
     activeTab = 'menu'
     chatTyping = false
+    chatMouseEnabled = false
     currentMenu = 'main'
     selectedIndex = 1
     menuItems = getMainMenuItems()
@@ -1813,7 +1850,7 @@ RegisterNUICallback('adminChatSubmit', function(data, cb)
     local message = tostring(data and data.message or '')
 
     chatTyping = false
-    SetNuiFocus(false, false)
+    SetNuiFocus(chatMouseEnabled, chatMouseEnabled)
     TriggerServerEvent('sb_admin:server:sendAdminChatMessage', message)
 
     cb({ ok = true })
@@ -1821,13 +1858,18 @@ end)
 
 RegisterNUICallback('adminChatCancel', function(_, cb)
     chatTyping = false
-    SetNuiFocus(false, false)
+    SetNuiFocus(chatMouseEnabled, chatMouseEnabled)
     cb({ ok = true })
+end)
+
+RegisterNUICallback('adminChatMouseToggle', function(_, cb)
+    toggleAdminChatMouse()
+    cb({ ok = true, enabled = chatMouseEnabled })
 end)
 
 RegisterNUICallback('adminChatSwitchTab', function(_, cb)
     chatTyping = false
-    SetNuiFocus(false, false)
+    setAdminChatMouse(false)
     setActiveTab('menu')
     cb({ ok = true })
 end)
@@ -2470,13 +2512,14 @@ CreateThread(function()
     while true do
         if not menuOpen then
             Wait(500)
-        elseif chatTyping then
+        elseif chatTyping or chatMouseEnabled then
             Wait(100)
         else
             Wait(0)
 
             DisableControlAction(0, 37, true)  -- Tab
             DisableControlAction(0, 182, true) -- L (adminchat-lyd)
+            DisableControlAction(0, 244, true) -- M (frigiv mus)
             DisableControlAction(0, 172, true) -- Arrow Up
             DisableControlAction(0, 173, true) -- Arrow Down
             DisableControlAction(0, 174, true) -- Arrow Left
@@ -2489,7 +2532,9 @@ CreateThread(function()
             if IsDisabledControlJustPressed(0, 37) then
                 toggleActiveTab()
             elseif activeTab == 'chat' then
-                if IsDisabledControlJustPressed(0, 182) then
+                if IsDisabledControlJustPressed(0, 244) then
+                    toggleAdminChatMouse()
+                elseif IsDisabledControlJustPressed(0, 182) then
                     toggleAdminChatSound()
                 elseif IsDisabledControlJustPressed(0, 191)
                     or IsDisabledControlJustPressed(0, 201) then
@@ -2530,4 +2575,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     chatTyping = false
     applyInvisibilityState()
     SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
 end)
