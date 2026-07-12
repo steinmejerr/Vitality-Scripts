@@ -12,12 +12,14 @@ const chatTab = document.getElementById('chat-tab');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const chatCounter = document.getElementById('chat-counter');
+const chatSoundStatus = document.getElementById('chat-sound-status');
 
 let items = [];
 let selectedIndex = 1;
 let windowStart = 1;
 let activeTab = 'menu';
 let chatItems = [];
+let chatSoundEnabled = true;
 
 // Antallet af menupunkter, der må være synlige på samme tid.
 // Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
@@ -339,6 +341,16 @@ function setActiveTab(tab) {
     }
 }
 
+function setChatSound(enabled) {
+    chatSoundEnabled = Boolean(enabled);
+
+    if (!chatSoundStatus) return;
+
+    chatSoundStatus.textContent = chatSoundEnabled ? 'Lyd: Til' : 'Lyd: Fra';
+    chatSoundStatus.classList.toggle('enabled', chatSoundEnabled);
+    chatSoundStatus.classList.toggle('disabled', !chatSoundEnabled);
+}
+
 function formatChatTime(timestamp) {
     const date = new Date(Number(timestamp || 0) * 1000);
     if (Number.isNaN(date.getTime())) return '';
@@ -440,6 +452,9 @@ window.addEventListener('message', (event) => {
                 setChatMessages(data.chatMessages);
             }
             setActiveTab(data.activeTab || activeTab);
+            if (typeof data.chatSoundEnabled === 'boolean') {
+                setChatSound(data.chatSoundEnabled);
+            }
 
             menu.classList.toggle('visible', Boolean(data.visible));
             menu.setAttribute('aria-hidden', String(!data.visible));
@@ -452,6 +467,10 @@ window.addEventListener('message', (event) => {
 
         case 'setActiveTab':
             setActiveTab(data.tab);
+            break;
+
+        case 'setChatSound':
+            setChatSound(data.enabled);
             break;
 
         case 'setChatMessages':

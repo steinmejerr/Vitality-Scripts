@@ -20,6 +20,12 @@ local playerDetailsReturnIndex = 1
 local activeTab = 'menu'
 local adminChatMessages = {}
 local chatTyping = false
+local adminChatSoundEnabled = GetResourceKvpString('sb_admin:adminChatSound')
+if adminChatSoundEnabled == nil then
+    adminChatSoundEnabled = not (Config.AdminChat and Config.AdminChat.soundDefault == false)
+else
+    adminChatSoundEnabled = adminChatSoundEnabled == 'true'
+end
 
 
 local function notify(description, notifyType)
@@ -155,7 +161,8 @@ local function sendMenuState()
         selectedIndex = selectedIndex,
         items = menuItems,
         activeTab = activeTab,
-        chatMessages = adminChatMessages
+        chatMessages = adminChatMessages,
+        chatSoundEnabled = adminChatSoundEnabled
     })
 end
 
@@ -518,6 +525,24 @@ end
 
 local function toggleActiveTab()
     setActiveTab(activeTab == 'menu' and 'chat' or 'menu')
+end
+
+local function updateAdminChatSoundUi()
+    SendNUIMessage({
+        action = 'setChatSound',
+        enabled = adminChatSoundEnabled
+    })
+end
+
+local function toggleAdminChatSound()
+    adminChatSoundEnabled = not adminChatSoundEnabled
+    SetResourceKvp('sb_admin:adminChatSound', adminChatSoundEnabled and 'true' or 'false')
+    updateAdminChatSoundUi()
+
+    notify(
+        adminChatSoundEnabled and 'Lyd for adminchat er slået til.' or 'Lyd for adminchat er slået fra.',
+        adminChatSoundEnabled and 'success' or 'inform'
+    )
 end
 
 local function beginChatInput()
@@ -1755,6 +1780,29 @@ RegisterNetEvent('sb_admin:client:adminChatMessage', function(message)
         action = 'addChatMessage',
         message = message
     })
+
+    -- Undgå notifikation og lyd for adminens egen besked.
+    local ownServerId = GetPlayerServerId(PlayerId())
+    if tonumber(message.senderId) == ownServerId then
+        return
+    end
+
+    lib.notify({
+        title = 'Admin live chat',
+        description = ('%s har skrevet noget i admin live chatten.'):format(message.senderName or 'En admin'),
+        type = 'inform',
+        position = Config.Notify.position,
+        duration = (Config.AdminChat and Config.AdminChat.notifyDuration) or 5000
+    })
+
+    if adminChatSoundEnabled then
+        PlaySoundFrontend(
+            -1,
+            (Config.AdminChat and Config.AdminChat.soundName) or 'ATM_WINDOW',
+            (Config.AdminChat and Config.AdminChat.soundSet) or 'HUD_FRONTEND_DEFAULT_SOUNDSET',
+            true
+        )
+    end
 end)
 
 RegisterNetEvent('sb_admin:client:adminChatError', function(message)
@@ -2428,6 +2476,7 @@ CreateThread(function()
             Wait(0)
 
             DisableControlAction(0, 37, true)  -- Tab
+            DisableControlAction(0, 182, true) -- L (adminchat-lyd)
             DisableControlAction(0, 172, true) -- Arrow Up
             DisableControlAction(0, 173, true) -- Arrow Down
             DisableControlAction(0, 174, true) -- Arrow Left
@@ -2440,7 +2489,9 @@ CreateThread(function()
             if IsDisabledControlJustPressed(0, 37) then
                 toggleActiveTab()
             elseif activeTab == 'chat' then
-                if IsDisabledControlJustPressed(0, 191)
+                if IsDisabledControlJustPressed(0, 182) then
+                    toggleAdminChatSound()
+                elseif IsDisabledControlJustPressed(0, 191)
                     or IsDisabledControlJustPressed(0, 201) then
                     beginChatInput()
                 elseif IsDisabledControlJustPressed(0, 177) then

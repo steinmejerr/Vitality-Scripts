@@ -115,6 +115,16 @@ Config.GiveVehicle = {
 
 
 Config.AdminChat = {
+    -- Om chatlyd er slået til som standard for nye admins.
+    soundDefault = true,
+
+    -- ox_lib-notifikation ved nye beskeder fra andre admins.
+    notifyDuration = 5000,
+
+    -- GTA frontend-lyd. Kan ændres til en anden lyd, hvis ønsket.
+    soundName = 'ATM_WINDOW',
+    soundSet = 'HUD_FRONTEND_DEFAULT_SOUNDSET',
+
     -- Maksimalt antal tegn i én besked.
     maxLength = 250,
 

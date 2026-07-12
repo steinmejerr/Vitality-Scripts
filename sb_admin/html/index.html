@@ -55,7 +55,10 @@
                         <h2>Live adminchat</h2>
                         <p>Kun synlig for serverens admins.</p>
                     </div>
-                    <span class="live-indicator"><span></span> Live</span>
+                    <div class="chat-statuses">
+                        <span id="chat-sound-status" class="sound-indicator enabled">Lyd: Til</span>
+                        <span class="live-indicator"><span></span> Live</span>
+                    </div>
                 </div>
 
                 <div id="chat-messages" class="chat-messages">
@@ -71,6 +74,7 @@
             <footer class="menu-footer">
                 <div class="key-help">
                     <span class="key-group"><kbd>Enter</kbd> Skriv / send</span>
+                    <span class="key-group"><kbd>L</kbd> Lyd til/fra</span>
                     <span class="key-group"><kbd>Tab</kbd> Adminmenu</span>
                     <span class="key-group"><kbd>Esc</kbd> Luk</span>
                 </div>
