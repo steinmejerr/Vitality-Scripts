@@ -24,6 +24,7 @@
         <nav class="tab-navigation" aria-label="Adminmenu faner">
             <div id="menu-tab" class="tab-button active">Adminmenu</div>
             <div id="chat-tab" class="tab-button">Adminchat</div>
+            <div id="admins-tab" class="tab-button">Admins</div>
             <div class="tab-key"><kbd>Tab</kbd> Skift</div>
         </nav>
 
@@ -84,6 +85,69 @@
                     <span class="key-group"><kbd>L</kbd> Lyd til/fra</span>
                     <span class="key-group"><kbd>Tab</kbd> Adminmenu</span>
                     <span class="key-group"><kbd>Esc</kbd> Luk</span>
+                </div>
+            </footer>
+        </div>
+
+        <div id="admins-view" class="tab-view">
+            <section class="admins-content">
+                <div class="section-heading admins-heading">
+                    <div>
+                        <h2>Admins</h2>
+                        <p>Administrér adgang og individuelle rettigheder.</p>
+                    </div>
+                    <button id="admins-add" class="ui-button primary" type="button">Tilføj admin</button>
+                </div>
+
+                <div class="admins-layout">
+                    <aside class="admins-sidebar">
+                        <div id="admins-list" class="admins-list"></div>
+                    </aside>
+
+                    <form id="admins-form" class="admins-form">
+                        <div class="form-row" id="admins-player-row">
+                            <label for="admins-player">Online spiller</label>
+                            <select id="admins-player"></select>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label for="admins-name">Navn</label>
+                                <input id="admins-name" type="text" maxlength="100" required>
+                            </div>
+                            <div class="form-row">
+                                <label for="admins-discord">Discord ID</label>
+                                <input id="admins-discord" type="text" readonly>
+                            </div>
+                            <div class="form-row full">
+                                <label for="admins-license">License identifier</label>
+                                <input id="admins-license" type="text" readonly>
+                            </div>
+                        </div>
+
+                        <div class="permissions-header">
+                            <div>
+                                <h3>Rettigheder</h3>
+                                <p>Afkryds de funktioner, adminen skal have adgang til.</p>
+                            </div>
+                            <button id="admins-toggle-all" class="ui-button secondary" type="button">Vælg alle</button>
+                        </div>
+
+                        <div id="admins-permissions" class="permissions-grid"></div>
+
+                        <div class="admins-actions">
+                            <button id="admins-delete" class="ui-button danger" type="button">Fjern admin</button>
+                            <button class="ui-button primary" type="submit">Gem admin</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <footer class="menu-footer">
+                <div class="key-help">
+                    <span class="key-group"><kbd>Mus</kbd> Vælg rettigheder</span>
+                    <span class="key-group"><kbd>Tab</kbd> Skift fane</span>
+                    <span class="key-group"><kbd>Esc</kbd> Adminmenu</span>
                 </div>
             </footer>
         </div>

@@ -57,13 +57,6 @@ end
 local function getMainMenuItems()
     local items = {
         {
-            action = 'admins',
-            permission = 'manage_admins',
-            label = 'Admins',
-            description = 'Tilføj admins og administrér deres rettigheder.',
-            icon = 'shield'
-        },
-        {
             action = 'players',
             permission = 'players_view',
             label = 'Spillere',
@@ -209,7 +202,8 @@ local function sendMenuState()
         items = menuItems,
         activeTab = activeTab,
         chatMessages = adminChatMessages,
-        chatSoundEnabled = adminChatSoundEnabled
+        chatSoundEnabled = adminChatSoundEnabled,
+        canManageAdmins = can('manage_admins')
     })
 end
 
@@ -652,9 +646,47 @@ local function refreshAdminChat()
     return true
 end
 
+local function buildPermissionDefinitions()
+    local definitions = {}
+    for key, label in pairs(Config.AdminPermissions or {}) do
+        if key ~= 'access_menu' then
+            definitions[#definitions + 1] = { key = key, label = label }
+        end
+    end
+    table.sort(definitions, function(a, b) return a.label < b.label end)
+    return definitions
+end
+
+local function refreshAdminsTab()
+    if not can('manage_admins') then
+        return false
+    end
+
+    local admins = lib.callback.await('sb_admin:server:getAdmins', false)
+    local candidates = lib.callback.await('sb_admin:server:getOnlineAdminCandidates', false)
+
+    if not admins or not candidates then
+        notify('Adminlisten kunne ikke hentes.', 'error')
+        return false
+    end
+
+    SendNUIMessage({
+        action = 'setAdminsData',
+        admins = admins,
+        candidates = candidates,
+        permissions = buildPermissionDefinitions()
+    })
+
+    return true
+end
+
 local function setActiveTab(tabName)
-    if tabName ~= 'menu' and tabName ~= 'chat' then
+    if tabName ~= 'menu' and tabName ~= 'chat' and tabName ~= 'admins' then
         return
+    end
+
+    if tabName == 'admins' and not can('manage_admins') then
+        tabName = 'menu'
     end
 
     if chatTyping or chatMouseEnabled then
@@ -674,16 +706,32 @@ local function setActiveTab(tabName)
 
     if activeTab == 'chat' then
         refreshAdminChat()
+        SetNuiFocus(false, false)
+        SetNuiFocusKeepInput(false)
+    elseif activeTab == 'admins' then
+        refreshAdminsTab()
+        SetNuiFocus(true, true)
+        SetNuiFocusKeepInput(false)
+    else
+        SetNuiFocus(false, false)
+        SetNuiFocusKeepInput(false)
     end
 
     SendNUIMessage({
         action = 'setActiveTab',
-        tab = activeTab
+        tab = activeTab,
+        canManageAdmins = can('manage_admins')
     })
 end
 
 local function toggleActiveTab()
-    setActiveTab(activeTab == 'menu' and 'chat' or 'menu')
+    if activeTab == 'menu' then
+        setActiveTab('chat')
+    elseif activeTab == 'chat' and can('manage_admins') then
+        setActiveTab('admins')
+    else
+        setActiveTab('menu')
+    end
 end
 
 local function updateAdminChatSoundUi()
@@ -2056,6 +2104,57 @@ RegisterNUICallback('clipboardResult', function(data, cb)
 end)
 
 
+RegisterNUICallback('adminsRefresh', function(_, cb)
+    local ok = refreshAdminsTab()
+    cb({ ok = ok })
+end)
+
+RegisterNUICallback('adminsSave', function(data, cb)
+    if not can('manage_admins') or type(data) ~= 'table' then
+        cb({ success = false, message = 'Ingen adgang.' })
+        return
+    end
+
+    local payload = {
+        id = data.id,
+        name = data.name,
+        license = data.license,
+        discord = data.discord,
+        permissions = data.permissions or {}
+    }
+
+    local result = lib.callback.await('sb_admin:server:saveAdmin', false, payload)
+    if result and result.success then
+        myPermissions = lib.callback.await('sb_admin:server:getMyPermissions', false) or myPermissions
+        refreshAdminsTab()
+        notify('Adminen blev gemt.', 'success')
+    else
+        notify(result and result.message or 'Adminen kunne ikke gemmes.', 'error')
+    end
+    cb(result or { success = false })
+end)
+
+RegisterNUICallback('adminsDelete', function(data, cb)
+    if not can('manage_admins') then
+        cb({ success = false })
+        return
+    end
+
+    local deleted = lib.callback.await('sb_admin:server:deleteAdmin', false, tonumber(data and data.id))
+    if deleted then
+        refreshAdminsTab()
+        notify('Adminen blev fjernet.', 'success')
+    else
+        notify('Adminen kunne ikke fjernes.', 'error')
+    end
+    cb({ success = deleted == true })
+end)
+
+RegisterNUICallback('adminsSwitchTab', function(_, cb)
+    toggleActiveTab()
+    cb({ ok = true })
+end)
+
 local function permissionOptions(selected)
     local options, defaults = {}, {}
     for key, label in pairs(Config.AdminPermissions or {}) do
@@ -2815,7 +2914,7 @@ CreateThread(function()
     while true do
         if not menuOpen then
             Wait(500)
-        elseif chatTyping or chatMouseEnabled then
+        elseif chatTyping or chatMouseEnabled or activeTab == 'admins' then
             Wait(100)
         else
             Wait(0)

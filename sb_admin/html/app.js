@@ -9,6 +9,19 @@ const adminView = document.getElementById('admin-view');
 const chatView = document.getElementById('chat-view');
 const menuTab = document.getElementById('menu-tab');
 const chatTab = document.getElementById('chat-tab');
+const adminsTab = document.getElementById('admins-tab');
+const adminsView = document.getElementById('admins-view');
+const adminsList = document.getElementById('admins-list');
+const adminsForm = document.getElementById('admins-form');
+const adminsAdd = document.getElementById('admins-add');
+const adminsPlayerRow = document.getElementById('admins-player-row');
+const adminsPlayer = document.getElementById('admins-player');
+const adminsName = document.getElementById('admins-name');
+const adminsDiscord = document.getElementById('admins-discord');
+const adminsLicense = document.getElementById('admins-license');
+const adminsPermissions = document.getElementById('admins-permissions');
+const adminsToggleAll = document.getElementById('admins-toggle-all');
+const adminsDelete = document.getElementById('admins-delete');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const chatCounter = document.getElementById('chat-counter');
@@ -26,6 +39,11 @@ let chatSoundEnabled = true;
 let chatMouseEnabled = false;
 let localTypingActive = false;
 let typingHeartbeat = null;
+let canManageAdmins = false;
+let adminRecords = [];
+let adminCandidates = [];
+let adminPermissionDefinitions = [];
+let editingAdminId = null;
 
 // Antallet af menupunkter, der må være synlige på samme tid.
 // Punkt 1-7 vises uden scrolling. Når punkt 8 vælges, flyttes vinduet én række.
@@ -344,18 +362,19 @@ function postNui(endpoint, payload = {}) {
 }
 
 function setActiveTab(tab) {
-    activeTab = tab === 'chat' ? 'chat' : 'menu';
-    const isChat = activeTab === 'chat';
+    if (tab === 'admins' && !canManageAdmins) tab = 'menu';
+    activeTab = ['menu', 'chat', 'admins'].includes(tab) ? tab : 'menu';
 
-    adminView.classList.toggle('active', !isChat);
-    chatView.classList.toggle('active', isChat);
-    menuTab.classList.toggle('active', !isChat);
-    chatTab.classList.toggle('active', isChat);
+    adminView.classList.toggle('active', activeTab === 'menu');
+    chatView.classList.toggle('active', activeTab === 'chat');
+    adminsView.classList.toggle('active', activeTab === 'admins');
+    menuTab.classList.toggle('active', activeTab === 'menu');
+    chatTab.classList.toggle('active', activeTab === 'chat');
+    adminsTab.classList.toggle('active', activeTab === 'admins');
+    adminsTab.classList.toggle('hidden', !canManageAdmins);
 
-    if (isChat) {
-        requestAnimationFrame(() => {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
+    if (activeTab === 'chat') {
+        requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
     }
 }
 
@@ -528,11 +547,150 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+
+function setAdminsData(data) {
+    adminRecords = Array.isArray(data.admins) ? data.admins : [];
+    adminCandidates = Array.isArray(data.candidates) ? data.candidates : [];
+    adminPermissionDefinitions = Array.isArray(data.permissions) ? data.permissions : [];
+    renderAdminsList();
+
+    if (editingAdminId !== null) {
+        const current = adminRecords.find((admin) => Number(admin.id) === Number(editingAdminId));
+        if (current) selectAdmin(current);
+        else startNewAdmin();
+    } else {
+        startNewAdmin();
+    }
+}
+
+function renderAdminsList() {
+    adminsList.innerHTML = '';
+    if (!adminRecords.length) {
+        adminsList.innerHTML = '<div class="admins-empty">Ingen admins oprettet.</div>';
+        return;
+    }
+
+    adminRecords.forEach((admin) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `admin-list-item${Number(admin.id) === Number(editingAdminId) ? ' active' : ''}`;
+        button.innerHTML = `<strong>${escapeHtml(admin.display_name || 'Admin')}</strong><span>${admin.active === 1 ? 'Aktiv' : 'Deaktiveret'}</span>`;
+        button.addEventListener('click', () => selectAdmin(admin));
+        adminsList.appendChild(button);
+    });
+}
+
+function populateCandidates() {
+    adminsPlayer.innerHTML = '<option value="">Vælg en online spiller</option>';
+    adminCandidates.forEach((candidate) => {
+        const option = document.createElement('option');
+        option.value = String(candidate.id);
+        option.textContent = `[${candidate.id}] ${candidate.name}`;
+        adminsPlayer.appendChild(option);
+    });
+}
+
+function renderPermissionCheckboxes(selected = {}) {
+    adminsPermissions.innerHTML = '';
+    adminPermissionDefinitions.forEach((permission) => {
+        const label = document.createElement('label');
+        label.className = 'permission-checkbox';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = permission.key;
+        checkbox.checked = selected && selected[permission.key] === true;
+        const visual = document.createElement('span');
+        visual.className = 'checkbox-visual';
+        const text = document.createElement('span');
+        text.textContent = permission.label;
+        label.append(checkbox, visual, text);
+        adminsPermissions.appendChild(label);
+    });
+}
+
+function startNewAdmin() {
+    editingAdminId = null;
+    adminsForm.reset();
+    adminsPlayerRow.classList.remove('hidden');
+    adminsDelete.classList.add('hidden');
+    populateCandidates();
+    adminsDiscord.value = '';
+    adminsLicense.value = '';
+    renderPermissionCheckboxes({});
+    renderAdminsList();
+}
+
+function selectAdmin(admin) {
+    editingAdminId = Number(admin.id);
+    adminsPlayerRow.classList.add('hidden');
+    adminsDelete.classList.remove('hidden');
+    adminsName.value = admin.display_name || '';
+    adminsDiscord.value = admin.discord_identifier || '';
+    adminsLicense.value = admin.license_identifier || '';
+    renderPermissionCheckboxes(admin.permissions || {});
+    renderAdminsList();
+}
+
+adminsPlayer.addEventListener('change', () => {
+    const candidate = adminCandidates.find((item) => String(item.id) === adminsPlayer.value);
+    if (!candidate) return;
+    adminsName.value = candidate.name || '';
+    adminsDiscord.value = candidate.discord || '';
+    adminsLicense.value = candidate.license || '';
+});
+
+adminsAdd.addEventListener('click', startNewAdmin);
+
+adminsToggleAll.addEventListener('click', () => {
+    const boxes = [...adminsPermissions.querySelectorAll('input[type="checkbox"]')];
+    const shouldCheck = boxes.some((box) => !box.checked);
+    boxes.forEach((box) => { box.checked = shouldCheck; });
+    adminsToggleAll.textContent = shouldCheck ? 'Fravælg alle' : 'Vælg alle';
+});
+
+adminsForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!adminsName.value.trim()) return;
+
+    const permissions = {};
+    adminsPermissions.querySelectorAll('input[type="checkbox"]:checked').forEach((box) => {
+        permissions[box.value] = true;
+    });
+
+    const response = await postNui('adminsSave', {
+        id: editingAdminId,
+        name: adminsName.value.trim(),
+        license: adminsLicense.value || null,
+        discord: adminsDiscord.value || null,
+        permissions
+    });
+});
+
+adminsDelete.addEventListener('click', async () => {
+    if (editingAdminId === null) return;
+    if (!window.confirm('Er du sikker på, at adminens adgang skal fjernes?')) return;
+    await postNui('adminsDelete', { id: editingAdminId });
+    editingAdminId = null;
+});
+
+document.addEventListener('keydown', (event) => {
+    if (activeTab !== 'admins') return;
+    if (event.key === 'Tab') {
+        event.preventDefault();
+        postNui('adminsSwitchTab');
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        postNui('adminsSwitchTab');
+    }
+});
+
 window.addEventListener('message', (event) => {
     const data = event.data || {};
 
     switch (data.action) {
         case 'setMenu':
+            canManageAdmins = Boolean(data.canManageAdmins);
+            adminsTab.classList.toggle('hidden', !canManageAdmins);
             items = Array.isArray(data.items) ? data.items : [];
             menuTitle.textContent = data.title || 'Adminmenu';
             selectedIndex = Number(data.selectedIndex) || 1;
@@ -557,7 +715,12 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'setActiveTab':
+            if (typeof data.canManageAdmins === 'boolean') canManageAdmins = data.canManageAdmins;
             setActiveTab(data.tab);
+            break;
+
+        case 'setAdminsData':
+            setAdminsData(data);
             break;
 
         case 'setChatSound':
