@@ -372,6 +372,7 @@ function setActiveTab(tab) {
     chatTab.classList.toggle('active', activeTab === 'chat');
     adminsTab.classList.toggle('active', activeTab === 'admins');
     adminsTab.classList.toggle('hidden', !canManageAdmins);
+    menu.classList.toggle('admins-mode', activeTab === 'admins');
 
     if (activeTab === 'chat') {
         requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });

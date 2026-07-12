@@ -763,3 +763,49 @@ body.chat-mouse-active .chat-compose input {
 .admins-form::-webkit-scrollbar-corner {
     background: transparent;
 }
+
+
+/* Større vindue kun på Admins-fanen */
+.admin-menu.admins-mode {
+    width: min(720px, 55vw);
+    min-width: 650px;
+}
+
+.admin-menu.admins-mode .admins-content {
+    padding: 22px;
+}
+
+.admin-menu.admins-mode .admins-layout {
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 18px;
+    height: 570px;
+}
+
+.admin-menu.admins-mode .admins-sidebar {
+    padding-right: 10px;
+}
+
+.admin-menu.admins-mode .admins-form {
+    padding-right: 10px;
+}
+
+.admin-menu.admins-mode .permissions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+@media (max-width: 1366px) {
+    .admin-menu.admins-mode {
+        width: min(680px, 62vw);
+        min-width: 610px;
+    }
+
+    .admin-menu.admins-mode .admins-layout {
+        grid-template-columns: 185px minmax(0, 1fr);
+        height: 520px;
+    }
+
+    .admin-menu.admins-mode .permissions-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
