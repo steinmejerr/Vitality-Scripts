@@ -353,12 +353,19 @@ async function copyToClipboard(text) {
 }
 
 
-function postNui(endpoint, payload = {}) {
-    return fetch(`https://${GetParentResourceName()}/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-        body: JSON.stringify(payload)
-    }).catch(() => {});
+async function postNui(endpoint, payload = {}) {
+    try {
+        const response = await fetch(`https://${GetParentResourceName()}/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+            body: JSON.stringify(payload)
+        });
+
+        return await response.json();
+    } catch (error) {
+        console.error(`[sb_admin] NUI request failed: ${endpoint}`, error);
+        return { success: false, message: 'NUI-kaldet fejlede.' };
+    }
 }
 
 function setActiveTab(tab) {
@@ -653,6 +660,12 @@ adminsForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!adminsName.value.trim()) return;
 
+    const submitButton = adminsForm.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Gemmer...';
+    }
+
     const permissions = {};
     adminsPermissions.querySelectorAll('input[type="checkbox"]:checked').forEach((box) => {
         permissions[box.value] = true;
@@ -665,6 +678,15 @@ adminsForm.addEventListener('submit', async (event) => {
         discord: adminsDiscord.value || null,
         permissions
     });
+
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Gem admin';
+    }
+
+    if (response && response.success) {
+        editingAdminId = response.id ? Number(response.id) : editingAdminId;
+    }
 });
 
 adminsDelete.addEventListener('click', async () => {

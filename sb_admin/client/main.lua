@@ -2127,7 +2127,7 @@ RegisterNUICallback('adminsSave', function(data, cb)
     if result and result.success then
         myPermissions = lib.callback.await('sb_admin:server:getMyPermissions', false) or myPermissions
         refreshAdminsTab()
-        notify('Adminen blev gemt.', 'success')
+        notify(result.message or 'Adminen blev gemt.', 'success')
     else
         notify(result and result.message or 'Adminen kunne ikke gemmes.', 'error')
     end

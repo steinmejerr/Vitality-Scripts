@@ -182,17 +182,87 @@ lib.callback.register('sb_admin:server:getOnlineAdminCandidates', function(sourc
 end)
 
 lib.callback.register('sb_admin:server:saveAdmin', function(source, data)
-    if not hasPermission(source, 'manage_admins') or type(data)~='table' then return {success=false,message='Ingen adgang.'} end
-    local adminId=tonumber(data.id); local name=tostring(data.name or 'Admin'):sub(1,100)
-    local license=data.license and tostring(data.license) or nil; local discord=data.discord and tostring(data.discord) or nil
-    local perms={}; for key in pairs(Config.AdminPermissions or {}) do perms[key]=data.permissions and data.permissions[key]==true or false end
-    perms.access_menu=true
-    if adminId then
-        MySQL.update.await('UPDATE sb_admin_admins SET display_name=?, license_identifier=?, discord_identifier=?, permissions=?, active=1 WHERE id=?',{name,license,discord,json.encode(perms),adminId})
-    else
-        MySQL.insert.await('INSERT INTO sb_admin_admins (display_name,license_identifier,discord_identifier,permissions,active,created_by) VALUES (?,?,?,?,1,?)',{name,license,discord,json.encode(perms),GetPlayerName(source)})
+    if not hasPermission(source, 'manage_admins') or type(data) ~= 'table' then
+        return { success = false, message = 'Ingen adgang.' }
     end
-    clearAdminCache(); return {success=true}
+
+    local adminId = tonumber(data.id)
+    local name = tostring(data.name or ''):gsub('^%s+', ''):gsub('%s+$', ''):sub(1, 100)
+    local license = data.license and tostring(data.license):gsub('^%s+', ''):gsub('%s+$', '') or nil
+    local discord = data.discord and tostring(data.discord):gsub('^%s+', ''):gsub('%s+$', '') or nil
+
+    if name == '' then
+        return { success = false, message = 'Du skal angive et navn.' }
+    end
+
+    if license == '' then license = nil end
+    if discord == '' then discord = nil end
+
+    if not adminId and not license and not discord then
+        return { success = false, message = 'Spilleren mangler både license- og Discord-identifier.' }
+    end
+
+    local perms = {}
+    for key in pairs(Config.AdminPermissions or {}) do
+        perms[key] = data.permissions and data.permissions[key] == true or false
+    end
+    perms.access_menu = true
+
+    local ok, result = pcall(function()
+        -- Hvis spilleren allerede findes, også som deaktiveret, genbruges posten.
+        if not adminId then
+            local existing = MySQL.single.await([[
+                SELECT id FROM sb_admin_admins
+                WHERE (license_identifier IS NOT NULL AND license_identifier = ?)
+                   OR (discord_identifier IS NOT NULL AND discord_identifier = ?)
+                LIMIT 1
+            ]], { license, discord })
+
+            if existing then
+                adminId = tonumber(existing.id)
+            end
+        end
+
+        if adminId then
+            local affected = MySQL.update.await([[
+                UPDATE sb_admin_admins
+                SET display_name = ?, license_identifier = ?, discord_identifier = ?,
+                    permissions = ?, active = 1
+                WHERE id = ?
+            ]], { name, license, discord, json.encode(perms), adminId })
+
+            if not affected or affected < 1 then
+                error('Adminposten blev ikke fundet.')
+            end
+
+            return { reactivated = true, id = adminId }
+        end
+
+        local insertedId = MySQL.insert.await([[
+            INSERT INTO sb_admin_admins
+                (display_name, license_identifier, discord_identifier, permissions, active, created_by)
+            VALUES (?, ?, ?, ?, 1, ?)
+        ]], { name, license, discord, json.encode(perms), GetPlayerName(source) })
+
+        if not insertedId then
+            error('Databasen returnerede intet admin-ID.')
+        end
+
+        return { reactivated = false, id = insertedId }
+    end)
+
+    if not ok then
+        print(('[sb_admin] Kunne ikke gemme admin: %s'):format(tostring(result)))
+        return { success = false, message = 'Adminen kunne ikke gemmes. Se serverkonsollen for detaljer.' }
+    end
+
+    clearAdminCache()
+
+    return {
+        success = true,
+        id = result.id,
+        message = result.reactivated and 'Adminen blev opdateret og aktiveret.' or 'Adminen blev oprettet.'
+    }
 end)
 
 lib.callback.register('sb_admin:server:deleteAdmin', function(source, adminId)
