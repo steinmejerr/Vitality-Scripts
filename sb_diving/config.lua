@@ -188,6 +188,19 @@ Config.Missions = {
     }
 }
 
+
+Config.MissionHud = {
+    enabled = true,
+    position = 'left-center',
+    guide = {
+        'Tag dykkerudstyret på.',
+        'Følg GPS-ruten til dykkerområdet.',
+        'Dyk ned til kisten med den grønne pil.',
+        'Tryk E tæt på kisten for at samle den op.',
+        'Åbn kisterne fra dit inventory bagefter.'
+    }
+}
+
 Config.Search = {
     pickupDuration = 3500,
     distance = 2.2,

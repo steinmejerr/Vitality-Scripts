@@ -28,6 +28,33 @@
         <section id="content" class="content"></section>
     </main>
 
+
+    <aside id="mission-hud" class="mission-hud hidden" aria-live="polite">
+        <div class="mission-hud-head">
+            <div>
+                <span class="mission-hud-kicker">AKTIV MISSION</span>
+                <strong id="mission-hud-title">Dykkermission</strong>
+            </div>
+            <div class="mission-hud-count">
+                <span id="mission-hud-remaining">0</span>
+                <small>tilbage</small>
+            </div>
+        </div>
+
+        <div class="mission-progress-row">
+            <span id="mission-hud-progress-text">0 / 0 kister</span>
+            <span id="mission-hud-percent">0%</span>
+        </div>
+        <div class="mission-progress-track">
+            <div id="mission-progress-fill" class="mission-progress-fill"></div>
+        </div>
+
+        <div class="mission-guide">
+            <span class="mission-guide-title">Lille guide</span>
+            <ol id="mission-guide-list"></ol>
+        </div>
+    </aside>
+
     <aside id="oxygen-hud" class="oxygen-hud hidden" aria-live="polite">
         <div class="oxygen-head">
             <span>ILT</span>

@@ -79,6 +79,22 @@ local function closeUi()
     SendNUIMessage({ action = 'close' })
 end
 
+local function setMissionHud(visible, mission, completed, required)
+    if not Config.MissionHud or Config.MissionHud.enabled == false then
+        SendNUIMessage({ action = 'missionHud', visible = false })
+        return
+    end
+
+    SendNUIMessage({
+        action = 'missionHud',
+        visible = visible == true,
+        label = mission and mission.label or nil,
+        completed = completed or 0,
+        required = required or 0,
+        guide = Config.MissionHud.guide or {}
+    })
+end
+
 local function removeMissionObject(pointIndex)
     local entry = missionObjects[pointIndex]
     if not entry then return end
@@ -92,6 +108,8 @@ local function removeMissionObject(pointIndex)
 end
 
 local function clearMissionZones()
+    setMissionHud(false)
+
     for pointIndex in pairs(missionObjects) do
         removeMissionObject(pointIndex)
     end
@@ -514,7 +532,14 @@ local function pickupMissionChest(pointIndex)
         result.completed,
         result.required
     ), 'success')
-    SendNUIMessage({ action = 'missionProgress', completed = result.completed, required = result.required })
+    SendNUIMessage({
+        action = 'missionProgress',
+        visible = not result.finished,
+        label = activeMission and activeMission.label or nil,
+        completed = result.completed,
+        required = result.required,
+        guide = Config.MissionHud and Config.MissionHud.guide or {}
+    })
 
     if result.finished then
         notify(('Mission fuldført! Du modtog %s kr. inkl. depositum.'):format(result.bonus), 'success')
@@ -565,6 +590,7 @@ end
 local function beginMission(mission)
     clearMissionZones()
     activeMission = mission
+    setMissionHud(true, mission, mission.completed or 0, mission.required or #mission.points)
 
     areaBlip = AddBlipForRadius(mission.area.center.x, mission.area.center.y, mission.area.center.z, mission.area.radius)
     SetBlipColour(areaBlip, 3)
@@ -644,6 +670,10 @@ RegisterNUICallback('sellAll', function(_, cb)
         result.data = lib.callback.await('sb_diving:server:getUiData', false, currentLocation)
     end
     cb(result or { success = false })
+end)
+
+CreateThread(function()
+    setMissionHud(false)
 end)
 
 CreateThread(function()

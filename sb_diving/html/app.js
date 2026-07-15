@@ -6,6 +6,14 @@ const oxygenHud = document.getElementById('oxygen-hud');
 const oxygenFill = document.getElementById('oxygen-fill');
 const oxygenTime = document.getElementById('oxygen-time');
 const oxygenState = document.getElementById('oxygen-state');
+const missionHud = document.getElementById('mission-hud');
+const missionHudTitle = document.getElementById('mission-hud-title');
+const missionHudRemaining = document.getElementById('mission-hud-remaining');
+const missionHudProgressText = document.getElementById('mission-hud-progress-text');
+const missionHudPercent = document.getElementById('mission-hud-percent');
+const missionProgressFill = document.getElementById('mission-progress-fill');
+const missionGuideList = document.getElementById('mission-guide-list');
+
 
 let state = { view: 'shop', data: null };
 
@@ -124,6 +132,30 @@ tabs.forEach(tab => tab.onclick = () => setView(tab.dataset.view));
 closeButton.onclick = () => post('close');
 window.addEventListener('keydown', event => { if (event.key === 'Escape') post('close'); });
 
+
+function updateMissionHud(message) {
+    const visible = Boolean(message.visible);
+    missionHud.classList.toggle('hidden', !visible);
+
+    if (!visible) return;
+
+    const completed = Math.max(0, Number(message.completed || 0));
+    const required = Math.max(0, Number(message.required || 0));
+    const remaining = Math.max(0, required - completed);
+    const percent = required > 0 ? Math.round((completed / required) * 100) : 0;
+
+    missionHudTitle.textContent = message.label || 'Dykkermission';
+    missionHudRemaining.textContent = String(remaining);
+    missionHudProgressText.textContent = `${completed} / ${required} kister`;
+    missionHudPercent.textContent = `${percent}%`;
+    missionProgressFill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+
+    const guide = Array.isArray(message.guide) ? message.guide : [];
+    missionGuideList.innerHTML = guide
+        .map(step => `<li>${escapeHtml(step)}</li>`)
+        .join('');
+}
+
 window.addEventListener('message', event => {
     const msg = event.data || {};
     if (msg.action === 'open') {
@@ -133,9 +165,20 @@ window.addEventListener('message', event => {
     } else if (msg.action === 'close') {
         app.classList.add('hidden');
         state.data = null;
-    } else if (msg.action === 'missionProgress' && state.data?.activeMission) {
-        state.data.activeMission.completed = msg.completed;
-        state.data.activeMission.required = msg.required;
+    } else if (msg.action === 'missionProgress') {
+        if (state.data?.activeMission) {
+            state.data.activeMission.completed = msg.completed;
+            state.data.activeMission.required = msg.required;
+        }
+        updateMissionHud({
+            visible: msg.visible !== false,
+            label: msg.label,
+            completed: msg.completed,
+            required: msg.required,
+            guide: msg.guide
+        });
+    } else if (msg.action === 'missionHud') {
+        updateMissionHud(msg);
     } else if (msg.action === 'oxygen') {
         oxygenHud.classList.toggle('hidden', !msg.visible);
 
