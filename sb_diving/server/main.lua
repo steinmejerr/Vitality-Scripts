@@ -1,4 +1,5 @@
 local ESX = exports['es_extended']:getSharedObject()
+local gearUseCooldowns = {}
 local activeMissions = {}
 local missionCooldowns = {}
 
@@ -332,16 +333,31 @@ end)
 
 RegisterNetEvent('sb_diving:server:validateGear', function()
     local source = source
+    local now = GetGameTimer()
+
+    if gearUseCooldowns[source] and now - gearUseCooldowns[source] < 1000 then
+        return
+    end
+
+    gearUseCooldowns[source] = now
     TriggerClientEvent('sb_diving:client:setGear', source, hasItem(source, Config.Items.gear, 1))
 end)
 
 AddEventHandler('playerDropped', function()
     activeMissions[source] = nil
     missionCooldowns[source] = nil
+    gearUseCooldowns[source] = nil
 end)
 
 
 -- ESX-inventory fallback. ox_inventory bruger client-exporten useDivingGear.
 ESX.RegisterUsableItem(Config.Items.gear, function(source)
+    local now = GetGameTimer()
+
+    if gearUseCooldowns[source] and now - gearUseCooldowns[source] < 1000 then
+        return
+    end
+
+    gearUseCooldowns[source] = now
     TriggerClientEvent('sb_diving:client:setGear', source, hasItem(source, Config.Items.gear, 1))
 end)

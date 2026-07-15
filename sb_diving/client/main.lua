@@ -14,6 +14,7 @@ local oxygenWarningsShown = {}
 local savedAppearance
 local gearObjects = {}
 local gearPed
+local lastGearToggleAt = 0
 
 local function notify(description, notifyType)
     lib.notify({
@@ -84,8 +85,33 @@ local function deleteGearObjects()
     gearObjects = {}
 end
 
+local function captureSkinchangerSkin()
+    local skin
+    local completed = false
+
+    -- ESX skinchanger returnerer normalt synkront gennem callbacken,
+    -- men vi giver den kort tid for kompatibilitet med custom clothing-scripts.
+    TriggerEvent('skinchanger:getSkin', function(currentSkin)
+        if type(currentSkin) == 'table' then
+            skin = currentSkin
+        end
+        completed = true
+    end)
+
+    local timeout = GetGameTimer() + 500
+    while not completed and GetGameTimer() < timeout do
+        Wait(0)
+    end
+
+    return skin
+end
+
 local function saveAppearance(ped)
-    local appearance = { components = {}, props = {} }
+    local appearance = {
+        components = {},
+        props = {},
+        skin = captureSkinchangerSkin()
+    }
 
     for component = 0, 11 do
         appearance.components[component] = {
@@ -105,22 +131,58 @@ local function saveAppearance(ped)
     return appearance
 end
 
-local function restoreAppearance(ped)
-    if not savedAppearance then return end
+local function applyNativeAppearance(ped, appearance)
+    if not appearance then return end
 
-    for component, data in pairs(savedAppearance.components) do
-        SetPedComponentVariation(ped, component, data.drawable, data.texture, data.palette or 0)
+    for component, data in pairs(appearance.components or {}) do
+        SetPedComponentVariation(
+            ped,
+            tonumber(component),
+            data.drawable,
+            data.texture,
+            data.palette or 0
+        )
     end
 
-    for prop, data in pairs(savedAppearance.props) do
+    for prop, data in pairs(appearance.props or {}) do
+        prop = tonumber(prop)
         if data.drawable and data.drawable >= 0 then
             SetPedPropIndex(ped, prop, data.drawable, data.texture or 0, true)
         else
             ClearPedProp(ped, prop)
         end
     end
+end
 
+local function restoreAppearance(ped)
+    if not savedAppearance then return end
+
+    local appearance = savedAppearance
     savedAppearance = nil
+
+    -- Brug clothing-systemets egen skin, når skinchanger er tilgængelig.
+    -- Det er mere stabilt end kun at ændre GTA components direkte.
+    if appearance.skin then
+        TriggerEvent('skinchanger:loadSkin', appearance.skin)
+        Wait(150)
+    end
+
+    -- Fallback og sidste sikkerhed: gendan også de præcise components/props.
+    applyNativeAppearance(ped, appearance)
+
+    -- Nogle clothing-scripts anvender deres ændringer en frame senere.
+    -- Gentag derfor én gang kort efter, så scuba-outfittet ikke bliver stående.
+    CreateThread(function()
+        Wait(500)
+        local currentPed = PlayerPedId()
+        if not gearEnabled and DoesEntityExist(currentPed) then
+            if appearance.skin then
+                TriggerEvent('skinchanger:loadSkin', appearance.skin)
+                Wait(100)
+            end
+            applyNativeAppearance(currentPed, appearance)
+        end
+    end)
 end
 
 local function applyDivingOutfit(ped)
@@ -141,7 +203,10 @@ local function applyDivingOutfit(ped)
         return
     end
 
-    savedAppearance = saveAppearance(ped)
+    -- Gem kun det oprindelige outfit én gang pr. aktivering.
+    if not savedAppearance then
+        savedAppearance = saveAppearance(ped)
+    end
 
     for component, data in pairs(components) do
         SetPedComponentVariation(ped, component, data.drawable, data.texture or 0, data.palette or 0)
@@ -235,10 +300,21 @@ local function setGear(enabled, silent)
 end
 
 RegisterNetEvent('sb_diving:client:setGear', function(hasGear)
+    local now = GetGameTimer()
+
+    -- ox_inventory og ESX compatibility kan begge affyre use-handleren.
+    -- Ignorér dubletkald, så ét klik kun toggler udstyret én gang.
+    if now - lastGearToggleAt < 1000 then
+        return
+    end
+
+    lastGearToggleAt = now
+
     if not hasGear then
         if gearEnabled then setGear(false, true) end
         return notify('Du ejer ikke dykkerudstyr.', 'error')
     end
+
     setGear(not gearEnabled)
 end)
 
