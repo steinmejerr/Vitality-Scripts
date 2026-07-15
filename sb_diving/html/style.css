@@ -89,3 +89,58 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     .sell-row { grid-template-columns: 1fr 80px 100px; }
     .sell-row .primary { grid-column: 1 / -1; }
 }
+
+
+.oxygen-hud {
+    position: absolute;
+    right: 2.2vw;
+    bottom: 7.5vh;
+    width: 210px;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--text);
+    background: rgba(14, 18, 22, .92);
+    box-shadow: 0 12px 34px rgba(0,0,0,.32);
+}
+
+.oxygen-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 9px;
+}
+
+.oxygen-head span {
+    color: var(--accent-2);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+}
+
+.oxygen-head strong {
+    font-size: 13px;
+    font-weight: 560;
+}
+
+.oxygen-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+}
+
+.oxygen-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+    transition: width .2s ease;
+}
+
+.oxygen-hud small {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 10px;
+}

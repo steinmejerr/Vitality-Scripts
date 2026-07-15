@@ -2,6 +2,10 @@ const app = document.getElementById('app');
 const content = document.getElementById('content');
 const tabs = [...document.querySelectorAll('.tabs button')];
 const closeButton = document.getElementById('close');
+const oxygenHud = document.getElementById('oxygen-hud');
+const oxygenFill = document.getElementById('oxygen-fill');
+const oxygenTime = document.getElementById('oxygen-time');
+const oxygenState = document.getElementById('oxygen-state');
 
 let state = { view: 'shop', data: null };
 
@@ -132,5 +136,16 @@ window.addEventListener('message', event => {
     } else if (msg.action === 'missionProgress' && state.data?.activeMission) {
         state.data.activeMission.completed = msg.completed;
         state.data.activeMission.required = msg.required;
+    } else if (msg.action === 'oxygen') {
+        oxygenHud.classList.toggle('hidden', !msg.visible);
+
+        if (msg.visible) {
+            const remaining = Math.max(0, Number(msg.remaining || 0));
+            const minutes = Math.floor(remaining / 60);
+            const seconds = Math.floor(remaining % 60);
+            oxygenTime.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            oxygenFill.style.width = `${Math.max(0, Math.min(100, Number(msg.percent || 0)))}%`;
+            oxygenState.textContent = msg.underwater ? 'I brug under vand' : 'Iltforbrug sat på pause';
+        }
     }
 });

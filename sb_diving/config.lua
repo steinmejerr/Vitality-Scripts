@@ -173,5 +173,43 @@ Config.Search = {
 Config.Diving = {
     oxygenSeconds = 900,
     swimMultiplier = 1.12,
-    removeGearOnDeath = false
+    removeGearOnDeath = false,
+
+    -- Synligt udstyr. Modelnavnene er GTA V standard-props.
+    props = {
+        tank = {
+            model = 'p_s_scuba_tank_s',
+            bone = 24818,
+            offset = vec3(-0.25, -0.20, 0.0),
+            rotation = vec3(180.0, 90.0, 0.0)
+        },
+        mask = {
+            model = 'p_s_scuba_mask_s',
+            bone = 12844,
+            offset = vec3(0.0, 0.0, 0.0),
+            rotation = vec3(0.0, 90.0, 180.0)
+        }
+    },
+
+    -- Standard sort våddragt til freemode-karakterer.
+    -- Sæt enabled = false, hvis jeres clothing-pack bruger andre drawable-ID'er.
+    outfit = {
+        enabled = true,
+        male = {
+            [3] = { drawable = 17, texture = 0 },  -- arme
+            [4] = { drawable = 94, texture = 0 },  -- ben
+            [6] = { drawable = 67, texture = 0 },  -- sko/finner
+            [8] = { drawable = 151, texture = 0 }, -- undertrøje
+            [11] = { drawable = 243, texture = 0 } -- overdel
+        },
+        female = {
+            [3] = { drawable = 18, texture = 0 },
+            [4] = { drawable = 97, texture = 0 },
+            [6] = { drawable = 70, texture = 0 },
+            [8] = { drawable = 187, texture = 0 },
+            [11] = { drawable = 251, texture = 0 }
+        }
+    },
+
+    lowOxygenWarnings = { 25, 10 }
 }

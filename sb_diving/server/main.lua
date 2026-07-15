@@ -339,3 +339,9 @@ AddEventHandler('playerDropped', function()
     activeMissions[source] = nil
     missionCooldowns[source] = nil
 end)
+
+
+-- ESX-inventory fallback. ox_inventory bruger client-exporten useDivingGear.
+ESX.RegisterUsableItem(Config.Items.gear, function(source)
+    TriggerClientEvent('sb_diving:client:setGear', source, hasItem(source, Config.Items.gear, 1))
+end)

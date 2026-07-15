@@ -9,6 +9,11 @@ local missionBlip
 local areaBlip
 local gearEnabled = false
 local oxygenStartedAt = 0
+local oxygenRemaining = 0
+local oxygenWarningsShown = {}
+local savedAppearance
+local gearObjects = {}
+local gearPed
 
 local function notify(description, notifyType)
     lib.notify({
@@ -21,6 +26,18 @@ local function notify(description, notifyType)
 end
 
 RegisterNetEvent('sb_diving:client:notify', notify)
+
+
+-- ox_inventory kalder denne export, når diving_gear bruges.
+exports('useDivingGear', function(data, slot)
+    TriggerServerEvent('sb_diving:server:validateGear')
+end)
+
+-- Kan også kaldes fra andre scripts eller item-systemer.
+RegisterNetEvent('sb_diving:client:useGear', function()
+    TriggerServerEvent('sb_diving:server:validateGear')
+end)
+
 
 local function loadModel(model)
     local hash = joaat(model)
@@ -58,28 +75,168 @@ local function clearMissionZones()
     if areaBlip then RemoveBlip(areaBlip) areaBlip = nil end
 end
 
-local function setGear(enabled)
+local function deleteGearObjects()
+    for _, object in pairs(gearObjects) do
+        if DoesEntityExist(object) then
+            DeleteEntity(object)
+        end
+    end
+    gearObjects = {}
+end
+
+local function saveAppearance(ped)
+    local appearance = { components = {}, props = {} }
+
+    for component = 0, 11 do
+        appearance.components[component] = {
+            drawable = GetPedDrawableVariation(ped, component),
+            texture = GetPedTextureVariation(ped, component),
+            palette = GetPedPaletteVariation(ped, component)
+        }
+    end
+
+    for prop = 0, 7 do
+        appearance.props[prop] = {
+            drawable = GetPedPropIndex(ped, prop),
+            texture = GetPedPropTextureIndex(ped, prop)
+        }
+    end
+
+    return appearance
+end
+
+local function restoreAppearance(ped)
+    if not savedAppearance then return end
+
+    for component, data in pairs(savedAppearance.components) do
+        SetPedComponentVariation(ped, component, data.drawable, data.texture, data.palette or 0)
+    end
+
+    for prop, data in pairs(savedAppearance.props) do
+        if data.drawable and data.drawable >= 0 then
+            SetPedPropIndex(ped, prop, data.drawable, data.texture or 0, true)
+        else
+            ClearPedProp(ped, prop)
+        end
+    end
+
+    savedAppearance = nil
+end
+
+local function applyDivingOutfit(ped)
+    local outfit = Config.Diving.outfit
+    if not outfit or not outfit.enabled then return end
+
+    local model = GetEntityModel(ped)
+    local components
+
+    if model == joaat('mp_m_freemode_01') then
+        components = outfit.male
+    elseif model == joaat('mp_f_freemode_01') then
+        components = outfit.female
+    end
+
+    if not components then
+        notify('Din karaktermodel understøtter ikke standard-dykkertøjet. Iltflaske og maske bliver stadig monteret.', 'warning')
+        return
+    end
+
+    savedAppearance = saveAppearance(ped)
+
+    for component, data in pairs(components) do
+        SetPedComponentVariation(ped, component, data.drawable, data.texture or 0, data.palette or 0)
+    end
+end
+
+local function createAttachedGearObject(ped, config)
+    if not config or not config.model then return nil end
+
+    local hash = loadModel(config.model)
+    if not hash then
+        print(('[sb_diving] Kunne ikke indlæse udstyrsmodel: %s'):format(config.model))
+        return nil
+    end
+
+    local coords = GetEntityCoords(ped)
+    local object = CreateObject(hash, coords.x, coords.y, coords.z, true, true, false)
+    if not DoesEntityExist(object) then return nil end
+
+    SetEntityCollision(object, false, false)
+    AttachEntityToEntity(
+        object,
+        ped,
+        GetPedBoneIndex(ped, config.bone),
+        config.offset.x, config.offset.y, config.offset.z,
+        config.rotation.x, config.rotation.y, config.rotation.z,
+        true, true, false, true, 1, true
+    )
+    SetModelAsNoLongerNeeded(hash)
+    return object
+end
+
+local function applyVisibleGear(ped)
+    deleteGearObjects()
+    applyDivingOutfit(ped)
+
+    local props = Config.Diving.props or {}
+    gearObjects.tank = createAttachedGearObject(ped, props.tank)
+    gearObjects.mask = createAttachedGearObject(ped, props.mask)
+    gearPed = ped
+end
+
+local function removeVisibleGear(ped)
+    deleteGearObjects()
+    restoreAppearance(ped)
+    gearPed = nil
+end
+
+local function updateOxygenUi()
+    local percent = 0
+    if Config.Diving.oxygenSeconds > 0 then
+        percent = math.max(0, math.min(100, math.floor((oxygenRemaining / Config.Diving.oxygenSeconds) * 100)))
+    end
+
+    SendNUIMessage({
+        action = 'oxygen',
+        visible = gearEnabled,
+        remaining = math.max(0, math.ceil(oxygenRemaining)),
+        percent = percent,
+        underwater = IsPedSwimmingUnderWater(PlayerPedId())
+    })
+end
+
+local function setGear(enabled, silent)
     local ped = PlayerPedId()
+
+    if enabled == gearEnabled then return end
     gearEnabled = enabled
+
     if enabled then
-        SetEnableScuba(ped, true)
-        SetPedMaxTimeUnderwater(ped, Config.Diving.oxygenSeconds + 0.0)
-        SetRunSprintMultiplierForPlayer(PlayerId(), Config.Diving.swimMultiplier)
+        oxygenRemaining = Config.Diving.oxygenSeconds + 0.0
+        oxygenWarningsShown = {}
         oxygenStartedAt = GetGameTimer()
-        notify('Dykkerudstyret er aktiveret.', 'success')
+        applyVisibleGear(ped)
+        SetEnableScuba(ped, true)
+        SetPedMaxTimeUnderwater(ped, 99999.0)
+        SetRunSprintMultiplierForPlayer(PlayerId(), Config.Diving.swimMultiplier)
+        updateOxygenUi()
+        if not silent then notify('Dykkerudstyret er taget på. Iltflasken er fuld.', 'success') end
     else
         SetEnableScuba(ped, false)
         SetPedMaxTimeUnderwater(ped, 10.0)
         SetRunSprintMultiplierForPlayer(PlayerId(), 1.0)
         oxygenStartedAt = 0
-        notify('Dykkerudstyret er deaktiveret.', 'inform')
+        oxygenRemaining = 0
+        oxygenWarningsShown = {}
+        removeVisibleGear(ped)
+        SendNUIMessage({ action = 'oxygen', visible = false })
+        if not silent then notify('Dykkerudstyret er taget af.', 'inform') end
     end
 end
 
 RegisterNetEvent('sb_diving:client:setGear', function(hasGear)
     if not hasGear then
-        gearEnabled = false
-        SetEnableScuba(PlayerPedId(), false)
+        if gearEnabled then setGear(false, true) end
         return notify('Du ejer ikke dykkerudstyr.', 'error')
     end
     setGear(not gearEnabled)
@@ -278,10 +435,56 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local lastTick = GetGameTimer()
+
     while true do
-        Wait(1000)
-        -- Missionens udløb valideres server-side ved hvert fundsted.
-        -- Klienten bruger bevidst ikke Lua os-biblioteket, som ikke findes i FiveM client scripts.
+        if not gearEnabled then
+            Wait(750)
+            lastTick = GetGameTimer()
+        else
+            Wait(250)
+
+            local ped = PlayerPedId()
+            local now = GetGameTimer()
+            local elapsed = math.max(0, (now - lastTick) / 1000.0)
+            lastTick = now
+
+            -- Hvis karaktermodellen ændres, bliver udstyret sat korrekt på den nye ped.
+            if gearPed ~= ped then
+                deleteGearObjects()
+                savedAppearance = nil
+                applyVisibleGear(ped)
+                SetEnableScuba(ped, true)
+                SetPedMaxTimeUnderwater(ped, 99999.0)
+            end
+
+            if IsPedSwimmingUnderWater(ped) then
+                oxygenRemaining = math.max(0.0, oxygenRemaining - elapsed)
+
+                local percent = (oxygenRemaining / Config.Diving.oxygenSeconds) * 100.0
+                for _, threshold in ipairs(Config.Diving.lowOxygenWarnings or {}) do
+                    if percent <= threshold and not oxygenWarningsShown[threshold] then
+                        oxygenWarningsShown[threshold] = true
+                        notify(('Iltflasken er nede på %d%%.'):format(threshold), threshold <= 10 and 'error' or 'warning')
+                    end
+                end
+
+                if oxygenRemaining <= 0.0 then
+                    SetEnableScuba(ped, false)
+                    SetPedMaxTimeUnderwater(ped, 5.0)
+                    notify('Iltflasken er tom! Gå straks mod overfladen.', 'error')
+                else
+                    SetEnableScuba(ped, true)
+                    SetPedMaxTimeUnderwater(ped, 99999.0)
+                end
+            end
+
+            updateOxygenUi()
+
+            if Config.Diving.removeGearOnDeath and IsEntityDead(ped) then
+                setGear(false, true)
+            end
+        end
     end
 end)
 
@@ -290,9 +493,11 @@ AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     closeUi()
     clearMissionZones()
+    if gearEnabled then setGear(false, true) end
     SetEnableScuba(PlayerPedId(), false)
     SetPedMaxTimeUnderwater(PlayerPedId(), 10.0)
     SetRunSprintMultiplierForPlayer(PlayerId(), 1.0)
+    deleteGearObjects()
     for i = 1, #spawnedPeds do
         if DoesEntityExist(spawnedPeds[i]) then DeleteEntity(spawnedPeds[i]) end
     end
