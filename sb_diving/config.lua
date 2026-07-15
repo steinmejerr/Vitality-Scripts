@@ -186,7 +186,10 @@ Config.Diving = {
             offset = vec3(-0.02, -0.22, 0.02),
             rotation = vec3(180.0, 0.0, 0.0)
         },
+        -- Standard scuba-outfittet har allerede en maske.
+        -- Den ekstra maske-prop er derfor slået fra, så der kun vises én maske.
         mask = {
+            enabled = false,
             model = 'p_s_scuba_mask_s',
             bone = 12844,
             offset = vec3(0.0, 0.0, 0.0),

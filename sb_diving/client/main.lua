@@ -199,7 +199,7 @@ local function applyDivingOutfit(ped)
     end
 
     if not components then
-        notify('Din karaktermodel understøtter ikke standard-dykkertøjet. Iltflaske og maske bliver stadig monteret.', 'warning')
+        notify('Din karaktermodel understøtter ikke standard-dykkertøjet. Synlige udstyrsdele kan derfor være begrænsede.', 'warning')
         return
     end
 
