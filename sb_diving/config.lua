@@ -56,6 +56,44 @@ Config.Items = {
     }
 }
 
+-- Alle fysiske missionsfund bruger samme lille kiste-prop, men den kiste,
+-- spilleren får i inventoryet, vælges tilfældigt ud fra disse typer.
+Config.Chests = {
+    common = {
+        item = 'diving_chest_common',
+        label = 'Slidt dykkerkiste',
+        weight = 60,
+        rolls = { min = 1, max = 2 },
+        loot = {
+            old_coin = { weight = 60, min = 1, max = 3 },
+            coral_fragment = { weight = 40, min = 1, max = 2 }
+        }
+    },
+    uncommon = {
+        item = 'diving_chest_uncommon',
+        label = 'Forseglet dykkerkiste',
+        weight = 30,
+        rolls = { min = 2, max = 3 },
+        loot = {
+            old_coin = { weight = 35, min = 1, max = 3 },
+            coral_fragment = { weight = 30, min = 1, max = 2 },
+            antique_watch = { weight = 25, min = 1, max = 1 },
+            pearl = { weight = 10, min = 1, max = 1 }
+        }
+    },
+    rare = {
+        item = 'diving_chest_rare',
+        label = 'Sjælden dykkerkiste',
+        weight = 10,
+        rolls = { min = 2, max = 4 },
+        loot = {
+            antique_watch = { weight = 40, min = 1, max = 2 },
+            pearl = { weight = 35, min = 1, max = 2 },
+            sealed_case = { weight = 25, min = 1, max = 1 }
+        }
+    }
+}
+
 Config.Locations = {
     {
         id = 'vespucci',
@@ -80,7 +118,7 @@ Config.Missions = {
         id = 'coastal_recovery',
         label = 'Kystfund',
         difficulty = 'Let',
-        description = 'Undersøg lavt vand efter tabte værdigenstande.',
+        description = 'Undersøg havbunden efter tabte dykkerkister.',
         duration = 15,
         deposit = 500,
         requiredSearches = 4,
@@ -97,17 +135,13 @@ Config.Missions = {
             vec3(-1779.45, -1273.92, -4.80),
             vec3(-1830.22, -1318.67, -10.10)
         },
-        loot = {
-            old_coin = { min = 1, max = 3 },
-            coral_fragment = { min = 1, max = 2 },
-            antique_watch = { min = 1, max = 1 }
-        }
+        chestPool = { common = 70, uncommon = 25, rare = 5 }
     },
     {
         id = 'wreck_salvage',
         label = 'Vragbjærgning',
         difficulty = 'Mellem',
-        description = 'Dyk ved et ældre vrag og bjærg værdifulde genstande.',
+        description = 'Dyk ved et ældre vrag og bjærg kister fra havbunden.',
         duration = 22,
         deposit = 1200,
         requiredSearches = 5,
@@ -125,18 +159,13 @@ Config.Missions = {
             vec3(-2789.70, -475.42, -19.30),
             vec3(-2878.24, -430.55, -28.40)
         },
-        loot = {
-            old_coin = { min = 1, max = 2 },
-            antique_watch = { min = 1, max = 2 },
-            pearl = { min = 1, max = 1 },
-            sealed_case = { min = 1, max = 1 }
-        }
+        chestPool = { common = 45, uncommon = 40, rare = 15 }
     },
     {
         id = 'deep_blue',
         label = 'Dybhavsfund',
         difficulty = 'Svær',
-        description = 'En risikofyldt mission i dybt vand med sjældne fund.',
+        description = 'En risikofyldt mission efter sjældne kister på dybt vand.',
         duration = 30,
         deposit = 2500,
         requiredSearches = 6,
@@ -155,34 +184,31 @@ Config.Missions = {
             vec3(3262.10, -443.67, -55.00),
             vec3(3138.68, -326.51, -36.80)
         },
-        loot = {
-            antique_watch = { min = 1, max = 2 },
-            pearl = { min = 1, max = 2 },
-            sealed_case = { min = 1, max = 2 }
-        }
+        chestPool = { common = 20, uncommon = 45, rare = 35 }
     }
 }
 
 Config.Search = {
-    duration = 7500,
-    distance = 2.0,
-    targetIcon = 'fa-solid fa-magnifying-glass',
-    targetLabel = 'Undersøg fund',
+    pickupDuration = 3500,
+    distance = 1.8,
+    prompt = '[E] Saml dykkerkiste op',
 
-    -- Der oprettes en fysisk prop ved hvert aktivt missionsmål.
-    -- Modellerne bruges på skift, så fundstederne ikke alle ser ens ud.
-    props = {
-        'prop_box_wood02a_pu',
-        'prop_tool_box_04',
-        'prop_ld_case_01'
-    },
+    -- En lille standardkiste, som bruges ved alle missionsmål.
+    chestProp = 'prop_box_wood05a',
+    headingRandom = true,
 
-    -- Lille pil over hvert fund. Den vises kun, når spilleren er i nærheden.
+    -- Forsøger at finde den faktiske havbund ved punktets X/Y. Hvis GTA ikke
+    -- returnerer en bundhøjde, anvendes Z-værdien fra missionens searchPoints.
+    placeOnSeabed = true,
+    seabedProbeHeight = 5.0,
+    seabedOffset = 0.05,
+    collisionTimeout = 2500,
+
     marker = {
         type = 2,
-        height = 1.15,
+        height = 0.75,
         drawDistance = 45.0,
-        scale = vec3(0.28, 0.28, 0.28),
+        scale = vec3(0.24, 0.24, 0.24),
         color = { r = 82, g = 255, b = 170, a = 210 }
     }
 }
@@ -192,10 +218,7 @@ Config.Diving = {
     swimMultiplier = 1.12,
     removeGearOnDeath = false,
 
-    -- Synligt udstyr. Modelnavnene er GTA V standard-props.
     props = {
-        -- Standard scuba-outfittet har allerede en gul ilttank.
-        -- Den ekstra orange prop-tank er derfor slået fra, så der kun vises én tank.
         tank = {
             enabled = false,
             model = 'p_s_scuba_tank_s',
@@ -203,8 +226,6 @@ Config.Diving = {
             offset = vec3(-0.02, -0.22, 0.02),
             rotation = vec3(180.0, 0.0, 0.0)
         },
-        -- Standard scuba-outfittet har allerede en maske.
-        -- Den ekstra maske-prop er derfor slået fra, så der kun vises én maske.
         mask = {
             enabled = false,
             model = 'p_s_scuba_mask_s',
@@ -214,16 +235,14 @@ Config.Diving = {
         }
     },
 
-    -- Standard sort våddragt til freemode-karakterer.
-    -- Sæt enabled = false, hvis jeres clothing-pack bruger andre drawable-ID'er.
     outfit = {
         enabled = true,
         male = {
-            [3] = { drawable = 17, texture = 0 },  -- arme
-            [4] = { drawable = 94, texture = 0 },  -- ben
-            [6] = { drawable = 67, texture = 0 },  -- sko/finner
-            [8] = { drawable = 151, texture = 0 }, -- undertrøje
-            [11] = { drawable = 243, texture = 0 } -- overdel
+            [3] = { drawable = 17, texture = 0 },
+            [4] = { drawable = 94, texture = 0 },
+            [6] = { drawable = 67, texture = 0 },
+            [8] = { drawable = 151, texture = 0 },
+            [11] = { drawable = 243, texture = 0 }
         },
         female = {
             [3] = { drawable = 18, texture = 0 },

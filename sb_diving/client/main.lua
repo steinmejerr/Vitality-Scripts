@@ -4,7 +4,6 @@ local blips = {}
 local menuOpen = false
 local currentLocation
 local activeMission
-local missionZones = {}
 local missionObjects = {}
 local missionBlip
 local areaBlip
@@ -33,6 +32,16 @@ RegisterNetEvent('sb_diving:client:notify', notify)
 -- ox_inventory kalder denne export, når diving_gear bruges.
 exports('useDivingGear', function(data, slot)
     TriggerServerEvent('sb_diving:server:validateGear')
+end)
+
+-- Kister åbnes senere fra inventoryet. Itemnavnet bestemmer kistetypen.
+exports('useDivingChest', function(data, slot)
+    if not data or not data.name then return end
+    TriggerServerEvent('sb_diving:server:openChest', data.name, slot)
+end)
+
+RegisterNetEvent('sb_diving:client:openChest', function(itemName, slot)
+    TriggerServerEvent('sb_diving:server:openChest', itemName, slot)
 end)
 
 -- Kan også kaldes fra andre scripts eller item-systemer.
@@ -73,7 +82,6 @@ local function removeMissionObject(pointIndex)
     if not entry then return end
 
     if entry.entity and DoesEntityExist(entry.entity) then
-        exports.ox_target:removeLocalEntity(entry.entity, entry.targetName)
         SetEntityAsMissionEntity(entry.entity, true, true)
         DeleteEntity(entry.entity)
     end
@@ -82,11 +90,6 @@ local function removeMissionObject(pointIndex)
 end
 
 local function clearMissionZones()
-    for i = 1, #missionZones do
-        exports.ox_target:removeZone(missionZones[i])
-    end
-    missionZones = {}
-
     for pointIndex in pairs(missionObjects) do
         removeMissionObject(pointIndex)
     end
@@ -338,89 +341,102 @@ RegisterNetEvent('sb_diving:client:setGear', function(hasGear)
     setGear(not gearEnabled)
 end)
 
-local function getSearchPropModel(pointIndex)
-    local models = Config.Search.props or { 'prop_box_wood02a_pu' }
-    if #models == 0 then return nil end
-    return models[((pointIndex - 1) % #models) + 1]
+local function resolveSeabedCoords(coords)
+    if not Config.Search.placeOnSeabed then
+        return vec3(coords.x, coords.y, coords.z)
+    end
+
+    RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+    local timeout = GetGameTimer() + (Config.Search.collisionTimeout or 2500)
+    local found, groundZ = false, coords.z
+
+    while GetGameTimer() < timeout do
+        RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+        found, groundZ = GetGroundZFor_3dCoord(
+            coords.x,
+            coords.y,
+            coords.z + (Config.Search.seabedProbeHeight or 5.0),
+            false
+        )
+
+        if found and groundZ < 1.0 then break end
+        Wait(100)
+    end
+
+    if not found or groundZ >= 1.0 then
+        groundZ = coords.z
+    end
+
+    return vec3(coords.x, coords.y, groundZ + (Config.Search.seabedOffset or 0.05))
+end
+
+local function pickupMissionChest(pointIndex)
+    if not activeMission or not missionObjects[pointIndex] then return end
+    if not gearEnabled then return notify('Du skal have dykkerudstyret aktiveret.', 'error') end
+    if not IsPedSwimmingUnderWater(PlayerPedId()) then
+        return notify('Kisten kan kun samles op under vandet.', 'error')
+    end
+
+    local completed = lib.progressCircle({
+        duration = Config.Search.pickupDuration or 3500,
+        label = 'Samler dykkerkisten op...',
+        position = 'bottom',
+        useWhileDead = false,
+        canCancel = true,
+        disable = { move = true, car = true, combat = true }
+    })
+    if not completed or not activeMission then return end
+
+    local result = lib.callback.await('sb_diving:server:collectChest', false, activeMission.id, pointIndex)
+    if not result or not result.success then
+        if result and result.expired then
+            activeMission = nil
+            clearMissionZones()
+        end
+        return notify(result and result.message or 'Kisten kunne ikke samles op.', 'error')
+    end
+
+    removeMissionObject(pointIndex)
+    notify(('Du samlede %s op. Åbn den fra dit inventory. (%d/%d)'):format(
+        result.label,
+        result.completed,
+        result.required
+    ), 'success')
+    SendNUIMessage({ action = 'missionProgress', completed = result.completed, required = result.required })
+
+    if result.finished then
+        notify(('Mission fuldført! Du modtog %s kr. inkl. depositum.'):format(result.bonus), 'success')
+        activeMission = nil
+        clearMissionZones()
+    end
 end
 
 local function addMissionZone(pointIndex, coords)
-    local model = getSearchPropModel(pointIndex)
-    local hash = model and loadModel(model)
-
+    local hash = loadModel(Config.Search.chestProp or 'prop_box_wood05a')
     if not hash then
-        print(('[sb_diving] Kunne ikke indlæse mission-prop ved punkt %s.'):format(pointIndex))
+        print(('[sb_diving] Kunne ikke indlæse kiste-prop ved punkt %s.'):format(pointIndex))
         return
     end
 
-    local object = CreateObjectNoOffset(hash, coords.x, coords.y, coords.z, false, false, false)
+    local seabedCoords = resolveSeabedCoords(coords)
+    local object = CreateObjectNoOffset(hash, seabedCoords.x, seabedCoords.y, seabedCoords.z, false, false, false)
     if not DoesEntityExist(object) then
-        print(('[sb_diving] Kunne ikke oprette mission-prop ved punkt %s.'):format(pointIndex))
+        print(('[sb_diving] Kunne ikke oprette missionskiste ved punkt %s.'):format(pointIndex))
         SetModelAsNoLongerNeeded(hash)
         return
     end
 
     SetEntityAsMissionEntity(object, true, true)
-    SetEntityHeading(object, math.random(0, 359) + 0.0)
-    FreezeEntityPosition(object, true)
+    SetEntityHeading(object, Config.Search.headingRandom and (math.random(0, 359) + 0.0) or 0.0)
     SetEntityCollision(object, true, true)
+    FreezeEntityPosition(object, true)
     SetModelAsNoLongerNeeded(hash)
 
-    local targetName = ('sb_diving_search_%s_%s'):format(activeMission.id, pointIndex)
     missionObjects[pointIndex] = {
         entity = object,
-        targetName = targetName,
-        coords = coords
+        coords = seabedCoords,
+        busy = false
     }
-
-    exports.ox_target:addLocalEntity(object, {
-        {
-            name = targetName,
-            icon = Config.Search.targetIcon,
-            label = Config.Search.targetLabel,
-            distance = Config.Search.distance + 1.0,
-            canInteract = function(entity)
-                return activeMission ~= nil
-                    and missionObjects[pointIndex] ~= nil
-                    and entity == missionObjects[pointIndex].entity
-                    and gearEnabled
-                    and IsPedSwimmingUnderWater(PlayerPedId())
-            end,
-            onSelect = function()
-                if not activeMission or not missionObjects[pointIndex] then return end
-
-                local completed = lib.progressCircle({
-                    duration = Config.Search.duration,
-                    label = 'Undersøger fundet...',
-                    position = 'bottom',
-                    useWhileDead = false,
-                    canCancel = true,
-                    disable = { move = true, car = true, combat = true },
-                    anim = { dict = 'amb@world_human_bum_wash@male@high@idle_a', clip = 'idle_a' }
-                })
-                if not completed then return end
-
-                local result = lib.callback.await('sb_diving:server:searchPoint', false, activeMission.id, pointIndex)
-                if not result or not result.success then
-                    if result and result.expired then
-                        activeMission = nil
-                        clearMissionZones()
-                    end
-                    return notify(result and result.message or 'Fundet kunne ikke undersøges.', 'error')
-                end
-
-                removeMissionObject(pointIndex)
-                notify(('Du fandt %dx %s. (%d/%d)'):format(result.amount, result.label, result.completed, result.required), 'success')
-                SendNUIMessage({ action = 'missionProgress', completed = result.completed, required = result.required })
-
-                if result.finished then
-                    notify(('Mission fuldført! Du modtog %s kr. inkl. depositum.'):format(result.bonus), 'success')
-                    activeMission = nil
-                    clearMissionZones()
-                end
-            end
-        }
-    })
 end
 
 local function beginMission(mission)
@@ -562,27 +578,37 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local textUiVisible = false
+
     while true do
         if not activeMission or not next(missionObjects) then
+            if textUiVisible then
+                lib.hideTextUI()
+                textUiVisible = false
+            end
             Wait(500)
         else
             Wait(0)
-            local playerCoords = GetEntityCoords(PlayerPedId())
+            local ped = PlayerPedId()
+            local playerCoords = GetEntityCoords(ped)
             local marker = Config.Search.marker or {}
             local drawDistance = marker.drawDistance or 45.0
+            local nearestIndex, nearestDistance
 
-            for _, entry in pairs(missionObjects) do
+            for pointIndex, entry in pairs(missionObjects) do
                 if entry.entity and DoesEntityExist(entry.entity) then
                     local coords = GetEntityCoords(entry.entity)
-                    if #(playerCoords - coords) <= drawDistance then
+                    local distance = #(playerCoords - coords)
+
+                    if distance <= drawDistance then
                         DrawMarker(
                             marker.type or 2,
-                            coords.x, coords.y, coords.z + (marker.height or 1.15),
+                            coords.x, coords.y, coords.z + (marker.height or 0.75),
                             0.0, 0.0, 0.0,
                             180.0, 0.0, 0.0,
-                            marker.scale and marker.scale.x or 0.28,
-                            marker.scale and marker.scale.y or 0.28,
-                            marker.scale and marker.scale.z or 0.28,
+                            marker.scale and marker.scale.x or 0.24,
+                            marker.scale and marker.scale.y or 0.24,
+                            marker.scale and marker.scale.z or 0.24,
                             marker.color and marker.color.r or 82,
                             marker.color and marker.color.g or 255,
                             marker.color and marker.color.b or 170,
@@ -590,7 +616,33 @@ CreateThread(function()
                             false, true, 2, false, nil, nil, false
                         )
                     end
+
+                    if distance <= (Config.Search.distance or 1.8)
+                        and (not nearestDistance or distance < nearestDistance)
+                    then
+                        nearestIndex = pointIndex
+                        nearestDistance = distance
+                    end
                 end
+            end
+
+            if nearestIndex and gearEnabled and IsPedSwimmingUnderWater(ped) then
+                if not textUiVisible then
+                    lib.showTextUI(Config.Search.prompt or '[E] Saml dykkerkiste op', {
+                        position = 'right-center',
+                        icon = 'box-open'
+                    })
+                    textUiVisible = true
+                end
+
+                if IsControlJustReleased(0, 38) then
+                    lib.hideTextUI()
+                    textUiVisible = false
+                    pickupMissionChest(nearestIndex)
+                end
+            elseif textUiVisible then
+                lib.hideTextUI()
+                textUiVisible = false
             end
         end
     end

@@ -2,6 +2,7 @@ local ESX = exports['es_extended']:getSharedObject()
 local gearUseCooldowns = {}
 local activeMissions = {}
 local missionCooldowns = {}
+local chestOpenCooldowns = {}
 
 local function notify(source, description, notifyType)
     TriggerClientEvent('sb_diving:client:notify', source, description, notifyType or 'inform')
@@ -21,6 +22,46 @@ local function getLocation(id)
             return Config.Locations[i]
         end
     end
+end
+
+local function getChest(chestId)
+    return Config.Chests and Config.Chests[chestId]
+end
+
+local function getChestByItem(itemName)
+    for chestId, chest in pairs(Config.Chests or {}) do
+        if chest.item == itemName then
+            return chestId, chest
+        end
+    end
+end
+
+local function weightedChoice(entries)
+    local total = 0
+    for _, weight in pairs(entries or {}) do
+        total = total + math.max(0, tonumber(weight) or 0)
+    end
+    if total <= 0 then return nil end
+
+    local roll = math.random() * total
+    local running = 0
+    for key, weight in pairs(entries) do
+        running = running + math.max(0, tonumber(weight) or 0)
+        if roll <= running then return key end
+    end
+end
+
+local function chooseMissionChest(mission)
+    local pool = mission.chestPool or {}
+    local chestId = weightedChoice(pool)
+
+    if chestId and getChest(chestId) then return chestId end
+
+    local fallback = {}
+    for id, chest in pairs(Config.Chests or {}) do
+        fallback[id] = chest.weight or 1
+    end
+    return weightedChoice(fallback)
 end
 
 local function hasItem(source, itemName, amount)
@@ -187,11 +228,18 @@ lib.callback.register('sb_diving:server:startMission', function(source, missionI
         selected[#selected + 1] = shuffled[i]
     end
 
+    local selectedChests = {}
+    for i = 1, #selected do
+        local pointIndex = selected[i]
+        selectedChests[pointIndex] = chooseMissionChest(mission)
+    end
+
     activeMissions[source] = {
         id = mission.id,
         completed = 0,
         required = #selected,
         points = selected,
+        chests = selectedChests,
         searched = {},
         expiresAt = now + (mission.duration * 60),
         deposit = mission.deposit
@@ -214,19 +262,11 @@ lib.callback.register('sb_diving:server:startMission', function(source, missionI
     }
 end)
 
-local function weightedLoot(lootTable)
-    local pool = {}
-    for name, range in pairs(lootTable) do
-        local itemCfg = Config.Items.finds[name]
-        local weight = itemCfg and itemCfg.weight or 1
-        for _ = 1, weight do pool[#pool + 1] = name end
-    end
-    return pool[math.random(1, #pool)]
-end
-
-lib.callback.register('sb_diving:server:searchPoint', function(source, missionId, pointIndex)
+lib.callback.register('sb_diving:server:collectChest', function(source, missionId, pointIndex)
     local state = activeMissions[source]
     local mission = getMission(missionId)
+    pointIndex = tonumber(pointIndex)
+
     if not state or not mission or state.id ~= missionId then
         return { success = false, message = 'Du har ikke denne mission aktiv.' }
     end
@@ -240,45 +280,123 @@ lib.callback.register('sb_diving:server:searchPoint', function(source, missionId
         if state.points[i] == pointIndex then allowed = true break end
     end
     if not allowed or state.searched[pointIndex] then
-        return { success = false, message = 'Fundstedet er allerede undersøgt.' }
+        return { success = false, message = 'Kisten er allerede samlet op.' }
     end
 
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
     local target = mission.searchPoints[pointIndex]
-    if #(coords - target) > 8.0 then
-        return { success = false, message = 'Du er for langt væk fra fundstedet.' }
+    local horizontalDistance = #(vec2(coords.x, coords.y) - vec2(target.x, target.y))
+    if horizontalDistance > 8.0 then
+        return { success = false, message = 'Du er for langt væk fra kisten.' }
     end
 
-    local itemName = weightedLoot(mission.loot)
-    local range = mission.loot[itemName]
-    local amount = math.random(range.min, range.max)
-    local added, reason = addItem(source, itemName, amount)
-    if not added then return { success = false, message = reason or 'Du kunne ikke bære fundet.' } end
+    local chestId = state.chests and state.chests[pointIndex]
+    local chest = chestId and getChest(chestId)
+    if not chest then
+        return { success = false, message = 'Kistetypen kunne ikke findes.' }
+    end
+
+    local added, reason = addItem(source, chest.item, 1)
+    if not added then return { success = false, message = reason or 'Du kunne ikke bære kisten.' } end
 
     state.searched[pointIndex] = true
     state.completed = state.completed + 1
     local finished = state.completed >= state.required
+    local completed = state.completed
+    local required = state.required
+    local bonus = 0
 
     if finished then
         local xPlayer = ESX.GetPlayerFromId(source)
-        local totalBonus = mission.rewardBonus + state.deposit
-        if xPlayer then giveMoney(xPlayer, totalBonus) end
+        bonus = mission.rewardBonus + state.deposit
+        if xPlayer then giveMoney(xPlayer, bonus) end
         activeMissions[source] = nil
         missionCooldowns[source] = os.time() + 300
     end
 
-    local itemCfg = Config.Items.finds[itemName]
     return {
         success = true,
-        item = itemName,
-        label = itemCfg.label,
-        amount = amount,
-        completed = state.completed,
-        required = state.required,
+        chestId = chestId,
+        item = chest.item,
+        label = chest.label,
+        completed = completed,
+        required = required,
         finished = finished,
-        bonus = finished and (mission.rewardBonus + state.deposit) or 0
+        bonus = bonus
     }
+end)
+
+local function chooseChestLoot(chest)
+    local rewards = {}
+    local rolls = math.random(chest.rolls.min or 1, chest.rolls.max or 1)
+
+    for _ = 1, rolls do
+        local weights = {}
+        for itemName, entry in pairs(chest.loot or {}) do
+            weights[itemName] = entry.weight or 1
+        end
+
+        local itemName = weightedChoice(weights)
+        local entry = itemName and chest.loot[itemName]
+        if itemName and entry then
+            rewards[itemName] = (rewards[itemName] or 0) + math.random(entry.min or 1, entry.max or 1)
+        end
+    end
+
+    return rewards
+end
+
+local function formatRewards(rewards)
+    local labels = {}
+    for itemName, amount in pairs(rewards) do
+        local item = Config.Items.finds[itemName]
+        labels[#labels + 1] = ('%dx %s'):format(amount, item and item.label or itemName)
+    end
+    table.sort(labels)
+    return table.concat(labels, ', ')
+end
+
+RegisterNetEvent('sb_diving:server:openChest', function(itemName, slot)
+    local source = source
+    local now = GetGameTimer()
+    if chestOpenCooldowns[source] and now - chestOpenCooldowns[source] < 1000 then return end
+    chestOpenCooldowns[source] = now
+
+    local _, chest = getChestByItem(itemName)
+    if not chest or not hasItem(source, itemName, 1) then
+        return notify(source, 'Du har ikke denne dykkerkiste.', 'error')
+    end
+
+    local rewards = chooseChestLoot(chest)
+    if not next(rewards) then
+        return notify(source, 'Kisten kunne ikke åbnes.', 'error')
+    end
+
+    -- Fjern først kisten, så dens vægt frigives. Hvis et fund ikke kan gives,
+    -- rulles hele handlingen tilbage og kisten gives tilbage.
+    local removed
+    if Config.UseOxInventory and GetResourceState('ox_inventory') == 'started' and slot then
+        removed = exports.ox_inventory:RemoveItem(source, itemName, 1, nil, slot) == true
+    else
+        removed = removeItem(source, itemName, 1)
+    end
+    if not removed then return notify(source, 'Kisten kunne ikke fjernes.', 'error') end
+
+    local given = {}
+    for rewardName, amount in pairs(rewards) do
+        local success = addItem(source, rewardName, amount)
+        if not success then
+            for rollbackName, rollbackAmount in pairs(given) do
+                removeItem(source, rollbackName, rollbackAmount)
+            end
+            addItem(source, itemName, 1)
+            return notify(source, 'Du har ikke plads til kistens indhold.', 'error')
+        end
+        given[rewardName] = amount
+    end
+
+    notify(source, ('Du åbnede %s og fandt: %s.'):format(chest.label, formatRewards(rewards)), 'success')
 end)
 
 lib.callback.register('sb_diving:server:cancelMission', function(source)
@@ -347,6 +465,7 @@ AddEventHandler('playerDropped', function()
     activeMissions[source] = nil
     missionCooldowns[source] = nil
     gearUseCooldowns[source] = nil
+    chestOpenCooldowns[source] = nil
 end)
 
 
@@ -361,3 +480,12 @@ ESX.RegisterUsableItem(Config.Items.gear, function(source)
     gearUseCooldowns[source] = now
     TriggerClientEvent('sb_diving:client:setGear', source, hasItem(source, Config.Items.gear, 1))
 end)
+
+
+-- ESX fallback for dykkerkister. ox_inventory bruger client-exporten useDivingChest.
+for _, chest in pairs(Config.Chests or {}) do
+    local itemName = chest.item
+    ESX.RegisterUsableItem(itemName, function(source)
+        TriggerClientEvent('sb_diving:client:openChest', source, itemName)
+    end)
+end
