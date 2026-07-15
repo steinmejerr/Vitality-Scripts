@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SB Diving</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app" class="app hidden">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-icon">⚓</div>
+                <div>
+                    <span class="eyebrow">PACIFIC DIVING</span>
+                    <h1>Dykkercenter</h1>
+                </div>
+            </div>
+            <button id="close" class="icon-button" aria-label="Luk">×</button>
+        </header>
+
+        <nav class="tabs">
+            <button data-view="shop">Butik</button>
+            <button data-view="missions">Missioner</button>
+            <button data-view="sell">Sælg fund</button>
+        </nav>
+
+        <section id="content" class="content"></section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+const app = document.getElementById('app');
+const content = document.getElementById('content');
+const tabs = [...document.querySelectorAll('.tabs button')];
+const closeButton = document.getElementById('close');
+
+let state = { view: 'shop', data: null };
+
+const post = async (event, payload = {}) => {
+    const response = await fetch(`https://${GetParentResourceName()}/${event}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(payload)
+    });
+    return response.json();
+};
+
+const money = value => new Intl.NumberFormat('da-DK').format(Number(value || 0));
+const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+function setView(view) {
+    state.view = view;
+    tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.view === view));
+    render();
+}
+
+function renderHero(title, text, status = '') {
+    return `<div class="hero"><div><h2>${escapeHtml(title)}</h2><p>${escapeHtml(text)}</p></div>${status ? `<span class="status-pill ${status.includes('klar') ? 'ready' : ''}">${escapeHtml(status)}</span>` : ''}</div>`;
+}
+
+function renderShop() {
+    const d = state.data;
+    const cards = d.shop.items.map(item => `
+        <article class="card">
+            <div class="card-top"><div class="card-icon">🤿</div></div>
+            <div class="card-body">
+                <h3>${escapeHtml(item.label)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="price">${money(item.price)} kr.</div>
+                <button class="primary buy" data-item="${escapeHtml(item.name)}" ${d.hasGear ? 'disabled' : ''}>${d.hasGear ? 'Allerede købt' : 'Køb udstyr'}</button>
+                <button class="secondary toggle-gear" ${!d.hasGear ? 'disabled' : ''}>Aktivér / deaktivér udstyr</button>
+            </div>
+        </article>`).join('');
+
+    content.innerHTML = renderHero('Dykkerbutik', 'Køb udstyr, før du tager ud på mission.', d.hasGear ? 'Udstyr klar' : 'Udstyr mangler') + `<div class="grid">${cards}</div>`;
+
+    content.querySelectorAll('.buy').forEach(btn => btn.onclick = async () => {
+        btn.disabled = true;
+        const result = await post('buyItem', { item: btn.dataset.item });
+        if (result.success) {
+            state.data.hasGear = true;
+            renderShop();
+        } else btn.disabled = false;
+    });
+    content.querySelectorAll('.toggle-gear').forEach(btn => btn.onclick = () => post('toggleGear'));
+}
+
+function renderMissions() {
+    const d = state.data;
+    let active = '';
+    if (d.activeMission) {
+        active = `<div class="mission-active"><div><strong>Aktiv mission: ${escapeHtml(d.activeMission.label)}</strong><small>${d.activeMission.completed}/${d.activeMission.required} fundsteder undersøgt</small></div><button class="danger cancel-mission">Annullér mission</button></div>`;
+    }
+
+    const cards = d.missions.map(mission => `
+        <article class="card">
+            <div class="card-top"><div class="card-icon">🌊</div></div>
+            <div class="card-body">
+                <h3>${escapeHtml(mission.label)}</h3>
+                <p>${escapeHtml(mission.description)}</p>
+                <div class="meta"><span>${escapeHtml(mission.difficulty)}</span><span>${mission.duration} min.</span><span>${mission.requiredSearches} fund</span></div>
+                <div class="price">Bonus: ${money(mission.rewardBonus)} kr.</div>
+                <button class="primary start-mission" data-id="${escapeHtml(mission.id)}" ${d.activeMission || !d.hasGear ? 'disabled' : ''}>Start mission</button>
+                <div class="meta"><span>Depositum: ${money(mission.deposit)} kr.</span></div>
+            </div>
+        </article>`).join('');
+
+    content.innerHTML = renderHero('Dykkermissioner', 'Vælg en opgave og bjærg fund fra havbunden.', d.hasGear ? 'Udstyr klar' : 'Udstyr mangler') + active + `<div class="grid">${cards}</div>`;
+
+    content.querySelectorAll('.start-mission').forEach(btn => btn.onclick = async () => {
+        btn.disabled = true;
+        await post('startMission', { missionId: btn.dataset.id });
+    });
+    const cancel = content.querySelector('.cancel-mission');
+    if (cancel) cancel.onclick = () => post('cancelMission');
+}
+
+function renderSell() {
+    const finds = state.data.finds;
+    const owned = finds.filter(item => item.count > 0);
+    const rows = owned.map(item => `
+        <div class="sell-row">
+            <div class="sell-name"><strong>${escapeHtml(item.label)}</strong><span>${item.count} stk. · ${money(item.price)} kr. pr. stk.</span></div>
+            <input type="number" min="1" max="${item.count}" value="${item.count}" data-input="${escapeHtml(item.name)}">
+            <strong>${money(item.count * item.price)} kr.</strong>
+            <button class="primary sell-one" data-item="${escapeHtml(item.name)}">Sælg</button>
+        </div>`).join('');
+
+    content.innerHTML = renderHero('Sælg dykkerfund', 'Sælg de genstande, du har bjærget under vandet.', `${owned.reduce((a,b) => a + b.count, 0)} fund`) + (rows ? `<div class="sell-list">${rows}</div><div class="sell-total"><button class="primary sell-all">Sælg alle fund</button></div>` : '<div class="empty">Du har ingen dykkerfund at sælge.</div>');
+
+    content.querySelectorAll('.sell-one').forEach(btn => btn.onclick = async () => {
+        const input = content.querySelector(`[data-input="${btn.dataset.item}"]`);
+        const result = await post('sellItem', { item: btn.dataset.item, amount: Number(input.value) });
+        if (result.success && result.data) { state.data = result.data; renderSell(); }
+    });
+    const all = content.querySelector('.sell-all');
+    if (all) all.onclick = async () => {
+        const result = await post('sellAll');
+        if (result.success && result.data) { state.data = result.data; renderSell(); }
+    };
+}
+
+function render() {
+    if (!state.data) return;
+    if (state.view === 'shop') renderShop();
+    else if (state.view === 'missions') renderMissions();
+    else renderSell();
+}
+
+tabs.forEach(tab => tab.onclick = () => setView(tab.dataset.view));
+closeButton.onclick = () => post('close');
+window.addEventListener('keydown', event => { if (event.key === 'Escape') post('close'); });
+
+window.addEventListener('message', event => {
+    const msg = event.data || {};
+    if (msg.action === 'open') {
+        state.data = msg.data;
+        app.classList.remove('hidden');
+        setView(msg.view || 'shop');
+    } else if (msg.action === 'close') {
+        app.classList.add('hidden');
+        state.data = null;
+    } else if (msg.action === 'missionProgress' && state.data?.activeMission) {
+        state.data.activeMission.completed = msg.completed;
+        state.data.activeMission.required = msg.required;
+    }
+});
