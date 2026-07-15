@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metaldetektor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app" class="panel hidden">
+        <header>
+            <div>
+                <span class="eyebrow">STRAND & FUND</span>
+                <h1>Metaldetektor</h1>
+                <p>Find skjulte værdier og sælg dine fund.</p>
+            </div>
+            <button id="close" class="icon-button">×</button>
+        </header>
+
+        <nav>
+            <button class="tab active" data-tab="shop">Shop</button>
+            <button class="tab" data-tab="sell">Sælg fund</button>
+        </nav>
+
+        <section id="shop" class="view active">
+            <article class="detector-card">
+                <div class="detector-visual">
+                    <div class="coil"></div>
+                    <div class="stem"></div>
+                    <div class="handle"></div>
+                </div>
+                <div class="detector-copy">
+                    <span class="badge">UDSTYR</span>
+                    <h2 id="detector-label">Metaldetektor</h2>
+                    <p>Aktivér den med J og følg signalet til et skjult fund.</p>
+                    <div class="price" id="detector-price">$0</div>
+                </div>
+                <button id="buy-detector" class="primary">Køb metaldetektor</button>
+            </article>
+        </section>
+
+        <section id="sell" class="view">
+            <div class="sell-heading">
+                <div>
+                    <h2>Dine fund</h2>
+                    <p>Sælg enkelte fund eller hele beholdningen.</p>
+                </div>
+                <button id="sell-all" class="primary small">Sælg alt</button>
+            </div>
+            <div id="inventory-list" class="inventory-list"></div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
