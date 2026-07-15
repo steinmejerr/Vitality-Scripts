@@ -4,6 +4,51 @@ local activeMissions = {}
 local missionCooldowns = {}
 local chestOpenCooldowns = {}
 
+local function getPlayerIdentifier(xPlayer)
+    if not xPlayer then return nil end
+    return xPlayer.identifier or (xPlayer.getIdentifier and xPlayer.getIdentifier())
+end
+
+local function formatCooldown(seconds)
+    seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.ceil((seconds % 3600) / 60)
+
+    if hours > 0 and minutes > 0 then
+        return ('%d time%s og %d minut%s'):format(
+            hours, hours == 1 and '' or 'r',
+            minutes, minutes == 1 and '' or 'ter'
+        )
+    elseif hours > 0 then
+        return ('%d time%s'):format(hours, hours == 1 and '' or 'r')
+    end
+
+    return ('%d minut%s'):format(minutes, minutes == 1 and '' or 'ter')
+end
+
+local function getCompletedMissionCooldown(identifier)
+    if not identifier then return 0 end
+
+    local expiresAt = MySQL.scalar.await(
+        'SELECT UNIX_TIMESTAMP(expires_at) FROM sb_diving_cooldowns WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+
+    return tonumber(expiresAt) or 0
+end
+
+local function setCompletedMissionCooldown(identifier)
+    if not identifier then return end
+
+    local cooldownSeconds = math.max(0, tonumber(Config.MissionCooldownSeconds) or 7200)
+
+    MySQL.prepare.await([[
+        INSERT INTO sb_diving_cooldowns (identifier, expires_at)
+        VALUES (?, DATE_ADD(NOW(), INTERVAL ? SECOND))
+        ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
+    ]], { identifier, cooldownSeconds })
+end
+
 local function notify(source, description, notifyType)
     TriggerClientEvent('sb_diving:client:notify', source, description, notifyType or 'inform')
 end
@@ -133,6 +178,20 @@ local function giveMoney(xPlayer, amount)
     xPlayer.addAccountMoney(Config.PaymentAccount, amount, 'sb_diving')
 end
 
+MySQL.ready(function()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `sb_diving_cooldowns` (
+            `identifier` VARCHAR(80) NOT NULL,
+            `expires_at` DATETIME NOT NULL,
+            `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`identifier`),
+            INDEX `idx_expires_at` (`expires_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
+
+    MySQL.update.await('DELETE FROM sb_diving_cooldowns WHERE expires_at <= NOW()')
+end)
+
 lib.callback.register('sb_diving:server:getUiData', function(source, locationId)
     if not getLocation(locationId) then return nil end
 
@@ -207,9 +266,21 @@ lib.callback.register('sb_diving:server:startMission', function(source, missionI
     end
 
     local now = os.time()
-    local cooldown = missionCooldowns[source] or 0
-    if cooldown > now then
-        return { success = false, message = ('Vent %d minutter før næste mission.'):format(math.ceil((cooldown - now) / 60)) }
+    local identifier = getPlayerIdentifier(xPlayer)
+    local persistentCooldown = getCompletedMissionCooldown(identifier)
+
+    if persistentCooldown > now then
+        return {
+            success = false,
+            message = ('Du skal vente %s, før du kan starte en ny dykkermission.'):format(
+                formatCooldown(persistentCooldown - now)
+            )
+        }
+    end
+
+    local shortCooldown = missionCooldowns[source] or 0
+    if shortCooldown > now then
+        return { success = false, message = ('Vent %d sekunder før du prøver igen.'):format(shortCooldown - now) }
     end
 
     if mission.deposit > 0 and not takeMoney(xPlayer, mission.deposit) then
@@ -310,9 +381,12 @@ lib.callback.register('sb_diving:server:collectChest', function(source, missionI
     if finished then
         local xPlayer = ESX.GetPlayerFromId(source)
         bonus = mission.rewardBonus + state.deposit
-        if xPlayer then giveMoney(xPlayer, bonus) end
+        if xPlayer then
+            giveMoney(xPlayer, bonus)
+            setCompletedMissionCooldown(getPlayerIdentifier(xPlayer))
+        end
         activeMissions[source] = nil
-        missionCooldowns[source] = os.time() + 300
+        missionCooldowns[source] = nil
     end
 
     return {

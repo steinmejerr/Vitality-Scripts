@@ -7,6 +7,8 @@ Config.InteractionDistance = 2.0
 Config.PaymentAccount = 'bank'
 Config.UseOxInventory = true
 
+Config.MissionCooldownSeconds = 2 * 60 * 60
+
 Config.Notify = {
     position = 'top-right',
     duration = 4500
