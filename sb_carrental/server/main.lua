@@ -97,6 +97,7 @@ CreateThread(function()
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_expires_at DATETIME NULL')
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_duration_minutes INT NULL')
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_payment_method VARCHAR(16) NULL')
+    MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_location VARCHAR(64) NULL')
 end)
 
 lib.callback.register('sb_carrental:server:requestRental', function(source, data)
@@ -153,9 +154,9 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
     local inserted = MySQL.insert.await([[
         INSERT INTO rented_vehicles (
             vehicle, plate, player_name, base_price, rent_price, owner,
-            rental_started_at, rental_expires_at, rental_duration_minutes, rental_payment_method
+            rental_started_at, rental_expires_at, rental_duration_minutes, rental_payment_method, rental_location
         )
-        VALUES (?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), ?, ?, ?)
     ]], {
         vehicle.model,
         plate,
@@ -165,7 +166,8 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         xPlayer.identifier,
         durationMinutes,
         durationMinutes,
-        data.paymentMethod
+        data.paymentMethod,
+        tostring(location.id or data.locationIndex)
     })
 
     if not inserted then
@@ -179,6 +181,8 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         plate = plate,
         model = vehicle.model,
         locationIndex = tonumber(data.locationIndex),
+        locationId = tostring(location.id or data.locationIndex),
+        company = location.company or location.label or 'SB Biludlejning',
         paymentMethod = data.paymentMethod,
         price = totalPrice,
         token = token,
@@ -198,12 +202,7 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         durationLabel = duration.label,
         price = totalPrice,
         paymentMethod = data.paymentMethod,
-        spawn = {
-            x = location.spawn.x,
-            y = location.spawn.y,
-            z = location.spawn.z,
-            w = location.spawn.w
-        }
+        locationIndex = tonumber(data.locationIndex)
     }
 end)
 
@@ -256,7 +255,7 @@ lib.callback.register('sb_carrental:server:getRentalPapers', function(source)
     local rental = activeRentals[source]
     if rental then
         return {
-            company = 'SB Biludlejning',
+            company = rental.company or 'SB Biludlejning',
             vehicleLabel = rental.vehicleLabel or rental.model,
             model = rental.model,
             plate = rental.plate,
@@ -270,7 +269,7 @@ lib.callback.register('sb_carrental:server:getRentalPapers', function(source)
     end
 
     local row = MySQL.single.await([[
-        SELECT vehicle, plate, rent_price, rental_duration_minutes, rental_payment_method,
+        SELECT vehicle, plate, rent_price, rental_duration_minutes, rental_payment_method, rental_location,
                DATE_FORMAT(rental_started_at, '%d/%m/%Y %H:%i') AS started_at_formatted,
                DATE_FORMAT(rental_expires_at, '%d/%m/%Y %H:%i') AS expires_at_formatted
         FROM rented_vehicles
@@ -288,8 +287,16 @@ lib.callback.register('sb_carrental:server:getRentalPapers', function(source)
         end
     end
 
+    local company = 'SB Biludlejning'
+    for index, location in ipairs(Config.Locations or {}) do
+        if tostring(location.id or index) == tostring(row.rental_location or '') then
+            company = location.company or location.label or company
+            break
+        end
+    end
+
     return {
-        company = 'SB Biludlejning',
+        company = company,
         vehicleLabel = row.vehicle,
         model = row.vehicle,
         plate = row.plate,

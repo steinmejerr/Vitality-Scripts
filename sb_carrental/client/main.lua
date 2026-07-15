@@ -58,6 +58,18 @@ local function isSpawnClear(coords)
     return not IsAnyVehicleNearPoint(coords.x, coords.y, coords.z, 3.0)
 end
 
+local function getAvailableSpawn(location)
+    local spawns = location.spawns or (location.spawn and { location.spawn }) or {}
+
+    for _, coords in ipairs(spawns) do
+        if isSpawnClear(coords) then
+            return coords
+        end
+    end
+
+    return nil
+end
+
 local function spawnRental(data)
     local hash = requestModel(data.model)
     if not hash then
@@ -65,11 +77,13 @@ local function spawnRental(data)
         return
     end
 
-    local spawn = vec4(data.spawn.x, data.spawn.y, data.spawn.z, data.spawn.w)
-    if not isSpawnClear(spawn) then
+    local location = Config.Locations[tonumber(data.locationIndex)]
+    local spawn = location and getAvailableSpawn(location) or nil
+
+    if not spawn then
         SetModelAsNoLongerNeeded(hash)
         TriggerServerEvent('sb_carrental:server:spawnFailed', data.token)
-        notify('Udlejningspladsen er blokeret. Flyt køretøjet og prøv igen.', 'error')
+        notify('Alle udlejningspladser ved denne lokation er optaget.', 'error')
         return
     end
 
@@ -256,26 +270,29 @@ CreateThread(function()
         if location.npc.scenario then TaskStartScenarioInPlace(ped, location.npc.scenario, 0, true) end
 
         rentalPeds[#rentalPeds + 1] = ped
+        local target = location.target or {}
+        local targetDistance = tonumber(target.distance) or 2.5
+
         exports.ox_target:addLocalEntity(ped, {
             {
-                name = ('sb_carrental_open_%s'):format(index),
+                name = ('sb_carrental_open_%s'):format(location.id or index),
                 icon = 'fa-solid fa-car',
-                label = 'Se lejebiler',
-                distance = 2.5,
+                label = target.open or 'Se lejebiler',
+                distance = targetDistance,
                 onSelect = function() openMenu(index) end
             },
             {
-                name = ('sb_carrental_papers_%s'):format(index),
+                name = ('sb_carrental_papers_%s'):format(location.id or index),
                 icon = 'fa-solid fa-file-contract',
-                label = 'Se køretøjspapirer',
-                distance = 2.5,
+                label = target.papers or 'Se køretøjspapirer',
+                distance = targetDistance,
                 onSelect = function() openActivePapers(index) end
             },
             {
-                name = ('sb_carrental_return_%s'):format(index),
+                name = ('sb_carrental_return_%s'):format(location.id or index),
                 icon = 'fa-solid fa-rotate-left',
-                label = 'Aflever lejebil',
-                distance = 2.5,
+                label = target.returnVehicle or 'Aflever lejebil',
+                distance = targetDistance,
                 onSelect = function() returnRental(index) end
             }
         })
