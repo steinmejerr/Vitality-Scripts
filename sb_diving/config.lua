@@ -118,6 +118,7 @@ Config.Missions = {
     {
         id = 'coastal_recovery',
         label = 'Kystfund',
+        image = 'images/coastal_recovery.svg',
         difficulty = 'Let',
         description = 'Undersøg havbunden efter tabte dykkerkister.',
         duration = 15,
@@ -141,6 +142,7 @@ Config.Missions = {
     {
         id = 'wreck_salvage',
         label = 'Vragbjærgning',
+        image = 'images/wreck_salvage.svg',
         difficulty = 'Mellem',
         description = 'Dyk ved et ældre vrag og bjærg kister fra havbunden.',
         duration = 22,
@@ -165,6 +167,7 @@ Config.Missions = {
     {
         id = 'deep_blue',
         label = 'Dybhavsfund',
+        image = 'images/deep_blue.svg',
         difficulty = 'Svær',
         description = 'En risikofyldt mission efter sjældne kister på dybt vand.',
         duration = 30,

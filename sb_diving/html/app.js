@@ -155,8 +155,11 @@ function renderMissions() {
             : 'Start mission';
 
         return `
-        <article class="card">
-            <div class="card-top"><div class="card-icon">🌊</div></div>
+        <article class="card mission-card">
+            <div class="mission-image-wrap">
+                <img class="mission-image" src="${escapeHtml(mission.image || 'images/coastal_recovery.svg')}" alt="${escapeHtml(mission.label)}">
+                <span class="mission-difficulty">${escapeHtml(mission.difficulty)}</span>
+            </div>
             <div class="card-body">
                 <h3>${escapeHtml(mission.label)}</h3>
                 <p>${escapeHtml(mission.description)}</p>
