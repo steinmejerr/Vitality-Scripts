@@ -190,8 +190,14 @@ Config.Missions = {
 
 Config.Search = {
     pickupDuration = 3500,
-    distance = 1.8,
+    distance = 2.2,
     prompt = '[E] Saml dykkerkiste op',
+
+    animation = {
+        dict = 'pickup_object',
+        clip = 'pickup_low',
+        flag = 1
+    },
 
     -- En lille standardkiste, som bruges ved alle missionsmål.
     chestProp = 'prop_box_wood05a',

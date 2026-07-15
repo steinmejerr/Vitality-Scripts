@@ -15,6 +15,8 @@ local savedAppearance
 local gearObjects = {}
 local gearPed
 local lastGearToggleAt = 0
+local nearestMissionChest
+local chestPickupBusy = false
 
 local function notify(description, notifyType)
     lib.notify({
@@ -370,25 +372,132 @@ local function resolveSeabedCoords(coords)
     return vec3(coords.x, coords.y, groundZ + (Config.Search.seabedOffset or 0.05))
 end
 
+local function loadAnimDict(dict)
+    if not dict or dict == '' then return false end
+
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + 3000
+
+    while not HasAnimDictLoaded(dict) and GetGameTimer() < timeout do
+        Wait(25)
+    end
+
+    return HasAnimDictLoaded(dict)
+end
+
+local function playChestPickupAnimation(ped)
+    local animation = Config.Search.animation or {}
+    local dict = animation.dict or 'pickup_object'
+    local clip = animation.clip or 'pickup_low'
+
+    if loadAnimDict(dict) then
+        TaskPlayAnim(
+            ped,
+            dict,
+            clip,
+            4.0,
+            -4.0,
+            -1,
+            animation.flag or 1,
+            0.0,
+            false,
+            false,
+            false
+        )
+        return true
+    end
+
+    return false
+end
+
 local function pickupMissionChest(pointIndex)
-    if not activeMission or not missionObjects[pointIndex] then return end
+    local entry = pointIndex and missionObjects[pointIndex]
+    if chestPickupBusy or not activeMission or not entry then return end
+
+    local ped = PlayerPedId()
     if not gearEnabled then return notify('Du skal have dykkerudstyret aktiveret.', 'error') end
-    if not IsPedSwimmingUnderWater(PlayerPedId()) then
+    if not IsPedSwimmingUnderWater(ped) then
         return notify('Kisten kan kun samles op under vandet.', 'error')
     end
 
-    local completed = lib.progressCircle({
-        duration = Config.Search.pickupDuration or 3500,
-        label = 'Samler dykkerkisten op...',
-        position = 'bottom',
-        useWhileDead = false,
-        canCancel = true,
-        disable = { move = true, car = true, combat = true }
+    local chestCoords = entry.entity and DoesEntityExist(entry.entity)
+        and GetEntityCoords(entry.entity)
+        or entry.coords
+
+    local maxDistance = (Config.Search.distance or 1.8) + 0.9
+    if not chestCoords or #(GetEntityCoords(ped) - chestCoords) > maxDistance then
+        return notify('Du er for langt væk fra kisten.', 'error')
+    end
+
+    chestPickupBusy = true
+    entry.busy = true
+    nearestMissionChest = nil
+    lib.hideTextUI()
+
+    TaskTurnPedToFaceCoord(ped, chestCoords.x, chestCoords.y, chestCoords.z, 400)
+    Wait(250)
+
+    -- Frys kun positionen under den korte opsamling. Det gør, at GTA's
+    -- svømme-task ikke straks overskriver pickup-animationen.
+    SetEntityVelocity(ped, 0.0, 0.0, 0.0)
+    FreezeEntityPosition(ped, true)
+    playChestPickupAnimation(ped)
+
+    local duration = Config.Search.pickupDuration or 3500
+    local finishAt = GetGameTimer() + duration
+    local cancelled = false
+
+    lib.showTextUI('Samler dykkerkisten op...', {
+        position = 'right-center',
+        icon = 'box-open'
     })
-    if not completed or not activeMission then return end
+
+    while GetGameTimer() < finishAt do
+        Wait(0)
+
+        DisableControlAction(0, 21, true)
+        DisableControlAction(0, 22, true)
+        DisableControlAction(0, 23, true)
+        DisableControlAction(0, 24, true)
+        DisableControlAction(0, 25, true)
+        DisableControlAction(0, 30, true)
+        DisableControlAction(0, 31, true)
+        DisableControlAction(0, 32, true)
+        DisableControlAction(0, 33, true)
+        DisableControlAction(0, 34, true)
+        DisableControlAction(0, 35, true)
+
+        if not activeMission or not missionObjects[pointIndex] then
+            cancelled = true
+            break
+        end
+
+        local currentEntry = missionObjects[pointIndex]
+        local currentCoords = currentEntry.entity and DoesEntityExist(currentEntry.entity)
+            and GetEntityCoords(currentEntry.entity)
+            or currentEntry.coords
+
+        if not currentCoords or #(GetEntityCoords(ped) - currentCoords) > maxDistance then
+            cancelled = true
+            break
+        end
+    end
+
+    lib.hideTextUI()
+    FreezeEntityPosition(ped, false)
+    ClearPedTasks(ped)
+
+    if cancelled or not activeMission or not missionObjects[pointIndex] then
+        if missionObjects[pointIndex] then missionObjects[pointIndex].busy = false end
+        chestPickupBusy = false
+        if cancelled then notify('Opsamlingen blev afbrudt.', 'error') end
+        return
+    end
 
     local result = lib.callback.await('sb_diving:server:collectChest', false, activeMission.id, pointIndex)
     if not result or not result.success then
+        if missionObjects[pointIndex] then missionObjects[pointIndex].busy = false end
+        chestPickupBusy = false
         if result and result.expired then
             activeMission = nil
             clearMissionZones()
@@ -397,6 +506,9 @@ local function pickupMissionChest(pointIndex)
     end
 
     removeMissionObject(pointIndex)
+    chestPickupBusy = false
+    nearestMissionChest = nil
+
     notify(('Du samlede %s op. Åbn den fra dit inventory. (%d/%d)'):format(
         result.label,
         result.completed,
@@ -410,6 +522,17 @@ local function pickupMissionChest(pointIndex)
         clearMissionZones()
     end
 end
+
+-- Et rigtigt FiveM-keybind er mere stabilt end kun at aflæse control 38 i en frame-loop,
+-- især mens spilleren svømmer under vandet.
+RegisterCommand('+sb_diving_pickup', function()
+    if nearestMissionChest and not chestPickupBusy then
+        pickupMissionChest(nearestMissionChest)
+    end
+end, false)
+
+RegisterCommand('-sb_diving_pickup', function() end, false)
+RegisterKeyMapping('+sb_diving_pickup', 'Saml dykkerkiste op', 'keyboard', 'E')
 
 local function addMissionZone(pointIndex, coords)
     local hash = loadModel(Config.Search.chestProp or 'prop_box_wood05a')
@@ -582,6 +705,7 @@ CreateThread(function()
 
     while true do
         if not activeMission or not next(missionObjects) then
+            nearestMissionChest = nil
             if textUiVisible then
                 lib.hideTextUI()
                 textUiVisible = false
@@ -626,7 +750,9 @@ CreateThread(function()
                 end
             end
 
-            if nearestIndex and gearEnabled and IsPedSwimmingUnderWater(ped) then
+            if nearestIndex and gearEnabled and IsPedSwimmingUnderWater(ped) and not chestPickupBusy then
+                nearestMissionChest = nearestIndex
+
                 if not textUiVisible then
                     lib.showTextUI(Config.Search.prompt or '[E] Saml dykkerkiste op', {
                         position = 'right-center',
@@ -634,15 +760,12 @@ CreateThread(function()
                     })
                     textUiVisible = true
                 end
-
-                if IsControlJustReleased(0, 38) then
+            else
+                nearestMissionChest = nil
+                if textUiVisible then
                     lib.hideTextUI()
                     textUiVisible = false
-                    pickupMissionChest(nearestIndex)
                 end
-            elseif textUiVisible then
-                lib.hideTextUI()
-                textUiVisible = false
             end
         end
     end
