@@ -39,7 +39,20 @@ end)
 -- Kister åbnes senere fra inventoryet. Itemnavnet bestemmer kistetypen.
 exports('useDivingChest', function(data, slot)
     if not data or not data.name then return end
-    TriggerServerEvent('sb_diving:server:openChest', data.name, slot)
+
+    -- ox_inventory-versioner kan sende slot som et tal, en slot-tabel
+    -- eller som data.slot. Send kun et gyldigt slotnummer til serveren.
+    local slotId
+
+    if type(slot) == 'number' then
+        slotId = slot
+    elseif type(slot) == 'table' then
+        slotId = tonumber(slot.slot)
+    end
+
+    slotId = slotId or tonumber(data.slot)
+
+    TriggerServerEvent('sb_diving:server:openChest', data.name, slotId)
 end)
 
 RegisterNetEvent('sb_diving:client:openChest', function(itemName, slot)

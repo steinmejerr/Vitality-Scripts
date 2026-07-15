@@ -375,13 +375,43 @@ RegisterNetEvent('sb_diving:server:openChest', function(itemName, slot)
 
     -- Fjern først kisten, så dens vægt frigives. Hvis et fund ikke kan gives,
     -- rulles hele handlingen tilbage og kisten gives tilbage.
-    local removed
-    if Config.UseOxInventory and GetResourceState('ox_inventory') == 'started' and slot then
-        removed = exports.ox_inventory:RemoveItem(source, itemName, 1, nil, slot) == true
+    local removed = false
+
+    if Config.UseOxInventory and GetResourceState('ox_inventory') == 'started' then
+        local slotId = tonumber(slot)
+
+        -- Brug den konkrete slot, når den er gyldig. Det sikrer korrekt
+        -- variant, hvis samme item senere får metadata.
+        if slotId then
+            local slotData = exports.ox_inventory:GetSlot(source, slotId)
+
+            if slotData and slotData.name == itemName and (slotData.count or 0) >= 1 then
+                local success = exports.ox_inventory:RemoveItem(
+                    source,
+                    itemName,
+                    1,
+                    slotData.metadata,
+                    slotId
+                )
+                removed = success == true
+            end
+        end
+
+        -- Fallback til itemnavnet. Dette håndterer ox_inventory-builds,
+        -- hvor client-exporten ikke leverer slotnummeret som forventet.
+        if not removed then
+            local success = exports.ox_inventory:RemoveItem(source, itemName, 1)
+            removed = success == true
+        end
     else
         removed = removeItem(source, itemName, 1)
     end
-    if not removed then return notify(source, 'Kisten kunne ikke fjernes.', 'error') end
+
+    if not removed then
+        print(('[sb_diving] Kunne ikke fjerne kiste %s fra spiller %s (slot: %s)')
+            :format(tostring(itemName), tostring(source), tostring(slot)))
+        return notify(source, 'Kisten kunne ikke fjernes fra dit inventory.', 'error')
+    end
 
     local given = {}
     for rewardName, amount in pairs(rewards) do
