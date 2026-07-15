@@ -214,7 +214,7 @@ local function applyDivingOutfit(ped)
 end
 
 local function createAttachedGearObject(ped, config)
-    if not config or not config.model then return nil end
+    if not config or config.enabled == false or not config.model then return nil end
 
     local hash = loadModel(config.model)
     if not hash then

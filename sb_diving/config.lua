@@ -177,11 +177,14 @@ Config.Diving = {
 
     -- Synligt udstyr. Modelnavnene er GTA V standard-props.
     props = {
+        -- Standard scuba-outfittet har allerede en gul ilttank.
+        -- Den ekstra orange prop-tank er derfor slået fra, så der kun vises én tank.
         tank = {
+            enabled = false,
             model = 'p_s_scuba_tank_s',
             bone = 24818,
-            offset = vec3(-0.25, -0.20, 0.0),
-            rotation = vec3(180.0, 90.0, 0.0)
+            offset = vec3(-0.02, -0.22, 0.02),
+            rotation = vec3(180.0, 0.0, 0.0)
         },
         mask = {
             model = 'p_s_scuba_mask_s',
