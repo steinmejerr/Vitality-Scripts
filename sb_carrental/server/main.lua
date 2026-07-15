@@ -92,7 +92,6 @@ local function deleteRentalRow(owner, plate)
 end
 
 CreateThread(function()
-    -- Tilføjes uden at overskrive eksisterende data.
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_started_at DATETIME NULL')
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_expires_at DATETIME NULL')
     MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_duration_minutes INT NULL')
@@ -119,7 +118,6 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         return { success = false, message = 'Du har allerede en aktiv lejebil.' }
     end
 
-    -- Ryd gamle, udløbne rækker før kontrollen.
     MySQL.update.await([[
         DELETE FROM rented_vehicles
         WHERE owner = ? AND rental_expires_at IS NOT NULL AND rental_expires_at <= NOW()

@@ -31,17 +31,13 @@ end
 RegisterNetEvent('sb_diving:client:notify', notify)
 
 
--- ox_inventory kalder denne export, når diving_gear bruges.
 exports('useDivingGear', function(data, slot)
     TriggerServerEvent('sb_diving:server:validateGear')
 end)
 
--- Kister åbnes senere fra inventoryet. Itemnavnet bestemmer kistetypen.
 exports('useDivingChest', function(data, slot)
     if not data or not data.name then return end
 
-    -- ox_inventory-versioner kan sende slot som et tal, en slot-tabel
-    -- eller som data.slot. Send kun et gyldigt slotnummer til serveren.
     local slotId
 
     if type(slot) == 'number' then
@@ -59,7 +55,6 @@ RegisterNetEvent('sb_diving:client:openChest', function(itemName, slot)
     TriggerServerEvent('sb_diving:server:openChest', itemName, slot)
 end)
 
--- Kan også kaldes fra andre scripts eller item-systemer.
 RegisterNetEvent('sb_diving:client:useGear', function()
     TriggerServerEvent('sb_diving:server:validateGear')
 end)
@@ -145,8 +140,6 @@ local function captureSkinchangerSkin()
     local skin
     local completed = false
 
-    -- ESX skinchanger returnerer normalt synkront gennem callbacken,
-    -- men vi giver den kort tid for kompatibilitet med custom clothing-scripts.
     TriggerEvent('skinchanger:getSkin', function(currentSkin)
         if type(currentSkin) == 'table' then
             skin = currentSkin
@@ -216,18 +209,13 @@ local function restoreAppearance(ped)
     local appearance = savedAppearance
     savedAppearance = nil
 
-    -- Brug clothing-systemets egen skin, når skinchanger er tilgængelig.
-    -- Det er mere stabilt end kun at ændre GTA components direkte.
     if appearance.skin then
         TriggerEvent('skinchanger:loadSkin', appearance.skin)
         Wait(150)
     end
 
-    -- Fallback og sidste sikkerhed: gendan også de præcise components/props.
     applyNativeAppearance(ped, appearance)
 
-    -- Nogle clothing-scripts anvender deres ændringer en frame senere.
-    -- Gentag derfor én gang kort efter, så scuba-outfittet ikke bliver stående.
     CreateThread(function()
         Wait(500)
         local currentPed = PlayerPedId()
@@ -259,7 +247,6 @@ local function applyDivingOutfit(ped)
         return
     end
 
-    -- Gem kun det oprindelige outfit én gang pr. aktivering.
     if not savedAppearance then
         savedAppearance = saveAppearance(ped)
     end
@@ -358,8 +345,6 @@ end
 RegisterNetEvent('sb_diving:client:setGear', function(hasGear)
     local now = GetGameTimer()
 
-    -- ox_inventory og ESX compatibility kan begge affyre use-handleren.
-    -- Ignorér dubletkald, så ét klik kun toggler udstyret én gang.
     if now - lastGearToggleAt < 1000 then
         return
     end
@@ -468,8 +453,6 @@ local function pickupMissionChest(pointIndex)
     TaskTurnPedToFaceCoord(ped, chestCoords.x, chestCoords.y, chestCoords.z, 400)
     Wait(250)
 
-    -- Frys kun positionen under den korte opsamling. Det gør, at GTA's
-    -- svømme-task ikke straks overskriver pickup-animationen.
     SetEntityVelocity(ped, 0.0, 0.0, 0.0)
     FreezeEntityPosition(ped, true)
     playChestPickupAnimation(ped)
@@ -561,8 +544,6 @@ local function pickupMissionChest(pointIndex)
     end
 end
 
--- Et rigtigt FiveM-keybind er mere stabilt end kun at aflæse control 38 i en frame-loop,
--- især mens spilleren svømmer under vandet.
 RegisterCommand('+sb_diving_pickup', function()
     if nearestMissionChest and not chestPickupBusy then
         pickupMissionChest(nearestMissionChest)
@@ -829,7 +810,6 @@ CreateThread(function()
             local elapsed = math.max(0, (now - lastTick) / 1000.0)
             lastTick = now
 
-            -- Hvis karaktermodellen ændres, bliver udstyret sat korrekt på den nye ped.
             if gearPed ~= ped then
                 deleteGearObjects()
                 savedAppearance = nil

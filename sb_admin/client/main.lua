@@ -522,9 +522,6 @@ local function formatPlayerNoteDate(value)
         return 'Ukendt tidspunkt'
     end
 
-    -- MySQL kan returnere DATETIME som enten tekst eller et numerisk timestamp.
-    -- FiveM-klienten har ikke adgang til Lua's os.date, så datoen formateres
-    -- primært på serveren. Denne fallback håndterer almindelig DATETIME-tekst.
     local y, m, d, h, min = text:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)[ T](%d%d):(%d%d)')
     if y then
         return ('%s/%s/%s %s:%s'):format(d, m, y, h, min)
@@ -1230,7 +1227,6 @@ local function toggleGodmode()
     end
 end
 
--- Genanvend beskyttelsen løbende, da andre resources kan ændre ped-state.
 CreateThread(function()
     while true do
         if not godmodeEnabled then
@@ -1474,7 +1470,6 @@ local function teleportToWaypoint()
         SetEntityCoordsNoOffset(entity, x, y, groundZ + 1.0, false, false, false)
         RequestCollisionAtCoord(x, y, groundZ)
     else
-        -- Fallback, hvis området endnu ikke har leveret ground-data.
         SetEntityCoordsNoOffset(entity, x, y, 1000.0, false, false, false)
     end
 
@@ -1881,10 +1876,6 @@ RegisterNetEvent('sb_admin:client:teleportToCoordinates', function(x, y, z, head
         Wait(0)
     end
 
-    -- Samme sikre teleport-princip som txAdmin:
-    -- 1) flyt til destinationens X/Y i en neutral højde
-    -- 2) vent på world collision
-    -- 3) flyt til den endelige Z-værdi
     SetPedCoordsKeepVehicle(ped, x, y, 100.0)
 
     if hasVehicle then
@@ -2012,7 +2003,6 @@ RegisterNetEvent('sb_admin:client:adminChatMessage', function(message)
         message = message
     })
 
-    -- Undgå notifikation og lyd for adminens egen besked.
     local ownServerId = GetPlayerServerId(PlayerId())
     if tonumber(message.senderId) == ownServerId then
         return
@@ -2283,7 +2273,6 @@ local function activateSelectedItem()
 
         toggleNoclip()
 
-        -- Behold menuen åben og opdatér teksten på noclip-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2299,7 +2288,6 @@ local function activateSelectedItem()
 
         toggleGodmode()
 
-        -- Behold menuen åben og opdatér teksten på godmode-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2315,7 +2303,6 @@ local function activateSelectedItem()
 
         toggleInvisibility()
 
-        -- Behold menuen åben og opdatér teksten på usynlighedspunktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2331,7 +2318,6 @@ local function activateSelectedItem()
 
         togglePlayerIds()
 
-        -- Behold menuen åben og opdatér teksten på spiller-ID-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2347,7 +2333,6 @@ local function activateSelectedItem()
 
         deleteNearbyVehicle()
 
-        -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2363,7 +2348,6 @@ local function activateSelectedItem()
 
         repairNearbyVehicle()
 
-        -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2379,7 +2363,6 @@ local function activateSelectedItem()
 
         flipNearbyVehicle()
 
-        -- Menuen forbliver åben efter handlingen.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2395,7 +2378,6 @@ local function activateSelectedItem()
 
         spawnAdminVehicle()
 
-        -- Menuen forbliver åben, også efter inputfeltet lukkes.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2411,7 +2393,6 @@ local function activateSelectedItem()
 
         teleportToWaypoint()
 
-        -- Menuen forbliver åben, og markeringen bliver på waypoint-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2427,7 +2408,6 @@ local function activateSelectedItem()
 
         teleportToCoordinates()
 
-        -- Menuen forbliver åben, og markeringen bliver på koordinat-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2443,7 +2423,6 @@ local function activateSelectedItem()
 
         copyCurrentCoordinates()
 
-        -- Menuen forbliver åben, og markeringen bliver på kopiér-koordinater-punktet.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2459,7 +2438,6 @@ local function activateSelectedItem()
 
         returnToPreviousPosition()
 
-        -- Menuen forbliver åben efter returnering.
         setMenu('main', getMainMenuItems(), selectedIndex)
         return
     end
@@ -2643,8 +2621,6 @@ local function activateSelectedItem()
     end
 
     if currentMenu == 'playerDetails' and item.action == 'giveVehicle' then
-        -- OP Garages V3 eksponerer getAllGarages som server-export.
-        -- Garage-listen hentes derfor sikkert gennem sb_admins server-callback.
         local garageResult = lib.callback.await('sb_admin:server:getGiveVehicleGarages', false)
 
         if not garageResult or not garageResult.success or type(garageResult.garages) ~= 'table' then
@@ -2816,8 +2792,6 @@ end)
 RegisterNetEvent('sb_admin:client:reviveNotification', function(adminName)
     local ped = PlayerPedId()
 
-    -- Ambulancejobbet står selv for revive og nulstilling af death-state.
-    -- Her fjerner vi kun en eventuel admin-freeze og viser beskeden.
     FreezeEntityPosition(ped, false)
 
     if IsPedInAnyVehicle(ped, false) then

@@ -133,7 +133,6 @@ local function loadAdminRecord(source)
         ]], { ids.license, ids.discord })
     end
 
-    -- Første bootstrap: første ESX-admin bliver ejer, hvis tabellen er tom.
     if not row then
         local total = tonumber(MySQL.scalar.await('SELECT COUNT(*) FROM sb_admin_admins')) or 0
         local xPlayer = ESX.GetPlayerFromId(source)
@@ -291,7 +290,6 @@ lib.callback.register('sb_admin:server:saveAdmin', function(source, data)
     perms.access_menu = true
 
     local ok, result = pcall(function()
-        -- Hvis spilleren allerede findes, også som deaktiveret, genbruges posten.
         if not adminId then
             local existing = MySQL.single.await([[
                 SELECT id FROM sb_admin_admins
@@ -815,12 +813,8 @@ lib.callback.register('sb_admin:server:revivePlayer', function(source, targetId)
 
     frozenPlayers[targetId] = nil
 
-    -- Piotreq Ambulance Job v2 har sin egen death-state.
-    -- Derfor skal revive gå gennem ambulancejobbets officielle client-event.
     TriggerClientEvent('p_ambulancejob/client/death/revive', targetId)
 
-    -- Vores egen event bruges kun til beskeden og til at sikre,
-    -- at en eventuel admin-freeze bliver fjernet.
     TriggerClientEvent('sb_admin:client:reviveNotification', targetId, adminName or 'en administrator')
 
     return {
@@ -953,8 +947,6 @@ local function unwrapGarageData(value, fallbackId)
         return nil
     end
 
-    -- Nogle OP Garages-versioner returnerer { ["35"] = { ... } }
-    -- fra getGarageByIndex i stedet for selve garage-tabellen.
     if value.Index or value.Type or value.Label or value.CenterOfZone or value.onespawn then
         value.__sbGarageId = tostring(value.Index or fallbackId or '')
         return value
@@ -1214,8 +1206,6 @@ lib.callback.register('sb_admin:server:getPlayerInventory', function(source, tar
 
     local rawItems
 
-    -- Brug ox_inventory, når det er aktivt. Kaldet er beskyttet, så
-    -- standard ESX inventory stadig fungerer, hvis exporten ikke findes.
     if GetResourceState('ox_inventory') == 'started' then
         local ok, result = pcall(function()
             return exports.ox_inventory:GetInventoryItems(targetId)
@@ -1412,9 +1402,6 @@ lib.callback.register('sb_admin:server:giveVehicle', function(source, targetId, 
         return { success = false, message = 'Der blev ikke valgt en garage.' }
     end
 
-    -- Garage-listen kommer fra OP Garages V3's client-export. Nogle builds
-    -- eksponerer ikke getAllGarages/getGarageByIndex på serversiden, så serveren
-    -- validerer i stedet inputformatet og gemmer garage-ID'et direkte.
     if not garageId:match('^%d+$') then
         return { success = false, message = 'Det valgte garage-ID er ugyldigt.' }
     end
@@ -1461,7 +1448,6 @@ lib.callback.register('sb_admin:server:giveVehicle', function(source, targetId, 
         vehicle = json.encode(vehicleProperties)
     }
 
-    -- OP Garages bruger 0 som "i garage" og 1 som "ude".
     if tableColumns.stored then
         insertData.stored = 0
     end

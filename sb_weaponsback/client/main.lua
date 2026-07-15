@@ -159,8 +159,7 @@ local function attachWeaponToPed(serverId, ped, weaponHash, slotIndex)
     local bone = GetPedBoneIndex(ped, settings.bone or Config.DefaultBone)
     local pos = settings.position
     local rot = settings.rotation
-
-    -- Slight offset for duplicate category entries.
+    
     local spacing = (slotIndex - 1) * 0.025
 
     AttachEntityToEntity(
