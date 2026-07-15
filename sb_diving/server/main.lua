@@ -219,13 +219,23 @@ lib.callback.register('sb_diving:server:getUiData', function(source, locationId)
         }
     end
 
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local cooldownExpiresAt = 0
+    if xPlayer then
+        cooldownExpiresAt = getCompletedMissionCooldown(getPlayerIdentifier(xPlayer))
+    end
+
     return {
         shop = Config.Shop,
         missions = Config.Missions,
         finds = finds,
         hasGear = hasItem(source, Config.Items.gear, 1),
         activeMission = missionData,
-        paymentAccount = Config.PaymentAccount
+        paymentAccount = Config.PaymentAccount,
+        missionCooldown = {
+            expiresAt = cooldownExpiresAt,
+            serverNow = os.time()
+        }
     }
 end)
 

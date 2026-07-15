@@ -16,6 +16,8 @@ const missionGuideList = document.getElementById('mission-guide-list');
 
 
 let state = { view: 'shop', data: null };
+let cooldownTimer = null;
+let serverClockOffsetMs = 0;
 
 const post = async (event, payload = {}) => {
     const response = await fetch(`https://${GetParentResourceName()}/${event}`, {
@@ -28,6 +30,69 @@ const post = async (event, payload = {}) => {
 
 const money = value => new Intl.NumberFormat('da-DK').format(Number(value || 0));
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+
+function syncServerClock() {
+    const serverNow = Number(state.data?.missionCooldown?.serverNow || 0);
+    if (serverNow > 0) serverClockOffsetMs = (serverNow * 1000) - Date.now();
+}
+
+function getCooldownRemaining() {
+    const expiresAt = Number(state.data?.missionCooldown?.expiresAt || 0);
+    if (expiresAt <= 0) return 0;
+    const nowSeconds = Math.floor((Date.now() + serverClockOffsetMs) / 1000);
+    return Math.max(0, expiresAt - nowSeconds);
+}
+
+function formatCountdown(totalSeconds) {
+    const seconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return [hours, minutes, secs].map(value => String(value).padStart(2, '0')).join(':');
+}
+
+function stopCooldownTimer() {
+    if (cooldownTimer) {
+        clearInterval(cooldownTimer);
+        cooldownTimer = null;
+    }
+}
+
+function startCooldownTimer() {
+    stopCooldownTimer();
+    if (state.view !== 'missions' || getCooldownRemaining() <= 0) return;
+
+    cooldownTimer = setInterval(() => {
+        if (state.view !== 'missions') {
+            stopCooldownTimer();
+            return;
+        }
+
+        const remaining = getCooldownRemaining();
+        document.querySelectorAll('.start-mission').forEach(button => {
+            if (remaining > 0) {
+                button.disabled = true;
+                button.textContent = `Cooldown · ${formatCountdown(remaining)}`;
+            } else {
+                button.disabled = Boolean(state.data?.activeMission || !state.data?.hasGear);
+                button.textContent = 'Start mission';
+            }
+        });
+
+        const cooldownBox = document.getElementById('mission-cooldown-box');
+        if (cooldownBox) {
+            if (remaining > 0) {
+                cooldownBox.classList.remove('hidden');
+                cooldownBox.querySelector('strong').textContent = formatCountdown(remaining);
+            } else {
+                cooldownBox.classList.add('hidden');
+                state.data.missionCooldown.expiresAt = 0;
+                stopCooldownTimer();
+            }
+        }
+    }, 1000);
+}
 
 function setView(view) {
     state.view = view;
@@ -68,12 +133,28 @@ function renderShop() {
 
 function renderMissions() {
     const d = state.data;
+    const cooldownRemaining = getCooldownRemaining();
     let active = '';
     if (d.activeMission) {
         active = `<div class="mission-active"><div><strong>Aktiv mission: ${escapeHtml(d.activeMission.label)}</strong><small>${d.activeMission.completed}/${d.activeMission.required} fundsteder undersøgt</small></div><button class="danger cancel-mission">Annullér mission</button></div>`;
     }
 
-    const cards = d.missions.map(mission => `
+    const cooldownBox = `
+        <div id="mission-cooldown-box" class="mission-cooldown ${cooldownRemaining > 0 ? '' : 'hidden'}">
+            <div>
+                <span>Ny mission tilgængelig om</span>
+                <strong>${formatCountdown(cooldownRemaining)}</strong>
+            </div>
+            <small>Cooldownen starter, når en mission er gennemført.</small>
+        </div>`;
+
+    const cards = d.missions.map(mission => {
+        const unavailable = Boolean(d.activeMission || !d.hasGear || cooldownRemaining > 0);
+        const buttonText = cooldownRemaining > 0
+            ? `Cooldown · ${formatCountdown(cooldownRemaining)}`
+            : 'Start mission';
+
+        return `
         <article class="card">
             <div class="card-top"><div class="card-icon">🌊</div></div>
             <div class="card-body">
@@ -81,19 +162,23 @@ function renderMissions() {
                 <p>${escapeHtml(mission.description)}</p>
                 <div class="meta"><span>${escapeHtml(mission.difficulty)}</span><span>${mission.duration} min.</span><span>${mission.requiredSearches} fund</span></div>
                 <div class="price">Bonus: ${money(mission.rewardBonus)} kr.</div>
-                <button class="primary start-mission" data-id="${escapeHtml(mission.id)}" ${d.activeMission || !d.hasGear ? 'disabled' : ''}>Start mission</button>
+                <button class="primary start-mission" data-id="${escapeHtml(mission.id)}" ${unavailable ? 'disabled' : ''}>${buttonText}</button>
                 <div class="meta"><span>Depositum: ${money(mission.deposit)} kr.</span></div>
             </div>
-        </article>`).join('');
+        </article>`;
+    }).join('');
 
-    content.innerHTML = renderHero('Dykkermissioner', 'Vælg en opgave og bjærg fund fra havbunden.', d.hasGear ? 'Udstyr klar' : 'Udstyr mangler') + active + `<div class="grid">${cards}</div>`;
+    content.innerHTML = renderHero('Dykkermissioner', 'Vælg en opgave og bjærg fund fra havbunden.', d.hasGear ? 'Udstyr klar' : 'Udstyr mangler') + cooldownBox + active + `<div class="grid">${cards}</div>`;
 
     content.querySelectorAll('.start-mission').forEach(btn => btn.onclick = async () => {
+        if (getCooldownRemaining() > 0) return;
         btn.disabled = true;
         await post('startMission', { missionId: btn.dataset.id });
     });
     const cancel = content.querySelector('.cancel-mission');
     if (cancel) cancel.onclick = () => post('cancelMission');
+
+    startCooldownTimer();
 }
 
 function renderSell() {
@@ -123,6 +208,7 @@ function renderSell() {
 
 function render() {
     if (!state.data) return;
+    if (state.view !== 'missions') stopCooldownTimer();
     if (state.view === 'shop') renderShop();
     else if (state.view === 'missions') renderMissions();
     else renderSell();
@@ -160,10 +246,12 @@ window.addEventListener('message', event => {
     const msg = event.data || {};
     if (msg.action === 'open') {
         state.data = msg.data;
+        syncServerClock();
         app.classList.remove('hidden');
         setView(msg.view || 'shop');
     } else if (msg.action === 'close') {
         app.classList.add('hidden');
+        stopCooldownTimer();
         state.data = null;
     } else if (msg.action === 'missionProgress') {
         if (state.data?.activeMission) {
