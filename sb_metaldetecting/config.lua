@@ -26,8 +26,8 @@ Config.Detector = {
 
     -- Placering af den streamede metaldetektor i højre hånd.
     bone = 57005,
-    offset = vec3(0.11, 0.02, -0.52),
-    rotation = vec3(-12.0, 178.0, 88.0),
+    offset = vec3(0.06, 0.02, -0.02),
+    rotation = vec3(-102.0, -8.0, 8.0),
 
     -- Animation mens metaldetektoren er aktiv.
     animation = {
