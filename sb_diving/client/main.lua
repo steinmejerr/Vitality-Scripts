@@ -5,6 +5,7 @@ local menuOpen = false
 local currentLocation
 local activeMission
 local missionZones = {}
+local missionObjects = {}
 local missionBlip
 local areaBlip
 local gearEnabled = false
@@ -67,11 +68,30 @@ local function closeUi()
     SendNUIMessage({ action = 'close' })
 end
 
+local function removeMissionObject(pointIndex)
+    local entry = missionObjects[pointIndex]
+    if not entry then return end
+
+    if entry.entity and DoesEntityExist(entry.entity) then
+        exports.ox_target:removeLocalEntity(entry.entity, entry.targetName)
+        SetEntityAsMissionEntity(entry.entity, true, true)
+        DeleteEntity(entry.entity)
+    end
+
+    missionObjects[pointIndex] = nil
+end
+
 local function clearMissionZones()
     for i = 1, #missionZones do
         exports.ox_target:removeZone(missionZones[i])
     end
     missionZones = {}
+
+    for pointIndex in pairs(missionObjects) do
+        removeMissionObject(pointIndex)
+    end
+    missionObjects = {}
+
     if missionBlip then RemoveBlip(missionBlip) missionBlip = nil end
     if areaBlip then RemoveBlip(areaBlip) areaBlip = nil end
 end
@@ -318,58 +338,89 @@ RegisterNetEvent('sb_diving:client:setGear', function(hasGear)
     setGear(not gearEnabled)
 end)
 
+local function getSearchPropModel(pointIndex)
+    local models = Config.Search.props or { 'prop_box_wood02a_pu' }
+    if #models == 0 then return nil end
+    return models[((pointIndex - 1) % #models) + 1]
+end
+
 local function addMissionZone(pointIndex, coords)
-    local zoneId = exports.ox_target:addSphereZone({
-        coords = coords,
-        radius = Config.Search.distance,
-        debug = Config.Debug,
-        options = {
-            {
-                name = ('sb_diving_search_%s_%s'):format(activeMission.id, pointIndex),
-                icon = Config.Search.targetIcon,
-                label = Config.Search.targetLabel,
-                distance = Config.Search.distance + 1.0,
-                canInteract = function()
-                    return activeMission ~= nil and gearEnabled and IsPedSwimmingUnderWater(PlayerPedId())
-                end,
-                onSelect = function()
-                    if not activeMission then return end
-                    local completed = lib.progressCircle({
-                        duration = Config.Search.duration,
-                        label = 'Undersøger havbunden...',
-                        position = 'bottom',
-                        useWhileDead = false,
-                        canCancel = true,
-                        disable = { move = true, car = true, combat = true },
-                        anim = { dict = 'amb@world_human_bum_wash@male@high@idle_a', clip = 'idle_a' }
-                    })
-                    if not completed then return end
+    local model = getSearchPropModel(pointIndex)
+    local hash = model and loadModel(model)
 
-                    local result = lib.callback.await('sb_diving:server:searchPoint', false, activeMission.id, pointIndex)
-                    if not result or not result.success then
-                        if result and result.expired then
-                            activeMission = nil
-                            clearMissionZones()
-                        end
-                        return notify(result and result.message or 'Fundstedet kunne ikke undersøges.', 'error')
-                    end
+    if not hash then
+        print(('[sb_diving] Kunne ikke indlæse mission-prop ved punkt %s.'):format(pointIndex))
+        return
+    end
 
-                    exports.ox_target:removeZone(zoneId)
-                    for i = #missionZones, 1, -1 do
-                        if missionZones[i] == zoneId then table.remove(missionZones, i) break end
-                    end
-                    notify(('Du fandt %dx %s. (%d/%d)'):format(result.amount, result.label, result.completed, result.required), 'success')
-                    SendNUIMessage({ action = 'missionProgress', completed = result.completed, required = result.required })
-                    if result.finished then
-                        notify(('Mission fuldført! Du modtog %s kr. inkl. depositum.'):format(result.bonus), 'success')
+    local object = CreateObjectNoOffset(hash, coords.x, coords.y, coords.z, false, false, false)
+    if not DoesEntityExist(object) then
+        print(('[sb_diving] Kunne ikke oprette mission-prop ved punkt %s.'):format(pointIndex))
+        SetModelAsNoLongerNeeded(hash)
+        return
+    end
+
+    SetEntityAsMissionEntity(object, true, true)
+    SetEntityHeading(object, math.random(0, 359) + 0.0)
+    FreezeEntityPosition(object, true)
+    SetEntityCollision(object, true, true)
+    SetModelAsNoLongerNeeded(hash)
+
+    local targetName = ('sb_diving_search_%s_%s'):format(activeMission.id, pointIndex)
+    missionObjects[pointIndex] = {
+        entity = object,
+        targetName = targetName,
+        coords = coords
+    }
+
+    exports.ox_target:addLocalEntity(object, {
+        {
+            name = targetName,
+            icon = Config.Search.targetIcon,
+            label = Config.Search.targetLabel,
+            distance = Config.Search.distance + 1.0,
+            canInteract = function(entity)
+                return activeMission ~= nil
+                    and missionObjects[pointIndex] ~= nil
+                    and entity == missionObjects[pointIndex].entity
+                    and gearEnabled
+                    and IsPedSwimmingUnderWater(PlayerPedId())
+            end,
+            onSelect = function()
+                if not activeMission or not missionObjects[pointIndex] then return end
+
+                local completed = lib.progressCircle({
+                    duration = Config.Search.duration,
+                    label = 'Undersøger fundet...',
+                    position = 'bottom',
+                    useWhileDead = false,
+                    canCancel = true,
+                    disable = { move = true, car = true, combat = true },
+                    anim = { dict = 'amb@world_human_bum_wash@male@high@idle_a', clip = 'idle_a' }
+                })
+                if not completed then return end
+
+                local result = lib.callback.await('sb_diving:server:searchPoint', false, activeMission.id, pointIndex)
+                if not result or not result.success then
+                    if result and result.expired then
                         activeMission = nil
                         clearMissionZones()
                     end
+                    return notify(result and result.message or 'Fundet kunne ikke undersøges.', 'error')
                 end
-            }
+
+                removeMissionObject(pointIndex)
+                notify(('Du fandt %dx %s. (%d/%d)'):format(result.amount, result.label, result.completed, result.required), 'success')
+                SendNUIMessage({ action = 'missionProgress', completed = result.completed, required = result.required })
+
+                if result.finished then
+                    notify(('Mission fuldført! Du modtog %s kr. inkl. depositum.'):format(result.bonus), 'success')
+                    activeMission = nil
+                    clearMissionZones()
+                end
+            end
         }
     })
-    missionZones[#missionZones + 1] = zoneId
 end
 
 local function beginMission(mission)
@@ -506,6 +557,41 @@ CreateThread(function()
             AddTextComponentString(location.blip.label)
             EndTextCommandSetBlipName(blip)
             blips[#blips + 1] = blip
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        if not activeMission or not next(missionObjects) then
+            Wait(500)
+        else
+            Wait(0)
+            local playerCoords = GetEntityCoords(PlayerPedId())
+            local marker = Config.Search.marker or {}
+            local drawDistance = marker.drawDistance or 45.0
+
+            for _, entry in pairs(missionObjects) do
+                if entry.entity and DoesEntityExist(entry.entity) then
+                    local coords = GetEntityCoords(entry.entity)
+                    if #(playerCoords - coords) <= drawDistance then
+                        DrawMarker(
+                            marker.type or 2,
+                            coords.x, coords.y, coords.z + (marker.height or 1.15),
+                            0.0, 0.0, 0.0,
+                            180.0, 0.0, 0.0,
+                            marker.scale and marker.scale.x or 0.28,
+                            marker.scale and marker.scale.y or 0.28,
+                            marker.scale and marker.scale.z or 0.28,
+                            marker.color and marker.color.r or 82,
+                            marker.color and marker.color.g or 255,
+                            marker.color and marker.color.b or 170,
+                            marker.color and marker.color.a or 210,
+                            false, true, 2, false, nil, nil, false
+                        )
+                    end
+                end
+            end
         end
     end
 end)

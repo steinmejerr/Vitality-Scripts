@@ -167,7 +167,24 @@ Config.Search = {
     duration = 7500,
     distance = 2.0,
     targetIcon = 'fa-solid fa-magnifying-glass',
-    targetLabel = 'Undersøg fundsted'
+    targetLabel = 'Undersøg fund',
+
+    -- Der oprettes en fysisk prop ved hvert aktivt missionsmål.
+    -- Modellerne bruges på skift, så fundstederne ikke alle ser ens ud.
+    props = {
+        'prop_box_wood02a_pu',
+        'prop_tool_box_04',
+        'prop_ld_case_01'
+    },
+
+    -- Lille pil over hvert fund. Den vises kun, når spilleren er i nærheden.
+    marker = {
+        type = 2,
+        height = 1.15,
+        drawDistance = 45.0,
+        scale = vec3(0.28, 0.28, 0.28),
+        color = { r = 82, g = 255, b = 170, a = 210 }
+    }
 }
 
 Config.Diving = {
