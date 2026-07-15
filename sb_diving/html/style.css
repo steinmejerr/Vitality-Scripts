@@ -150,8 +150,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     position: absolute;
     left: 2.2vw;
     top: 50%;
-    width: 300px;
-    padding: 15px 16px;
+    width: 340px;
+    padding: 18px 19px;
     transform: translateY(-50%);
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -171,16 +171,16 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     display: block;
     margin-bottom: 4px;
     color: var(--accent);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: .16em;
 }
 
 .mission-hud-head strong {
     display: block;
-    max-width: 205px;
+    max-width: 230px;
     overflow: hidden;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 580;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -188,8 +188,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 .mission-hud-count {
     display: grid;
-    min-width: 54px;
-    min-height: 54px;
+    min-width: 62px;
+    min-height: 62px;
     place-content: center;
     border: 1px solid rgba(72, 216, 148, .25);
     border-radius: 8px;
@@ -199,15 +199,15 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 .mission-hud-count span {
     color: #fff;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 580;
     line-height: 1;
 }
 
 .mission-hud-count small {
-    margin-top: 3px;
+    margin-top: 4px;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 11px;
 }
 
 .mission-progress-row {
@@ -215,7 +215,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     justify-content: space-between;
     margin-top: 14px;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .mission-progress-track {
@@ -242,19 +242,19 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 .mission-guide-title {
     color: #dce3e6;
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 570;
 }
 
 .mission-guide ol {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin: 9px 0 0;
-    padding-left: 18px;
+    gap: 8px;
+    margin: 11px 0 0;
+    padding-left: 21px;
     color: var(--muted);
-    font-size: 10px;
-    line-height: 1.42;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .mission-guide li::marker {
