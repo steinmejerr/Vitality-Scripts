@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SB Car Rental</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app" class="app hidden">
+        <section class="rental-panel">
+            <header class="header">
+                <div>
+                    <span class="eyebrow">KØRETØJSUDLEJNING</span>
+                    <h1 id="location-title">Biludlejning</h1>
+                    <p>Vælg et køretøj og betalingsmetode.</p>
+                </div>
+                <button id="close-button" class="icon-button" aria-label="Luk">×</button>
+            </header>
+
+            <div class="toolbar">
+                <div class="payment-switch" role="group" aria-label="Betalingsmetode">
+                    <button class="payment active" data-payment="bank">Bank</button>
+                    <button class="payment" data-payment="cash">Kontant</button>
+                </div>
+                <span id="vehicle-count" class="vehicle-count"></span>
+            </div>
+
+            <div id="vehicle-list" class="vehicle-grid"></div>
+            <div id="message" class="message hidden"></div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
