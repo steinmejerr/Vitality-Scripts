@@ -3,6 +3,7 @@ local rentalPeds = {}
 local rentalVehicle = nil
 local currentLocationIndex = nil
 local menuOpen = false
+local papersOpen = false
 
 local function notify(description, notifyType)
     lib.notify({
@@ -19,8 +20,9 @@ RegisterNetEvent('sb_carrental:client:notify', function(description, notifyType)
 end)
 
 local function closeMenu()
-    if not menuOpen then return end
+    if not menuOpen and not papersOpen then return end
     menuOpen = false
+    papersOpen = false
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
 end
@@ -36,7 +38,8 @@ local function openMenu(locationIndex)
         action = 'open',
         label = location.label,
         currency = Config.Currency,
-        vehicles = location.vehicles
+        vehicles = location.vehicles,
+        durations = Config.Rental.durations or {}
     })
 end
 
@@ -94,8 +97,37 @@ local function spawnRental(data)
     end
 
     SetModelAsNoLongerNeeded(hash)
-    notify(('Du har lejet en %s med nummerpladen %s.'):format(data.model, data.plate), 'success')
+    notify(('Du har lejet en %s i %s med nummerpladen %s.'):format(data.model, data.durationLabel or 'den valgte periode', data.plate), 'success')
 end
+
+RegisterNetEvent('sb_carrental:client:rentalExpired', function(plate)
+    plate = tostring(plate or ''):gsub('%s+', '')
+    local vehicle = rentalVehicle
+
+    if not vehicle or not DoesEntityExist(vehicle) or GetVehicleNumberPlateText(vehicle):gsub('%s+', '') ~= plate then
+        local vehicles = GetGamePool('CVehicle')
+        for _, candidate in ipairs(vehicles) do
+            if GetVehicleNumberPlateText(candidate):gsub('%s+', '') == plate then
+                vehicle = candidate
+                break
+            end
+        end
+    end
+
+    if vehicle and DoesEntityExist(vehicle) then
+        NetworkRequestControlOfEntity(vehicle)
+        local deadline = GetGameTimer() + 1500
+        while not NetworkHasControlOfEntity(vehicle) and GetGameTimer() < deadline do
+            Wait(0)
+            NetworkRequestControlOfEntity(vehicle)
+        end
+        SetEntityAsMissionEntity(vehicle, true, true)
+        DeleteVehicle(vehicle)
+    end
+
+    rentalVehicle = nil
+    notify('Din lejeperiode er udløbet, og køretøjet er blevet afleveret automatisk.', 'inform')
+end)
 
 local function findNearbyRentalVehicle(plate, radius)
     local ped = PlayerPedId()
@@ -170,7 +202,8 @@ RegisterNUICallback('rent', function(data, cb)
     local response = lib.callback.await('sb_carrental:server:requestRental', false, {
         locationIndex = currentLocationIndex,
         model = data.model,
-        paymentMethod = data.paymentMethod
+        paymentMethod = data.paymentMethod,
+        durationId = data.durationId
     })
 
     cb(response or { success = false, message = 'Serveren svarede ikke.' })
@@ -179,6 +212,23 @@ RegisterNUICallback('rent', function(data, cb)
         spawnRental(response)
     end
 end)
+
+local function openActivePapers(locationIndex)
+    local rental = lib.callback.await('sb_carrental:server:getRentalPapers', false)
+    if not rental then
+        notify('Du har ingen aktive køretøjspapirer.', 'error')
+        return
+    end
+
+    currentLocationIndex = locationIndex
+    papersOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'openPapers',
+        currency = Config.Currency,
+        rental = rental
+    })
+end
 
 local function createBlip(location)
     if not location.blip or not location.blip.enabled then return end
@@ -213,6 +263,13 @@ CreateThread(function()
                 label = 'Se lejebiler',
                 distance = 2.5,
                 onSelect = function() openMenu(index) end
+            },
+            {
+                name = ('sb_carrental_papers_%s'):format(index),
+                icon = 'fa-solid fa-file-contract',
+                label = 'Se køretøjspapirer',
+                distance = 2.5,
+                onSelect = function() openActivePapers(index) end
             },
             {
                 name = ('sb_carrental_return_%s'):format(index),

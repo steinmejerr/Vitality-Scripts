@@ -4,7 +4,7 @@ game 'gta5'
 name 'sb_carrental'
 author 'Steinmejer'
 description 'ESX vehicle rental with ox_target, custom NUI and ox_lib notifications'
-version '1.0.0'
+version '1.2.0'
 
 lua54 'yes'
 
@@ -27,7 +27,8 @@ ui_page 'html/index.html'
 files {
     'html/index.html',
     'html/style.css',
-    'html/app.js'
+    'html/app.js',
+    'html/images/*.webp'
 }
 
 dependencies {

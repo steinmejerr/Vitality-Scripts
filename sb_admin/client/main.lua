@@ -34,7 +34,7 @@ end
 
 local function notify(description, notifyType)
     lib.notify({
-        title = 'SB Admin',
+        title = 'Vitality Admin',
         description = description,
         type = notifyType or 'inform',
         position = Config.Notify.position,
@@ -2905,7 +2905,7 @@ end, false)
 
 RegisterKeyMapping(
     Config.Command,
-    'Åbn SB Admin',
+    'Åbn Vitality Admin',
     'keyboard',
     Config.DefaultKey
 )

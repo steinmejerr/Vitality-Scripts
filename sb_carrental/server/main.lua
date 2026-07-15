@@ -22,6 +22,19 @@ local function findVehicle(locationIndex, model)
     end
 end
 
+local function findDuration(durationId)
+    durationId = tostring(durationId or '')
+    for _, duration in ipairs(Config.Rental.durations or {}) do
+        if tostring(duration.id) == durationId then
+            local minutes = math.floor(tonumber(duration.minutes) or 0)
+            local multiplier = tonumber(duration.multiplier) or 0
+            if minutes > 0 and multiplier > 0 then
+                return duration, minutes, multiplier
+            end
+        end
+    end
+end
+
 local function generatePlate()
     local prefix = string.upper(Config.Rental.platePrefix or 'LEJ')
     local length = math.max(#prefix + 2, Config.Rental.plateLength or 8)
@@ -74,6 +87,18 @@ local function refundMoney(xPlayer, method, amount)
     end
 end
 
+local function deleteRentalRow(owner, plate)
+    MySQL.update.await('DELETE FROM rented_vehicles WHERE owner = ? AND plate = ?', { owner, plate })
+end
+
+CreateThread(function()
+    -- Tilføjes uden at overskrive eksisterende data.
+    MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_started_at DATETIME NULL')
+    MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_expires_at DATETIME NULL')
+    MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_duration_minutes INT NULL')
+    MySQL.query.await('ALTER TABLE rented_vehicles ADD COLUMN IF NOT EXISTS rental_payment_method VARCHAR(16) NULL')
+end)
+
 lib.callback.register('sb_carrental:server:requestRental', function(source, data)
     local xPlayer = ESX.GetPlayerFromId(source)
     if not xPlayer then return { success = false, message = 'Spilleren kunne ikke findes.' } end
@@ -84,9 +109,20 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         return { success = false, message = 'Det valgte køretøj findes ikke.' }
     end
 
+    local duration, durationMinutes, durationMultiplier = findDuration(data.durationId)
+    if not duration then
+        return { success = false, message = 'Den valgte lejeperiode er ugyldig.' }
+    end
+
     if activeRentals[source] then
         return { success = false, message = 'Du har allerede en aktiv lejebil.' }
     end
+
+    -- Ryd gamle, udløbne rækker før kontrollen.
+    MySQL.update.await([[
+        DELETE FROM rented_vehicles
+        WHERE owner = ? AND rental_expires_at IS NOT NULL AND rental_expires_at <= NOW()
+    ]], { xPlayer.identifier })
 
     local existing = MySQL.single.await('SELECT plate, vehicle FROM rented_vehicles WHERE owner = ? LIMIT 1', {
         xPlayer.identifier
@@ -95,8 +131,13 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         return { success = false, message = 'Du har allerede en registreret lejebil. Aflever den først.' }
     end
 
+    local totalPrice = math.ceil((tonumber(vehicle.price) or 0) * durationMultiplier)
+    if totalPrice <= 0 then
+        return { success = false, message = 'Prisen på køretøjet er ugyldig.' }
+    end
+
     pendingRentals[source] = true
-    local paid, paymentError = removeMoney(xPlayer, data.paymentMethod, vehicle.price)
+    local paid, paymentError = removeMoney(xPlayer, data.paymentMethod, totalPrice)
     if not paid then
         pendingRentals[source] = nil
         return { success = false, message = paymentError }
@@ -104,25 +145,31 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
 
     local plate = generatePlate()
     if not plate then
-        refundMoney(xPlayer, data.paymentMethod, vehicle.price)
+        refundMoney(xPlayer, data.paymentMethod, totalPrice)
         pendingRentals[source] = nil
         return { success = false, message = 'Kunne ikke generere en nummerplade. Prøv igen.' }
     end
 
     local inserted = MySQL.insert.await([[
-        INSERT INTO rented_vehicles (vehicle, plate, player_name, base_price, rent_price, owner)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO rented_vehicles (
+            vehicle, plate, player_name, base_price, rent_price, owner,
+            rental_started_at, rental_expires_at, rental_duration_minutes, rental_payment_method
+        )
+        VALUES (?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), ?, ?)
     ]], {
         vehicle.model,
         plate,
         getPlayerName(xPlayer),
         vehicle.price,
-        vehicle.price,
-        xPlayer.identifier
+        totalPrice,
+        xPlayer.identifier,
+        durationMinutes,
+        durationMinutes,
+        data.paymentMethod
     })
 
     if not inserted then
-        refundMoney(xPlayer, data.paymentMethod, vehicle.price)
+        refundMoney(xPlayer, data.paymentMethod, totalPrice)
         pendingRentals[source] = nil
         return { success = false, message = 'Køretøjet kunne ikke registreres i databasen.' }
     end
@@ -133,8 +180,13 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         model = vehicle.model,
         locationIndex = tonumber(data.locationIndex),
         paymentMethod = data.paymentMethod,
-        price = vehicle.price,
-        token = token
+        price = totalPrice,
+        token = token,
+        durationMinutes = durationMinutes,
+        durationLabel = duration.label,
+        vehicleLabel = vehicle.label or vehicle.model,
+        playerName = getPlayerName(xPlayer),
+        expiresAt = os.time() + (durationMinutes * 60)
     }
     pendingRentals[source] = nil
 
@@ -143,6 +195,9 @@ lib.callback.register('sb_carrental:server:requestRental', function(source, data
         token = token,
         plate = plate,
         model = vehicle.model,
+        durationLabel = duration.label,
+        price = totalPrice,
+        paymentMethod = data.paymentMethod,
         spawn = {
             x = location.spawn.x,
             y = location.spawn.y,
@@ -158,10 +213,7 @@ RegisterNetEvent('sb_carrental:server:spawnFailed', function(token)
     if not rental or rental.token ~= token then return end
 
     local xPlayer = ESX.GetPlayerFromId(source)
-    MySQL.update.await('DELETE FROM rented_vehicles WHERE owner = ? AND plate = ?', {
-        xPlayer and xPlayer.identifier or '', rental.plate
-    })
-
+    if xPlayer then deleteRentalRow(xPlayer.identifier, rental.plate) end
     if xPlayer then refundMoney(xPlayer, rental.paymentMethod, rental.price) end
     activeRentals[source] = nil
     notify(source, 'Køretøjet kunne ikke spawnes. Betalingen er refunderet.', 'error')
@@ -187,11 +239,67 @@ lib.callback.register('sb_carrental:server:getActiveRental', function(source)
         }
     end
 
-    local row = MySQL.single.await('SELECT vehicle, plate FROM rented_vehicles WHERE owner = ? LIMIT 1', {
-        xPlayer.identifier
-    })
+    local row = MySQL.single.await([[
+        SELECT vehicle, plate
+        FROM rented_vehicles
+        WHERE owner = ? AND (rental_expires_at IS NULL OR rental_expires_at > NOW())
+        LIMIT 1
+    ]], { xPlayer.identifier })
     if not row then return nil end
     return { plate = row.plate, model = row.vehicle }
+end)
+
+lib.callback.register('sb_carrental:server:getRentalPapers', function(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then return nil end
+
+    local rental = activeRentals[source]
+    if rental then
+        return {
+            company = 'SB Biludlejning',
+            vehicleLabel = rental.vehicleLabel or rental.model,
+            model = rental.model,
+            plate = rental.plate,
+            durationLabel = rental.durationLabel,
+            paymentMethod = rental.paymentMethod,
+            paymentLabel = rental.paymentMethod == 'cash' and 'Kontant' or 'Bank',
+            price = rental.price,
+            startedAt = os.date('%d/%m/%Y %H:%M', rental.expiresAt - (rental.durationMinutes * 60)),
+            expiresAt = os.date('%d/%m/%Y %H:%M', rental.expiresAt)
+        }
+    end
+
+    local row = MySQL.single.await([[
+        SELECT vehicle, plate, rent_price, rental_duration_minutes, rental_payment_method,
+               DATE_FORMAT(rental_started_at, '%d/%m/%Y %H:%i') AS started_at_formatted,
+               DATE_FORMAT(rental_expires_at, '%d/%m/%Y %H:%i') AS expires_at_formatted
+        FROM rented_vehicles
+        WHERE owner = ? AND (rental_expires_at IS NULL OR rental_expires_at > NOW())
+        LIMIT 1
+    ]], { xPlayer.identifier })
+
+    if not row then return nil end
+
+    local durationLabel = ('%s minutter'):format(tonumber(row.rental_duration_minutes) or 0)
+    for _, duration in ipairs(Config.Rental.durations or {}) do
+        if tonumber(duration.minutes) == tonumber(row.rental_duration_minutes) then
+            durationLabel = duration.label
+            break
+        end
+    end
+
+    return {
+        company = 'SB Biludlejning',
+        vehicleLabel = row.vehicle,
+        model = row.vehicle,
+        plate = row.plate,
+        durationLabel = durationLabel,
+        paymentMethod = row.rental_payment_method,
+        paymentLabel = row.rental_payment_method == 'cash' and 'Kontant' or 'Bank',
+        price = row.rent_price,
+        startedAt = row.started_at_formatted,
+        expiresAt = row.expires_at_formatted
+    }
 end)
 
 lib.callback.register('sb_carrental:server:returnRental', function(source, plate)
@@ -207,12 +315,30 @@ lib.callback.register('sb_carrental:server:returnRental', function(source, plate
         return { success = false, message = 'Dette er ikke din aktive lejebil.' }
     end
 
-    MySQL.update.await('DELETE FROM rented_vehicles WHERE owner = ? AND plate = ?', {
-        xPlayer.identifier, plate
-    })
+    deleteRentalRow(xPlayer.identifier, plate)
     activeRentals[source] = nil
 
     return { success = true, message = 'Lejebilen er afleveret. Tak for denne gang.' }
+end)
+
+CreateThread(function()
+    while true do
+        Wait(Config.Rental.expiryCheckInterval or 30000)
+        local now = os.time()
+
+        for playerId, rental in pairs(activeRentals) do
+            if rental.expiresAt and rental.expiresAt <= now then
+                local xPlayer = ESX.GetPlayerFromId(playerId)
+                if xPlayer then
+                    deleteRentalRow(xPlayer.identifier, rental.plate)
+                    TriggerClientEvent('sb_carrental:client:rentalExpired', playerId, rental.plate)
+                end
+                activeRentals[playerId] = nil
+            end
+        end
+
+        MySQL.update.await('DELETE FROM rented_vehicles WHERE rental_expires_at IS NOT NULL AND rental_expires_at <= NOW()')
+    end
 end)
 
 AddEventHandler('playerDropped', function()

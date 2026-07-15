@@ -14,7 +14,16 @@ Config.Rental = {
     warpIntoVehicle = true,
     engineOn = true,
     fuel = 100.0,
-    deleteOnReturn = true
+    deleteOnReturn = true,
+    expiryCheckInterval = 30000,
+
+    -- Prisen på køretøjerne nedenfor er grundprisen for 1 time.
+    durations = {
+        { id = '30m', label = '30 minutter', minutes = 30, multiplier = 0.60 },
+        { id = '1h',  label = '1 time',      minutes = 60, multiplier = 1.00 },
+        { id = '2h',  label = '2 timer',     minutes = 120, multiplier = 1.75 },
+        { id = '4h',  label = '4 timer',     minutes = 240, multiplier = 3.25 }
+    }
 }
 
 Config.Locations = {
@@ -40,21 +49,21 @@ Config.Locations = {
                 label = 'Blista',
                 category = 'Kompakt',
                 price = 1250,
-                image = ''
+                image = 'images/blista.webp'
             },
             {
                 model = 'asea',
                 label = 'Asea',
                 category = 'Sedan',
                 price = 1600,
-                image = ''
+                image = 'images/asea.webp'
             },
             {
                 model = 'faggio',
                 label = 'Faggio',
                 category = 'Scooter',
                 price = 500,
-                image = ''
+                image = 'images/faggio.webp'
             }
         }
     }

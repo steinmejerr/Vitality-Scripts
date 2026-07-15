@@ -13,21 +13,71 @@
                 <div>
                     <span class="eyebrow">KØRETØJSUDLEJNING</span>
                     <h1 id="location-title">Biludlejning</h1>
-                    <p>Vælg et køretøj og betalingsmetode.</p>
+                    <p>Vælg køretøj, lejeperiode og betalingsmetode.</p>
                 </div>
                 <button id="close-button" class="icon-button" aria-label="Luk">×</button>
             </header>
 
             <div class="toolbar">
-                <div class="payment-switch" role="group" aria-label="Betalingsmetode">
-                    <button class="payment active" data-payment="bank">Bank</button>
-                    <button class="payment" data-payment="cash">Kontant</button>
+                <div class="toolbar-group">
+                    <span class="toolbar-label">Betaling</span>
+                    <div class="payment-switch" role="group" aria-label="Betalingsmetode">
+                        <button class="payment active" data-payment="bank">Bank</button>
+                        <button class="payment" data-payment="cash">Kontant</button>
+                    </div>
                 </div>
+
+                <div class="toolbar-group duration-group">
+                    <span class="toolbar-label">Lejeperiode</span>
+                    <div id="duration-switch" class="duration-switch" role="group" aria-label="Lejeperiode"></div>
+                </div>
+
                 <span id="vehicle-count" class="vehicle-count"></span>
             </div>
 
             <div id="vehicle-list" class="vehicle-grid"></div>
             <div id="message" class="message hidden"></div>
+
+            <div id="papers-modal" class="papers-overlay hidden">
+                <section class="papers-card" role="dialog" aria-modal="true" aria-labelledby="papers-title">
+                    <div class="papers-topline">
+                        <div>
+                            <span class="papers-kicker">LEJEAFTALE</span>
+                            <h2 id="papers-title">Køretøjspapirer</h2>
+                        </div>
+                        <button id="papers-close" class="icon-button papers-close" aria-label="Luk">×</button>
+                    </div>
+
+                    <div class="papers-document">
+                        <div class="document-watermark">SB</div>
+                        <div class="document-header">
+                            <div>
+                                <span class="document-label">Udlejer</span>
+                                <strong id="papers-company">SB Biludlejning</strong>
+                            </div>
+                            <span id="papers-status" class="document-status">KLAR TIL UNDERSKRIFT</span>
+                        </div>
+
+                        <div class="document-grid">
+                            <div class="document-field"><span>Køretøj</span><strong id="papers-vehicle">—</strong></div>
+                            <div class="document-field"><span>Model</span><strong id="papers-model">—</strong></div>
+                            <div class="document-field"><span>Nummerplade</span><strong id="papers-plate">Tildeles ved udlevering</strong></div>
+                            <div class="document-field"><span>Lejeperiode</span><strong id="papers-duration">—</strong></div>
+                            <div class="document-field"><span>Betaling</span><strong id="papers-payment">—</strong></div>
+                            <div class="document-field"><span>Lejepris</span><strong id="papers-price">—</strong></div>
+                            <div class="document-field wide"><span>Gyldig fra</span><strong id="papers-start">Ved underskrift</strong></div>
+                            <div class="document-field wide"><span>Udløber</span><strong id="papers-expiry">Beregnes ved udlevering</strong></div>
+                        </div>
+
+                        <p class="document-terms">Lejeren er ansvarlig for køretøjet i hele lejeperioden. Køretøjet skal afleveres ved udlejningsstedet inden aftalens udløb.</p>
+                    </div>
+
+                    <div class="papers-actions">
+                        <button id="papers-back" class="secondary-button">Tilbage</button>
+                        <button id="papers-sign" class="primary-button">Underskriv lejeaftale</button>
+                    </div>
+                </section>
+            </div>
         </section>
     </main>
     <script src="app.js"></script>
