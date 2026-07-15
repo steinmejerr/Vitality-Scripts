@@ -6,7 +6,7 @@ Config.PaymentAccount = 'money'
 Config.Shop = {
     ped = {
         model = `a_m_m_hillbilly_01`,
-        coords = vec4(-1603.64, 5256.72, 2.08, 25.0),
+        coords = vec4(-1531.60, -907.16, 10.17, 137.53),
         scenario = 'WORLD_HUMAN_CLIPBOARD'
     },
     blip = {
@@ -28,6 +28,19 @@ Config.Detector = {
     rotation = vec3(-80.0, 5.0, -15.0),
     toggleCommand = 'metaldetector',
     toggleKey = 'J'
+}
+
+
+
+-- Kortmarkeringer for søgeområder. De vises kun, når spilleren har en metaldetektor i inventoryet.
+Config.ZoneBlips = {
+    sprite = 587,
+    colour = 5,
+    scale = 0.75,
+    shortRange = false,
+    radiusColour = 5,
+    radiusAlpha = 70,
+    inventoryCheckInterval = 5000
 }
 
 Config.Search = {

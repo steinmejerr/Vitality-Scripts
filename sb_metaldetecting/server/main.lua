@@ -238,3 +238,8 @@ end)
 AddEventHandler('playerDropped', function()
     playerTargets[source] = nil
 end)
+
+
+ESX.RegisterUsableItem(Config.Detector.item, function(source)
+    TriggerClientEvent('sb_metaldetecting:client:useDetector', source)
+end)

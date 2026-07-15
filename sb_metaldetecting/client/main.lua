@@ -8,6 +8,9 @@ local currentTarget
 local currentZone
 local searching = false
 local lastSignal = 0
+local zoneBlips = {}
+local hasDetectorItem = false
+local lastDetectorUse = 0
 
 local function notify(description, notifyType)
     lib.notify({
@@ -76,6 +79,72 @@ local function setDetectorActive(state)
         currentZone = nil
         deleteDetectorObject()
         notify('Metaldetektoren er pakket væk.', 'inform')
+    end
+end
+
+
+local function useDetectorItem()
+    local now = GetGameTimer()
+    if now - lastDetectorUse < 1000 then return end
+    lastDetectorUse = now
+    setDetectorActive(not detectorActive)
+end
+
+exports('useMetalDetector', function()
+    useDetectorItem()
+end)
+
+RegisterNetEvent('sb_metaldetecting:client:useDetector', function()
+    useDetectorItem()
+end)
+
+local function clearZoneBlips()
+    for _, blips in pairs(zoneBlips) do
+        if blips.radius and DoesBlipExist(blips.radius) then
+            RemoveBlip(blips.radius)
+        end
+        if blips.icon and DoesBlipExist(blips.icon) then
+            RemoveBlip(blips.icon)
+        end
+    end
+    zoneBlips = {}
+end
+
+local function createZoneBlips()
+    if next(zoneBlips) then return end
+
+    for _, zone in ipairs(Config.Zones) do
+        local radiusBlip = AddBlipForRadius(zone.center.x, zone.center.y, zone.center.z, zone.radius)
+        SetBlipColour(radiusBlip, Config.ZoneBlips.radiusColour)
+        SetBlipAlpha(radiusBlip, Config.ZoneBlips.radiusAlpha)
+
+        local iconBlip = AddBlipForCoord(zone.center.x, zone.center.y, zone.center.z)
+        SetBlipSprite(iconBlip, Config.ZoneBlips.sprite)
+        SetBlipColour(iconBlip, Config.ZoneBlips.colour)
+        SetBlipScale(iconBlip, Config.ZoneBlips.scale)
+        SetBlipAsShortRange(iconBlip, Config.ZoneBlips.shortRange)
+        BeginTextCommandSetBlipName('STRING')
+        AddTextComponentString(zone.label)
+        EndTextCommandSetBlipName(iconBlip)
+
+        zoneBlips[zone.id] = {
+            radius = radiusBlip,
+            icon = iconBlip
+        }
+    end
+end
+
+local function updateDetectorOwnership()
+    local owned = lib.callback.await('sb_metaldetecting:server:hasDetector', false) == true
+    hasDetectorItem = owned
+
+    if owned then
+        createZoneBlips()
+    else
+        clearZoneBlips()
+        if detectorActive then
+            setDetectorActive(false)
+        end
     end
 end
 
@@ -222,7 +291,10 @@ end)
 RegisterNUICallback('buyDetector', function(_, cb)
     local result = lib.callback.await('sb_metaldetecting:server:buyDetector', false)
     cb(result or { success = false, message = 'Købet kunne ikke gennemføres.' })
-    if result and result.success then notify(result.message, 'success') end
+    if result and result.success then
+        notify(result.message, 'success')
+        updateDetectorOwnership()
+    end
 end)
 
 RegisterNUICallback('sellItem', function(data, cb)
@@ -235,6 +307,16 @@ RegisterNUICallback('sellAll', function(_, cb)
     local result = lib.callback.await('sb_metaldetecting:server:sellAll', false)
     cb(result or { success = false, message = 'Salget kunne ikke gennemføres.' })
     if result then notify(result.message, result.success and 'success' or 'error') end
+end)
+
+
+CreateThread(function()
+    Wait(1500)
+
+    while true do
+        updateDetectorOwnership()
+        Wait(Config.ZoneBlips.inventoryCheckInterval)
+    end
 end)
 
 CreateThread(function()
@@ -284,6 +366,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     deleteDetectorObject()
+    clearZoneBlips()
     if shopPed and DoesEntityExist(shopPed) then DeleteEntity(shopPed) end
     lib.hideTextUI()
     SetNuiFocus(false, false)
