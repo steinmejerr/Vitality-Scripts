@@ -22,10 +22,20 @@ Config.Detector = {
     item = 'metal_detector',
     label = 'Metaldetektor',
     price = 2500,
-    model = `w_am_metaldetector`,
-    bone = 28422,
-    offset = vec3(0.15, 0.02, -0.02),
-    rotation = vec3(-80.0, 5.0, -15.0),
+    model = `skv_metaldetector`,
+
+    -- Placering af den streamede metaldetektor i højre hånd.
+    bone = 57005,
+    offset = vec3(0.11, 0.02, -0.52),
+    rotation = vec3(-12.0, 178.0, 88.0),
+
+    -- Animation mens metaldetektoren er aktiv.
+    animation = {
+        dict = 'move_weapon@jerrycan@generic',
+        clip = 'idle',
+        flag = 49
+    },
+
     toggleCommand = 'metaldetector',
     toggleKey = 'J'
 }

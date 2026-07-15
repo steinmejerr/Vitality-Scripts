@@ -4,6 +4,7 @@ local shopPed
 local nuiOpen = false
 local detectorActive = false
 local detectorObject
+local previousWeapon
 local currentTarget
 local currentZone
 local searching = false
@@ -25,15 +26,83 @@ local function loadModel(model)
     if not IsModelInCdimage(model) then return false end
     RequestModel(model)
     local timeout = GetGameTimer() + 5000
-    while not HasModelLoaded(model) and GetGameTimer() < timeout do Wait(0) end
+    while not HasModelLoaded(model) and GetGameTimer() < timeout do
+        Wait(0)
+    end
     return HasModelLoaded(model)
 end
 
+
 local function deleteDetectorObject()
+    local ped = PlayerPedId()
+
     if detectorObject and DoesEntityExist(detectorObject) then
+        DetachEntity(detectorObject, true, true)
         DeleteEntity(detectorObject)
     end
+
     detectorObject = nil
+
+    if previousWeapon then
+        SetCurrentPedWeapon(ped, previousWeapon, true)
+    else
+        SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+    end
+
+    ClearPedSecondaryTask(ped)
+    previousWeapon = nil
+end
+
+local function loadAnimDict(dict)
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + 5000
+    while not HasAnimDictLoaded(dict) and GetGameTimer() < timeout do
+        Wait(0)
+    end
+    return HasAnimDictLoaded(dict)
+end
+
+local function createDetectorObject(ped)
+    local model = Config.Detector.model
+    if not loadModel(model) then
+        return false
+    end
+
+    detectorObject = CreateObject(model, GetEntityCoords(ped), true, true, false)
+
+    if not detectorObject or detectorObject == 0 or not DoesEntityExist(detectorObject) then
+        SetModelAsNoLongerNeeded(model)
+        detectorObject = nil
+        return false
+    end
+
+    local bone = GetPedBoneIndex(ped, Config.Detector.bone)
+    AttachEntityToEntity(
+        detectorObject,
+        ped,
+        bone,
+        Config.Detector.offset.x,
+        Config.Detector.offset.y,
+        Config.Detector.offset.z,
+        Config.Detector.rotation.x,
+        Config.Detector.rotation.y,
+        Config.Detector.rotation.z,
+        true,
+        true,
+        false,
+        true,
+        2,
+        true
+    )
+
+    SetModelAsNoLongerNeeded(model)
+
+    local animation = Config.Detector.animation
+    if animation and animation.dict and animation.clip and loadAnimDict(animation.dict) then
+        TaskPlayAnim(ped, animation.dict, animation.clip, 3.0, 3.0, -1, animation.flag or 49, 0.0, false, false, false)
+    end
+
+    return DoesEntityExist(detectorObject)
 end
 
 local function setDetectorActive(state)
@@ -52,25 +121,15 @@ local function setDetectorActive(state)
             return
         end
 
-        if not loadModel(Config.Detector.model) then
+        previousWeapon = GetSelectedPedWeapon(ped)
+        SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true)
+
+        if not createDetectorObject(ped) then
+            previousWeapon = nil
             notify('Metaldetektor-modellen kunne ikke indlæses.', 'error')
             return
         end
 
-        detectorObject = CreateObject(Config.Detector.model, 0.0, 0.0, 0.0, true, true, false)
-        AttachEntityToEntity(
-            detectorObject,
-            ped,
-            GetPedBoneIndex(ped, Config.Detector.bone),
-            Config.Detector.offset.x,
-            Config.Detector.offset.y,
-            Config.Detector.offset.z,
-            Config.Detector.rotation.x,
-            Config.Detector.rotation.y,
-            Config.Detector.rotation.z,
-            true, true, false, true, 1, true
-        )
-        SetModelAsNoLongerNeeded(Config.Detector.model)
         detectorActive = true
         notify('Metaldetektoren er aktiveret.', 'success')
     else
@@ -329,9 +388,19 @@ CreateThread(function()
             Wait(0)
             local ped = PlayerPedId()
 
+            DisablePlayerFiring(PlayerId(), true)
+            DisableControlAction(0, 24, true)
+            DisableControlAction(0, 25, true)
+            DisableControlAction(0, 37, true)
+
+
             if IsPedInAnyVehicle(ped, false) or IsEntityDead(ped) then
                 setDetectorActive(false)
             elseif not currentTarget then
+                lib.showTextUI('Gå ind i et markeret søgeområde for at bruge metaldetektoren', {
+                    position = 'right-center',
+                    icon = 'magnifying-glass'
+                })
                 Wait(500)
                 requestTarget()
             else
