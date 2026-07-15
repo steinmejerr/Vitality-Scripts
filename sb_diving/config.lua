@@ -56,8 +56,7 @@ Config.Items = {
     }
 }
 
--- Alle fysiske missionsfund bruger samme lille kiste-prop, men den kiste,
--- spilleren får i inventoryet, vælges tilfældigt ud fra disse typer.
+
 Config.Chests = {
     common = {
         item = 'diving_chest_common',
@@ -212,12 +211,9 @@ Config.Search = {
         flag = 1
     },
 
-    -- En lille standardkiste, som bruges ved alle missionsmål.
     chestProp = 'prop_box_wood05a',
     headingRandom = true,
 
-    -- Forsøger at finde den faktiske havbund ved punktets X/Y. Hvis GTA ikke
-    -- returnerer en bundhøjde, anvendes Z-værdien fra missionens searchPoints.
     placeOnSeabed = true,
     seabedProbeHeight = 5.0,
     seabedOffset = 0.05,
