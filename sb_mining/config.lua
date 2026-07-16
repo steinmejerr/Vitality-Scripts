@@ -90,32 +90,32 @@ Config.Ores = {
 
 Config.MiningProps = {
     stone = {
-        model = `bzzz_prop_mine_flint_big`,
-        variants = { `bzzz_prop_mine_flint_big`, `bzzz_prop_mine_flint`, `bzzz_prop_mine_flint_a`, `bzzz_prop_mine_flint_b`, `bzzz_prop_mine_flint_c` }
+        model = `bzzz_prop_mine_stone_big`,
+        variants = { `bzzz_prop_mine_stone_big` }
     },
     coal = {
-        model = `bzzz_prop_mine_coal`,
-        variants = { `bzzz_prop_mine_coal`, `bzzz_prop_mine_coal_a`, `bzzz_prop_mine_coal_b`, `bzzz_prop_mine_coal_c` }
+        model = `bzzz_prop_mine_coal_big`,
+        variants = { `bzzz_prop_mine_coal_big` }
     },
     copper = {
-        model = `bzzz_prop_mine_copper`,
-        variants = { `bzzz_prop_mine_copper`, `bzzz_prop_mine_copper_a`, `bzzz_prop_mine_copper_b`, `bzzz_prop_mine_copper_c` }
+        model = `bzzz_prop_mine_copper_big`,
+        variants = { `bzzz_prop_mine_copper_big` }
     },
     iron = {
-        model = `bzzz_prop_mine_lead`,
-        variants = { `bzzz_prop_mine_lead`, `bzzz_prop_mine_lead_a`, `bzzz_prop_mine_lead_b`, `bzzz_prop_mine_lead_c` }
+        model = `bzzz_prop_mine_iron_big`,
+        variants = { `bzzz_prop_mine_iron_big` }
     },
     silver = {
-        model = `bzzz_prop_mine_titanium`,
-        variants = { `bzzz_prop_mine_titanium`, `bzzz_prop_mine_titanium_a`, `bzzz_prop_mine_titanium_b`, `bzzz_prop_mine_titanium_c` }
+        model = `bzzz_prop_mine_silver_big`,
+        variants = { `bzzz_prop_mine_silver_big` }
     },
     gold = {
-        model = `bzzz_prop_mine_pinksapphire`,
-        variants = { `bzzz_prop_mine_pinksapphire`, `bzzz_prop_mine_pinksapphire_a`, `bzzz_prop_mine_pinksapphire_b`, `bzzz_prop_mine_pinksapphire_c` }
+        model = `bzzz_prop_mine_gold_big`,
+        variants = { `bzzz_prop_mine_gold_big` }
     },
     diamond = {
-        model = `bzzz_prop_mine_crystal5_big`,
-        variants = { `bzzz_prop_mine_crystal5_big`, `bzzz_prop_mine_crystal5_a`, `bzzz_prop_mine_crystal5_b`, `bzzz_prop_mine_crystal5_c` }
+        model = `bzzz_prop_mine_diamond_big`,
+        variants = { `bzzz_prop_mine_diamond_big` }
     }
 }
 
