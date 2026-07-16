@@ -47,7 +47,7 @@ Config.Placements = {
     melee = {
         back = {
             bone = 24818,
-            position = vec3(0.18, -0.15, -0.03),
+            position = vec3(0.02, -0.16, -0.12),
             rotation = vec3(0.0, 90.0, 0.0)
         },
         front = {
@@ -63,13 +63,34 @@ Config.WeaponPlacements = {
     [`WEAPON_BAT`] = {
         back = {
             bone = 24818,
-            position = vec3(-0.14, -0.15, -0.02),
-            rotation = vec3(-8.0, 150.0, 8.0)
+            position = vec3(0.02, -0.16, -0.12),
+            rotation = vec3(0.0, 90.0, 0.0)
         },
         front = {
             bone = 24818,
             position = vec3(0.14, 0.14, -0.02),
             rotation = vec3(8.0, 28.0, 188.0)
+        }
+    },
+    [`WEAPON_CROWBAR`] = {
+        back = {
+            bone = 24818,
+            position = vec3(0.02, -0.16, -0.12),
+            rotation = vec3(0.0, 90.0, 0.0)
+        }
+    },
+    [`WEAPON_GOLFCLUB`] = {
+        back = {
+            bone = 24818,
+            position = vec3(0.02, -0.16, -0.12),
+            rotation = vec3(0.0, 90.0, 0.0)
+        }
+    },
+    [`WEAPON_POOLCUE`] = {
+        back = {
+            bone = 24818,
+            position = vec3(0.02, -0.16, -0.12),
+            rotation = vec3(0.0, 90.0, 0.0)
         }
     }
 }
