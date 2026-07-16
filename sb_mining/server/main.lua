@@ -316,62 +316,118 @@ lib.callback.register('sb_mining:server:startMission', function(source, missionK
 end)
 
 lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, rockIndex)
-    local leader, mission = missionForPlayer(source)
-    if not mission or mission.zone ~= zoneKey then return false, 'Du er ikke i den rigtige mission.' end
+    local zone = Config.Zones[zoneKey]
+    rockIndex = tonumber(rockIndex)
+
+    if not zone or not rockIndex or not zone.rocks[rockIndex] then
+        return false, 'Ugyldig mineåre.'
+    end
+
     local lockKey = rockStateKey(zoneKey, rockIndex)
     local now = os.time()
-    if rockLocks[lockKey] and rockLocks[lockKey] > now then return false, 'Stenen er allerede brudt.' end
+
+    if rockLocks[lockKey] and rockLocks[lockKey] > now then
+        return false, 'Stenen er allerede brudt.'
+    end
+
     local xPlayer = ESX.GetPlayerFromId(source)
     local profile = xPlayer and getProfile(getIdentifier(xPlayer))
-    if not profile then return false, 'Spilleren kunne ikke findes.' end
+
+    if not profile then
+        return false, 'Spilleren kunne ikke findes.'
+    end
+
+    if zone.minLevel and profile.level < zone.minLevel then
+        return false, ('Dette mineområde kræver mindst mining-level %s.'):format(zone.minLevel)
+    end
+
+    if zone.maxLevel and profile.level > zone.maxLevel then
+        return false, ('Dette mineområde er kun til og med mining-level %s.'):format(zone.maxLevel)
+    end
+
     local pickaxe = getEquippedPickaxe(source, profile.level)
-    if not pickaxe then return false, 'Brug en hakke fra dit inventory først.' end
-    rockLocks[lockKey] = now + Config.Rock.respawnSeconds
+
+    if not pickaxe then
+        return false, 'Brug en hakke fra dit inventory først.'
+    end
+
     local rockOreKey = ensureRockOre(zoneKey, rockIndex)
     local rockOre = Config.Ores[rockOreKey]
-    if not rockOre or profile.level < rockOre.minLevel then
-        return false, ('Denne malmåre kræver mining-level %s.'):format(rockOre and rockOre.minLevel or 1)
+
+    if not rockOre then
+        return false, 'Denne malmåre kunne ikke findes.'
     end
+
+    if profile.level < rockOre.minLevel then
+        return false, ('Denne malmåre kræver mining-level %s.'):format(rockOre.minLevel)
+    end
+
+    local playerCoords = GetEntityCoords(GetPlayerPed(source))
+    local rockCoords = zone.rocks[rockIndex]
+    local distance = #(playerCoords - vec3(rockCoords.x, rockCoords.y, rockCoords.z))
+
+    if distance > (Config.Rock.interactionDistance + 3.0) then
+        return false, 'Du er for langt væk fra malmåren.'
+    end
+
     local rewards = { [rockOreKey] = Config.OresPerRock }
+
     for key, amount in pairs(rewards) do
         local ore = Config.Ores[key]
+
         if not addItem(source, ore.item, amount) then
-            rockLocks[lockKey] = nil
             return false, 'Du har ikke plads til malmen.'
         end
-        mission.ores[key] = (mission.ores[key] or 0) + amount
     end
-    mission.mined = mission.mined + 1
+
+    rockLocks[lockKey] = now + Config.Rock.respawnSeconds
+
     local xp, level = saveXP(getIdentifier(xPlayer), Config.XPPerRock)
+    local leader, mission = missionForPlayer(source)
+
+    if mission and mission.zone == zoneKey then
+        mission.ores[rockOreKey] = (mission.ores[rockOreKey] or 0) + Config.OresPerRock
+        mission.mined = mission.mined + 1
+
+        for _, member in ipairs(mission.members) do
+            TriggerClientEvent('sb_mining:client:missionProgress', member, mission)
+        end
+
+        local configMission = Config.Missions[mission.key]
+        local complete = mission.mined >= configMission.rocks
+
+        if configMission.requiredOre then
+            complete = complete and (mission.ores[configMission.requiredOre] or 0) >= configMission.requiredOreAmount
+        end
+
+        if complete then
+            for _, member in ipairs(mission.members) do
+                local memberPlayer = ESX.GetPlayerFromId(member)
+
+                if memberPlayer then
+                    memberPlayer.addMoney(configMission.moneyBonus)
+                    local memberIdentifier = getIdentifier(memberPlayer)
+                    saveXP(memberIdentifier, configMission.xpBonus)
+                    MySQL.update.await('UPDATE sb_mining_players SET completed_missions = completed_missions + 1, cooldown_until = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE identifier = ?', { Config.MissionCooldownSeconds, memberIdentifier })
+                    TriggerClientEvent('sb_mining:client:missionComplete', member, configMission.moneyBonus, configMission.xpBonus)
+                end
+            end
+
+            activeMissions[leader] = nil
+        end
+    end
+
     local nextOreKey = chooseZoneOre(zoneKey)
     rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
     rockOreTypes[zoneKey][rockIndex] = nextOreKey
-    for _, member in ipairs(mission.members) do
-        TriggerClientEvent('sb_mining:client:missionProgress', member, mission)
-        TriggerClientEvent('sb_mining:client:rockRespawn', member, zoneKey, rockIndex, Config.Rock.respawnSeconds, nextOreKey)
-    end
-    local configMission = Config.Missions[mission.key]
-    local complete = mission.mined >= configMission.rocks
-    if configMission.requiredOre then
-        complete = complete and (mission.ores[configMission.requiredOre] or 0) >= configMission.requiredOreAmount
-    end
-    if complete then
-        for _, member in ipairs(mission.members) do
-            local memberPlayer = ESX.GetPlayerFromId(member)
-            if memberPlayer then
-                memberPlayer.addMoney(configMission.moneyBonus)
-                local memberIdentifier = getIdentifier(memberPlayer)
-                saveXP(memberIdentifier, configMission.xpBonus)
-                MySQL.update.await('UPDATE sb_mining_players SET completed_missions = completed_missions + 1, cooldown_until = DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE identifier = ?', { Config.MissionCooldownSeconds, memberIdentifier })
-                TriggerClientEvent('sb_mining:client:missionComplete', member, configMission.moneyBonus, configMission.xpBonus)
-            end
-        end
-        activeMissions[leader] = nil
-    end
+    TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, Config.Rock.respawnSeconds, nextOreKey)
+
     local list = {}
+
     for key, amount in pairs(rewards) do
         list[#list + 1] = ('%sx %s'):format(amount, Config.Ores[key].label)
     end
+
     return true, table.concat(list, ', '), pickaxe.data.speedMultiplier, xp, level
 end)
 

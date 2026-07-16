@@ -81,10 +81,10 @@ Config.Ores = {
     stone = { item = 'mining_stone', label = 'Sten', minLevel = 1, weight = 50, sellPrice = 35 },
     coal = { item = 'mining_coal', label = 'Kul', minLevel = 1, weight = 30, sellPrice = 65 },
     copper = { item = 'mining_copper', label = 'Kobbermalm', minLevel = 2, weight = 25, sellPrice = 110 },
-    iron = { item = 'mining_iron', label = 'Jernmalm', minLevel = 3, weight = 22, sellPrice = 165 },
-    silver = { item = 'mining_silver', label = 'Sølvmalm', minLevel = 5, weight = 14, sellPrice = 280 },
-    gold = { item = 'mining_gold', label = 'Guldmalm', minLevel = 7, weight = 8, sellPrice = 520 },
-    diamond = { item = 'mining_diamond', label = 'Rå diamant', minLevel = 10, weight = 2, sellPrice = 1450 }
+    iron = { item = 'mining_iron', label = 'Jernmalm', minLevel = 1, weight = 22, sellPrice = 165 },
+    silver = { item = 'mining_silver', label = 'Sølvmalm', minLevel = 3, weight = 14, sellPrice = 280 },
+    gold = { item = 'mining_gold', label = 'Guldmalm', minLevel = 3, weight = 8, sellPrice = 520 },
+    diamond = { item = 'mining_diamond', label = 'Rå diamant', minLevel = 6, weight = 2, sellPrice = 1450 }
 }
 
 
@@ -128,7 +128,7 @@ Config.Missions = {
         xpBonus = 120,
         moneyBonus = 900,
         multiplayer = true,
-        zone = 'quarry'
+        zone = 'level_1_3'
     },
     iron_run = {
         label = 'Jernleverancen',
@@ -140,7 +140,7 @@ Config.Missions = {
         xpBonus = 280,
         moneyBonus = 2200,
         multiplayer = true,
-        zone = 'quarry'
+        zone = 'level_3_6'
     },
     deep_vein = {
         label = 'Den dybe åre',
@@ -150,45 +150,67 @@ Config.Missions = {
         xpBonus = 520,
         moneyBonus = 5200,
         multiplayer = true,
-        zone = 'deep_mine'
+        zone = 'level_6_10'
     }
 }
 
 Config.Zones = {
-    quarry = {
-        label = 'Davis Quartz',
-        center = vec3(2954.0, 2795.0, 41.5),
-        radius = 120.0,
-        orePool = { 'stone', 'coal', 'copper', 'iron' },
+    level_1_3 = {
+        label = 'Mineområde level 1 - 3',
+        center = vec3(2945.20, 2781.25, 39.80),
+        radius = 24.0,
+        minLevel = 1,
+        maxLevel = 3,
+        orePool = { 'coal', 'iron' },
         rocks = {
-            vec4(2963.8, 2775.4, 39.8, 20.0),
-            vec4(2974.2, 2788.8, 40.3, 185.0),
-            vec4(2984.6, 2802.7, 41.2, 95.0),
-            vec4(2968.1, 2816.5, 42.2, 275.0),
-            vec4(2948.3, 2824.0, 43.2, 160.0),
-            vec4(2933.0, 2808.7, 42.5, 40.0),
-            vec4(2928.6, 2788.4, 41.8, 220.0),
-            vec4(2942.5, 2775.1, 40.9, 320.0),
-            vec4(2993.4, 2791.5, 41.1, 80.0),
-            vec4(3000.2, 2812.4, 42.0, 140.0)
+            vector4(2951.54, 2774.65, 39.23, 285.59),
+            vector4(2949.70, 2783.26, 40.20, 18.30),
+            vector4(2947.33, 2790.86, 40.57, 17.22),
+            vector4(2938.56, 2789.91, 40.14, 96.19),
+            vector4(2940.76, 2780.58, 39.42, 194.55),
+            vector4(2943.53, 2771.49, 39.26, 181.66)
         }
     },
-    deep_mine = {
-        label = 'Den dybe mine',
-        center = vec3(2930.0, 2750.0, 43.0),
-        radius = 100.0,
-        orePool = { 'iron', 'silver', 'gold', 'diamond' },
+    level_3_6 = {
+        label = 'Mineområde level 3 - 6',
+        center = vec3(2939.50, 2804.20, 41.55),
+        radius = 24.0,
+        minLevel = 3,
+        maxLevel = 6,
+        orePool = { 'iron', 'silver', 'gold' },
         rocks = {
-            vec4(2918.8, 2752.5, 43.1, 10.0),
-            vec4(2908.1, 2744.0, 43.0, 170.0),
-            vec4(2924.0, 2737.5, 43.1, 260.0),
-            vec4(2940.2, 2738.7, 43.0, 90.0),
-            vec4(2951.4, 2752.3, 43.2, 310.0),
-            vec4(2942.8, 2768.0, 43.1, 120.0)
+            vector4(2927.98, 2799.61, 41.27, 313.97),
+            vector4(2935.60, 2806.75, 41.99, 313.45),
+            vector4(2941.95, 2812.07, 42.32, 306.84),
+            vector4(2950.60, 2806.71, 41.60, 207.74),
+            vector4(2945.48, 2801.26, 41.15, 132.82),
+            vector4(2935.51, 2798.76, 40.99, 97.63)
+        }
+    },
+    level_6_10 = {
+        label = 'Mineområde level 6 - 10',
+        center = vec3(2965.15, 2791.05, 40.25),
+        radius = 24.0,
+        minLevel = 6,
+        maxLevel = 10,
+        orePool = { 'silver', 'gold', 'diamond' },
+        rocks = {
+            vector4(2971.69, 2780.48, 38.78, 260.56),
+            vector4(2970.83, 2788.80, 39.81, 5.63),
+            vector4(2968.91, 2798.18, 41.13, 12.96),
+            vector4(2959.23, 2801.79, 41.60, 81.06),
+            vector4(2961.28, 2791.42, 40.44, 265.79),
+            vector4(2959.01, 2784.60, 40.73, 148.57)
         }
     }
 }
 
+Config.BlockedVehicles = {
+    enabled = true,
+    models = { `dump` },
+    checkInterval = 2000,
+    extraRadius = 20.0
+}
 
 Config.Rock = {
     model = `prop_rock_4_cl_2`,

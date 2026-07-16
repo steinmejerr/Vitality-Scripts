@@ -30,6 +30,44 @@ local function loadAnim(dict)
     return HasAnimDictLoaded(dict)
 end
 
+
+local function isInsideMiningArea(coords)
+    for _, zone in pairs(Config.Zones) do
+        local radius = (zone.radius or 0.0) + (Config.BlockedVehicles.extraRadius or 0.0)
+        if #(coords - zone.center) <= radius then
+            return true
+        end
+    end
+    return false
+end
+
+local function removeBlockedVehicles()
+    if not Config.BlockedVehicles or not Config.BlockedVehicles.enabled then
+        return
+    end
+
+    local blocked = {}
+    for _, model in ipairs(Config.BlockedVehicles.models or {}) do
+        blocked[model] = true
+    end
+
+    for _, vehicle in ipairs(GetGamePool('CVehicle')) do
+        if DoesEntityExist(vehicle) and blocked[GetEntityModel(vehicle)] and isInsideMiningArea(GetEntityCoords(vehicle)) then
+            NetworkRequestControlOfEntity(vehicle)
+            local timeout = GetGameTimer() + 750
+            while not NetworkHasControlOfEntity(vehicle) and GetGameTimer() < timeout do
+                Wait(0)
+                NetworkRequestControlOfEntity(vehicle)
+            end
+            SetEntityAsMissionEntity(vehicle, true, true)
+            DeleteVehicle(vehicle)
+            if DoesEntityExist(vehicle) then
+                DeleteEntity(vehicle)
+            end
+        end
+    end
+end
+
 local function closeNui()
     nuiOpen = false
     SetNuiFocus(false, false)
@@ -117,7 +155,7 @@ exports('usePickaxe', function(data)
 end)
 
 local function mineRock(zoneKey, rockIndex)
-    if mining or not activeMission then return end
+    if mining then return end
     local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
     if not object or not DoesEntityExist(object) then return end
 
@@ -206,7 +244,7 @@ local function createRock(zoneKey, rockIndex)
             label = ('Mine %s'):format(getOreLabel(oreKey)),
             distance = Config.Rock.interactionDistance,
             canInteract = function()
-                return activeMission and activeMission.zone == zoneKey and not mining and not rockStates[zoneKey .. ':' .. rockIndex]
+                return not mining and not rockStates[zoneKey .. ':' .. rockIndex]
             end,
             onSelect = function()
                 mineRock(zoneKey, rockIndex)
@@ -322,6 +360,14 @@ RegisterNetEvent('sb_mining:client:rockRespawn', function(zoneKey, rockIndex, se
     end)
 end)
 
+
+
+CreateThread(function()
+    while true do
+        removeBlockedVehicles()
+        Wait((Config.BlockedVehicles and Config.BlockedVehicles.checkInterval) or 2000)
+    end
+end)
 
 CreateThread(function()
     while true do
