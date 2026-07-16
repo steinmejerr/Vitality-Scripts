@@ -9,9 +9,21 @@ local currentTarget
 local currentZone
 local searching = false
 local lastSignal = 0
+local lastScanSound = 0
 local zoneBlips = {}
 local hasDetectorItem = false
 local lastDetectorUse = 0
+
+
+local function playDetectorSound(soundType, volume, frequency, duration)
+    SendNUIMessage({
+        action = 'detectorSound',
+        soundType = soundType,
+        volume = volume,
+        frequency = frequency,
+        duration = duration
+    })
+end
 
 local function notify(description, notifyType)
     lib.notify({
@@ -404,6 +416,13 @@ CreateThread(function()
                         icon = 'magnifying-glass'
                     })
                 elseif not currentTarget then
+                    local now = GetGameTimer()
+                    local scanSound = Config.Search.scanSound
+                    if now - lastScanSound >= scanSound.interval then
+                        playDetectorSound('scan', scanSound.volume, scanSound.frequency, scanSound.duration)
+                        lastScanSound = now
+                    end
+
                     lib.showTextUI('Søger efter signal...', {
                         position = 'right-center',
                         icon = 'satellite-dish'
@@ -413,12 +432,24 @@ CreateThread(function()
                 else
                     local coords = GetEntityCoords(ped)
                     local distance = #(coords - currentTarget)
+                    local now = GetGameTimer()
+                    local scanSound = Config.Search.scanSound
+
+                    if now - lastScanSound >= scanSound.interval then
+                        playDetectorSound('scan', scanSound.volume, scanSound.frequency, scanSound.duration)
+                        lastScanSound = now
+                    end
 
                     if distance <= Config.Search.maxSignalDistance then
-                        local interval = math.floor(math.max(140, math.min(1200, distance * 80)))
-                        if GetGameTimer() - lastSignal >= interval then
-                            PlaySoundFrontend(-1, Config.Search.signalSound.name, Config.Search.signalSound.set, true)
-                            lastSignal = GetGameTimer()
+                        local signal = Config.Search.signalSound
+                        local closeness = 1.0 - math.min(1.0, math.max(0.0, distance / Config.Search.maxSignalDistance))
+                        local interval = math.floor(signal.farInterval - ((signal.farInterval - signal.nearInterval) * closeness))
+                        local volume = signal.farVolume + ((signal.nearVolume - signal.farVolume) * closeness)
+                        local frequency = signal.farFrequency + ((signal.nearFrequency - signal.farFrequency) * closeness)
+
+                        if now - lastSignal >= interval then
+                            playDetectorSound('signal', volume, frequency, signal.duration)
+                            lastSignal = now
                         end
                     end
 

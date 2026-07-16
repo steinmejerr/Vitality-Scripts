@@ -5,7 +5,7 @@ lua54 'yes'
 
 author 'Steinmejer'
 description 'Metal detecting for ESX Legacy'
-version '1.6.6'
+version '1.8.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -27,8 +27,8 @@ files {
     'html/index.html',
     'html/style.css',
     'html/app.js',
-    'stream/skv_metaldetector.ydr',
-    'stream/skv_metaldetector.ytyp'
+    'stream/bostra_detector.ydr',
+    'stream/bostra_detector.ytyp'
 }
 
 data_file 'DLC_ITYP_REQUEST' 'stream/bostra_detector.ytyp'

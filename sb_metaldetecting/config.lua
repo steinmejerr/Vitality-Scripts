@@ -55,9 +55,20 @@ Config.Search = {
     digDuration = 5000,
     respawnSeconds = 180,
     maxActiveFindsPerPlayer = 1,
+    scanSound = {
+        interval = 900,
+        volume = 0.12,
+        frequency = 240,
+        duration = 70
+    },
     signalSound = {
-        name = 'NAV_UP_DOWN',
-        set = 'HUD_FRONTEND_DEFAULT_SOUNDSET'
+        farInterval = 1150,
+        nearInterval = 120,
+        farVolume = 0.10,
+        nearVolume = 0.85,
+        farFrequency = 420,
+        nearFrequency = 1050,
+        duration = 85
     }
 }
 

@@ -1,3 +1,39 @@
+
+let detectorAudioContext;
+
+function getDetectorAudioContext() {
+    if (!detectorAudioContext) {
+        detectorAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (detectorAudioContext.state === 'suspended') {
+        detectorAudioContext.resume();
+    }
+
+    return detectorAudioContext;
+}
+
+function playDetectorSound(data) {
+    const context = getDetectorAudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const duration = Math.max(30, Number(data.duration) || 80) / 1000;
+    const volume = Math.min(1, Math.max(0, Number(data.volume) || 0.1));
+    const frequency = Math.max(80, Number(data.frequency) || 440);
+    const now = context.currentTime;
+
+    oscillator.type = data.soundType === 'scan' ? 'sine' : 'square';
+    oscillator.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+}
+
 const app = document.getElementById('app');
 const inventoryList = document.getElementById('inventory-list');
 let inventory = [];
@@ -57,6 +93,7 @@ window.addEventListener('message', event => {
         switchTab(data.defaultTab || 'shop');
     }
     if (data.action === 'close') app.classList.add('hidden');
+    if (data.action === 'detectorSound') playDetectorSound(data);
 });
 
 document.getElementById('close').addEventListener('click', () => post('close'));
