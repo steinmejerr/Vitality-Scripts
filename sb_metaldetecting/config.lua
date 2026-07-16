@@ -48,6 +48,7 @@ Config.ZoneBlips = {
 }
 
 Config.Search = {
+    scanControl = 25,
     minFindDistance = 1.45,
     maxSignalDistance = 18.0,
     interactKey = 38, -- E

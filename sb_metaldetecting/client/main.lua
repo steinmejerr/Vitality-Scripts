@@ -390,42 +390,58 @@ CreateThread(function()
 
             DisablePlayerFiring(PlayerId(), true)
             DisableControlAction(0, 24, true)
-            DisableControlAction(0, 25, true)
+            DisableControlAction(0, Config.Search.scanControl, true)
             DisableControlAction(0, 37, true)
-
 
             if IsPedInAnyVehicle(ped, false) or IsEntityDead(ped) then
                 setDetectorActive(false)
-            elseif not currentTarget then
-                lib.showTextUI('Gå ind i et markeret søgeområde for at bruge metaldetektoren', {
-                    position = 'right-center',
-                    icon = 'magnifying-glass'
-                })
-                Wait(500)
-                requestTarget()
             else
-                local coords = GetEntityCoords(ped)
-                local distance = #(coords - currentTarget)
+                local scanning = IsDisabledControlPressed(0, Config.Search.scanControl)
 
-                if distance <= Config.Search.maxSignalDistance then
-                    local interval = math.floor(math.max(160, math.min(1400, distance * 95)))
-                    if GetGameTimer() - lastSignal >= interval then
-                        PlaySoundFrontend(-1, Config.Search.signalSound.name, Config.Search.signalSound.set, true)
-                        lastSignal = GetGameTimer()
-                    end
-                end
-
-                if distance <= Config.Search.minFindDistance then
-                    lib.showTextUI('[E] Grav fundet op', {
+                if not scanning then
+                    lib.showTextUI('[Højreklik] Hold for at søge', {
                         position = 'right-center',
-                        icon = 'trowel'
+                        icon = 'magnifying-glass'
                     })
-                    if IsControlJustPressed(0, Config.Search.interactKey) then
-                        lib.hideTextUI()
-                        digTarget()
-                    end
+                elseif not currentTarget then
+                    lib.showTextUI('Søger efter signal...', {
+                        position = 'right-center',
+                        icon = 'satellite-dish'
+                    })
+                    Wait(350)
+                    requestTarget()
                 else
-                    lib.hideTextUI()
+                    local coords = GetEntityCoords(ped)
+                    local distance = #(coords - currentTarget)
+
+                    if distance <= Config.Search.maxSignalDistance then
+                        local interval = math.floor(math.max(140, math.min(1200, distance * 80)))
+                        if GetGameTimer() - lastSignal >= interval then
+                            PlaySoundFrontend(-1, Config.Search.signalSound.name, Config.Search.signalSound.set, true)
+                            lastSignal = GetGameTimer()
+                        end
+                    end
+
+                    if distance <= Config.Search.minFindDistance then
+                        lib.showTextUI('[E] Grav fundet op', {
+                            position = 'right-center',
+                            icon = 'trowel'
+                        })
+                        if IsControlJustPressed(0, Config.Search.interactKey) then
+                            lib.hideTextUI()
+                            digTarget()
+                        end
+                    elseif distance <= Config.Search.maxSignalDistance then
+                        lib.showTextUI('Signal registreret – bevæg dig langsomt', {
+                            position = 'right-center',
+                            icon = 'wave-square'
+                        })
+                    else
+                        lib.showTextUI('Intet signal i nærheden', {
+                            position = 'right-center',
+                            icon = 'magnifying-glass'
+                        })
+                    end
                 end
             end
         end
