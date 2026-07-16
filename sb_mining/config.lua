@@ -16,7 +16,7 @@ Config.Shop = {
     },
     table = {
         model = `prop_table_03`,
-        offset = vec3(0.0, 1.05, -1.0),
+        offset = vec3(0.0, 0.82, 0.0),
         headingOffset = 0.0
     },
     blip = {

@@ -1,1 +1,188 @@
-const app=document.getElementById('app');const content=document.getElementById('content');const profile=document.getElementById('profile');let state={tab:'shop',data:null};const resource=()=>typeof GetParentResourceName==='function'?GetParentResourceName():'sb_mining';const post=(name,data={})=>fetch(`https://${resource()}/${name}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json());function money(v){return Number(v||0).toLocaleString('da-DK')+' kr.'}function setTab(tab){state.tab=tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));render()}function renderProfile(){const p=state.data.profile;profile.innerHTML=`<span><strong>Level:</strong> ${p.level}</span><span><strong>XP:</strong> ${p.xp}</span><span><strong>Missioner:</strong> ${p.completed_missions}</span>`}function renderShop(){const cards=Object.entries(state.data.pickaxes).map(([key,p])=>`<article class="card"><h3>${p.label}</h3><p>Hurtigere minedrift og højere holdbarhed.</p><div class="meta"><span>Level ${p.requiredLevel}</span><strong>${money(p.price)}</strong></div><button class="action" data-buy="${key}" ${state.data.profile.level<p.requiredLevel?'disabled':''}>${state.data.profile.level<p.requiredLevel?'Låst':'Køb hakke'}</button></article>`).join('');content.innerHTML=`<div class="grid">${cards}</div>`;content.querySelectorAll('[data-buy]').forEach(b=>b.onclick=async()=>{await post('buyPickaxe',{key:b.dataset.buy});})}function renderMissions(){const active=state.data.activeMission;const activeHtml=active?`<div class="mission-progress"><strong>${active.label}</strong><div>${active.mined} / ${active.rocks} sten</div></div>`:'';const cards=Object.entries(state.data.missions).map(([key,m])=>`<article class="card"><h3>${m.label}</h3><p>${m.description}</p><div class="meta"><span>Level ${m.requiredLevel}</span><span>${m.rocks} sten</span></div><div class="meta"><span>${m.multiplayer?'Multiplayer':'Solo'}</span><strong>${money(m.moneyBonus)}</strong></div><input class="member-input" id="members-${key}" placeholder="Server-ID'er, fx 2, 7, 12"><button class="action" data-mission="${key}" ${state.data.profile.level<m.requiredLevel||active?'disabled':''}>${active?'Mission aktiv':state.data.profile.level<m.requiredLevel?'Låst':'Start mission'}</button></article>`).join('');content.innerHTML=activeHtml+`<div class="grid">${cards}</div>`;content.querySelectorAll('[data-mission]').forEach(b=>b.onclick=async()=>{const raw=document.getElementById(`members-${b.dataset.mission}`).value;const members=raw.split(',').map(v=>Number(v.trim())).filter(Boolean);await post('startMission',{key:b.dataset.mission,members});})}function renderSell(){const rows=Object.entries(state.data.ores).map(([key,o])=>{const amount=state.data.inventory[key]||0;return `<div class="sell-row"><div><strong>${o.label}</strong><p>${amount} stk. · ${money(o.sellPrice)} grundpris</p></div><input id="sell-${key}" type="number" min="1" max="${amount}" value="${Math.max(amount,1)}"><button class="secondary" data-sell="${key}" ${amount<1?'disabled':''}>Sælg</button></div>`}).join('');content.innerHTML=`<button class="action" id="sell-all">Sælg alt</button><div style="height:12px"></div>${rows}`;document.getElementById('sell-all').onclick=()=>post('sellAll');content.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>post('sellOre',{key:b.dataset.sell,amount:Number(document.getElementById(`sell-${b.dataset.sell}`).value)})}function render(){if(!state.data)return;renderProfile();if(state.tab==='shop')renderShop();if(state.tab==='missions')renderMissions();if(state.tab==='sell')renderSell()}window.addEventListener('message',e=>{const d=e.data||{};if(d.action==='open'){state.data=d.data;state.tab=d.tab||'shop';app.classList.remove('hidden');setTab(state.tab)}if(d.action==='close')app.classList.add('hidden');if(d.action==='missionProgress'&&state.data){state.data.activeMission=d.mission;if(state.tab==='missions')renderMissions()}});document.getElementById('close').onclick=()=>post('close');document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));document.addEventListener('keydown',e=>{if(e.key==='Escape')post('close')});
+const app = document.getElementById('app');
+const content = document.getElementById('content');
+const profile = document.getElementById('profile');
+
+let state = {
+    tab: 'shop',
+    data: null
+};
+
+const resource = () => typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'sb_mining';
+
+const post = (name, data = {}) => fetch(`https://${resource()}/${name}`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+}).then(response => response.json());
+
+function money(value) {
+    return `${Number(value || 0).toLocaleString('da-DK')} kr.`;
+}
+
+function setTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('nav button').forEach(button => {
+        button.classList.toggle('active', button.dataset.tab === tab);
+    });
+    render();
+}
+
+function renderProfile() {
+    const player = state.data && state.data.profile
+        ? state.data.profile
+        : { level: 1, xp: 0, completed_missions: 0 };
+
+    profile.innerHTML = `
+        <span><strong>Level:</strong> ${player.level}</span>
+        <span><strong>XP:</strong> ${player.xp}</span>
+        <span><strong>Missioner:</strong> ${player.completed_missions}</span>
+    `;
+}
+
+function renderShop() {
+    const cards = Object.entries(state.data.pickaxes || {}).map(([key, pickaxe]) => {
+        const locked = state.data.profile.level < pickaxe.requiredLevel;
+        return `
+            <article class="card">
+                <h3>${pickaxe.label}</h3>
+                <p>Hurtigere minedrift og højere holdbarhed.</p>
+                <div class="meta">
+                    <span>Level ${pickaxe.requiredLevel}</span>
+                    <strong>${money(pickaxe.price)}</strong>
+                </div>
+                <button class="action" data-buy="${key}" ${locked ? 'disabled' : ''}>
+                    ${locked ? 'Låst' : 'Køb hakke'}
+                </button>
+            </article>
+        `;
+    }).join('');
+
+    content.innerHTML = `<div class="grid">${cards}</div>`;
+
+    content.querySelectorAll('[data-buy]').forEach(button => {
+        button.onclick = async () => {
+            await post('buyPickaxe', { key: button.dataset.buy });
+        };
+    });
+}
+
+function renderMissions() {
+    const active = state.data.activeMission;
+    const activeHtml = active
+        ? `<div class="mission-progress"><strong>${active.label}</strong><div>${active.mined} / ${active.rocks} sten</div></div>`
+        : '';
+
+    const cards = Object.entries(state.data.missions || {}).map(([key, mission]) => {
+        const locked = state.data.profile.level < mission.requiredLevel;
+        const disabled = locked || Boolean(active);
+        const text = active ? 'Mission aktiv' : locked ? 'Låst' : 'Start mission';
+
+        return `
+            <article class="card">
+                <h3>${mission.label}</h3>
+                <p>${mission.description}</p>
+                <div class="meta">
+                    <span>Level ${mission.requiredLevel}</span>
+                    <span>${mission.rocks} sten</span>
+                </div>
+                <div class="meta">
+                    <span>${mission.multiplayer ? 'Multiplayer' : 'Solo'}</span>
+                    <strong>${money(mission.moneyBonus)}</strong>
+                </div>
+                <input class="member-input" id="members-${key}" placeholder="Server-ID'er, fx 2, 7, 12">
+                <button class="action" data-mission="${key}" ${disabled ? 'disabled' : ''}>${text}</button>
+            </article>
+        `;
+    }).join('');
+
+    content.innerHTML = `${activeHtml}<div class="grid">${cards}</div>`;
+
+    content.querySelectorAll('[data-mission]').forEach(button => {
+        button.onclick = async () => {
+            const input = document.getElementById(`members-${button.dataset.mission}`);
+            const raw = input ? input.value : '';
+            const members = raw.split(',').map(value => Number(value.trim())).filter(Boolean);
+            await post('startMission', {
+                key: button.dataset.mission,
+                members
+            });
+        };
+    });
+}
+
+function renderSell() {
+    const rows = Object.entries(state.data.ores || {}).map(([key, ore]) => {
+        const amount = Number(state.data.inventory?.[key] || 0);
+        return `
+            <div class="sell-row">
+                <div>
+                    <strong>${ore.label}</strong>
+                    <p>${amount} stk. · ${money(ore.sellPrice)} grundpris</p>
+                </div>
+                <input id="sell-${key}" type="number" min="1" max="${amount}" value="${Math.max(amount, 1)}">
+                <button class="secondary" data-sell="${key}" ${amount < 1 ? 'disabled' : ''}>Sælg</button>
+            </div>
+        `;
+    }).join('');
+
+    content.innerHTML = `
+        <button class="action" id="sell-all">Sælg alt</button>
+        <div style="height: 12px"></div>
+        ${rows}
+    `;
+
+    const sellAll = document.getElementById('sell-all');
+    if (sellAll) {
+        sellAll.onclick = () => post('sellAll');
+    }
+
+    content.querySelectorAll('[data-sell]').forEach(button => {
+        button.onclick = () => {
+            const input = document.getElementById(`sell-${button.dataset.sell}`);
+            const amount = input ? Number(input.value) : 0;
+            post('sellOre', {
+                key: button.dataset.sell,
+                amount
+            });
+        };
+    });
+}
+
+function render() {
+    if (!state.data) return;
+    renderProfile();
+    if (state.tab === 'shop') renderShop();
+    if (state.tab === 'missions') renderMissions();
+    if (state.tab === 'sell') renderSell();
+}
+
+window.addEventListener('message', event => {
+    const data = event.data || {};
+
+    if (data.action === 'open') {
+        if (!data.data || !data.data.profile) return;
+        state.data = data.data;
+        state.tab = data.tab || 'shop';
+        app.classList.remove('hidden');
+        setTab(state.tab);
+    }
+
+    if (data.action === 'close') {
+        app.classList.add('hidden');
+    }
+
+    if (data.action === 'missionProgress' && state.data) {
+        state.data.activeMission = data.mission;
+        if (state.tab === 'missions') renderMissions();
+    }
+});
+
+document.getElementById('close').onclick = () => post('close');
+document.querySelectorAll('nav button').forEach(button => {
+    button.onclick = () => setTab(button.dataset.tab);
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') post('close');
+});

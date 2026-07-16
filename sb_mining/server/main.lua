@@ -3,6 +3,19 @@ local activeMissions = {}
 local rockLocks = {}
 local invites = {}
 
+MySQL.ready(function()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `sb_mining_players` (
+            `identifier` varchar(80) NOT NULL,
+            `xp` int NOT NULL DEFAULT 0,
+            `level` int NOT NULL DEFAULT 1,
+            `completed_missions` int NOT NULL DEFAULT 0,
+            `cooldown_until` datetime DEFAULT NULL,
+            PRIMARY KEY (`identifier`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
+end)
+
 local function getIdentifier(xPlayer)
     return xPlayer and xPlayer.identifier
 end
@@ -105,21 +118,40 @@ end
 
 lib.callback.register('sb_mining:server:getMenuData', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer then return nil end
-    local profile = getProfile(getIdentifier(xPlayer))
-    local inventory = {}
-    for key, ore in pairs(Config.Ores) do
-        inventory[key] = countItem(source, ore.item)
+    if not xPlayer then
+        return nil, 'Spilleren kunne ikke findes.'
     end
-    local _, mission = missionForPlayer(source)
-    return {
-        profile = profile,
-        pickaxes = Config.Pickaxes,
-        missions = Config.Missions,
-        ores = Config.Ores,
-        inventory = inventory,
-        activeMission = mission
-    }
+
+    local success, result = pcall(function()
+        local profile = getProfile(getIdentifier(xPlayer))
+        local inventory = {}
+
+        for key, ore in pairs(Config.Ores) do
+            inventory[key] = countItem(source, ore.item)
+        end
+
+        local _, mission = missionForPlayer(source)
+
+        return {
+            profile = {
+                xp = tonumber(profile.xp) or 0,
+                level = tonumber(profile.level) or 1,
+                completed_missions = tonumber(profile.completed_missions) or 0
+            },
+            pickaxes = Config.Pickaxes,
+            missions = Config.Missions,
+            ores = Config.Ores,
+            inventory = inventory,
+            activeMission = mission
+        }
+    end)
+
+    if not success then
+        print(('[sb_mining] Kunne ikke hente NUI-data: %s'):format(result))
+        return nil, 'Minebutikken kunne ikke indlæses. Se serverkonsollen.'
+    end
+
+    return result
 end)
 
 lib.callback.register('sb_mining:server:buyPickaxe', function(source, pickaxeKey)

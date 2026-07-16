@@ -33,8 +33,14 @@ local function closeNui()
 end
 
 local function openNui(tab)
-    local data = lib.callback.await('sb_mining:server:getMenuData', false)
-    if not data then notify('Menuen kunne ikke indlæses.', 'error') return end
+    local data, errorMessage = lib.callback.await('sb_mining:server:getMenuData', false)
+
+    if not data then
+        notify(errorMessage or 'Menuen kunne ikke indlæses.', 'error')
+        SetNuiFocus(false, false)
+        return
+    end
+
     nuiOpen = true
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'open', tab = tab or 'shop', data = data })
@@ -131,13 +137,14 @@ local function createShop()
         })
     end
     local tableData = Config.Shop.table
-    if loadModel(tableData.model) then
-        local forward = GetEntityForwardVector(shopPed)
-        local coords = GetEntityCoords(shopPed) + forward * tableData.offset.y
-        tableObject = CreateObject(tableData.model, coords.x, coords.y, coords.z + tableData.offset.z, false, false, false)
-        SetEntityHeading(tableObject, pedData.coords.w + tableData.headingOffset)
-        FreezeEntityPosition(tableObject, true)
+    if shopPed and DoesEntityExist(shopPed) and loadModel(tableData.model) then
+        local coords = GetOffsetFromEntityInWorldCoords(shopPed, tableData.offset.x, tableData.offset.y, tableData.offset.z)
+        tableObject = CreateObject(tableData.model, coords.x, coords.y, coords.z, false, false, false)
+        local heading = pedData.coords.w + tableData.headingOffset
+        SetEntityHeading(tableObject, heading)
         PlaceObjectOnGroundProperly(tableObject)
+        SetEntityRotation(tableObject, 0.0, 0.0, heading, 2, true)
+        FreezeEntityPosition(tableObject, true)
     end
     if Config.Shop.blip.enabled then
         local blip = AddBlipForCoord(pedData.coords.x, pedData.coords.y, pedData.coords.z)
