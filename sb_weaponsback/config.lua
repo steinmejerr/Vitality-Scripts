@@ -58,6 +58,22 @@ Config.Placements = {
     }
 }
 
+
+Config.WeaponPlacements = {
+    [`WEAPON_BAT`] = {
+        back = {
+            bone = 24818,
+            position = vec3(-0.14, -0.15, -0.02),
+            rotation = vec3(-8.0, 150.0, 8.0)
+        },
+        front = {
+            bone = 24818,
+            position = vec3(0.14, 0.14, -0.02),
+            rotation = vec3(8.0, 28.0, 188.0)
+        }
+    }
+}
+
 Config.Weapons = {
     -- Rifler
     [`WEAPON_ASSAULTRIFLE`] = {

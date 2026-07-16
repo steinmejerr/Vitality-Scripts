@@ -234,8 +234,9 @@ local function attachWeaponToPed(serverId, ped, entry, slotIndex)
     local category = settings.category or 'rifle'
     local requestedPlacement = type(entry) == 'table' and entry.placement or settings.placement
     local placementName = requestedPlacement == 'front' and 'front' or 'back'
+    local weaponPlacements = Config.WeaponPlacements and Config.WeaponPlacements[weaponHash]
     local categoryPlacements = Config.Placements[category] or Config.Placements.rifle
-    local placement = categoryPlacements[placementName] or categoryPlacements.back
+    local placement = (weaponPlacements and weaponPlacements[placementName]) or categoryPlacements[placementName] or categoryPlacements.back
     local bone = GetPedBoneIndex(ped, placement.bone or Config.DefaultBone)
     local pos = placement.position
     local rot = placement.rotation
