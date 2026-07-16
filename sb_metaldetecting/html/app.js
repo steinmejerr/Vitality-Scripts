@@ -1,5 +1,6 @@
 
 let detectorAudioContext;
+const activeDetectorOscillators = new Set();
 
 function getDetectorAudioContext() {
     if (!detectorAudioContext) {
@@ -30,8 +31,17 @@ function playDetectorSound(data) {
 
     oscillator.connect(gain);
     gain.connect(context.destination);
+    activeDetectorOscillators.add(oscillator);
+    oscillator.onended = () => activeDetectorOscillators.delete(oscillator);
     oscillator.start(now);
     oscillator.stop(now + duration + 0.02);
+}
+
+function stopDetectorSounds() {
+    for (const oscillator of activeDetectorOscillators) {
+        try { oscillator.stop(); } catch (_) {}
+    }
+    activeDetectorOscillators.clear();
 }
 
 const app = document.getElementById('app');
@@ -94,6 +104,7 @@ window.addEventListener('message', event => {
     }
     if (data.action === 'close') app.classList.add('hidden');
     if (data.action === 'detectorSound') playDetectorSound(data);
+    if (data.action === 'stopDetectorSound') stopDetectorSounds();
 });
 
 document.getElementById('close').addEventListener('click', () => post('close'));

@@ -58,6 +58,12 @@ local function removeMoney(xPlayer, amount)
     return true
 end
 
+local function distance2D(a, b)
+    local dx = a.x - b.x
+    local dy = a.y - b.y
+    return math.sqrt((dx * dx) + (dy * dy))
+end
+
 local function weightedFind()
     local total = 0
     for _, data in pairs(Config.Finds) do total += data.weight end
@@ -147,27 +153,47 @@ lib.callback.register('sb_metaldetecting:server:getTarget', function(source, coo
     local selectedZone
 
     for _, zone in ipairs(Config.Zones) do
-        if #(playerCoords - zone.center) <= zone.radius then
+        if distance2D(playerCoords, zone.center) <= zone.radius and playerCoords.z >= zone.minZ and playerCoords.z <= zone.maxZ then
             selectedZone = zone
             break
         end
     end
 
-    if not selectedZone then return nil end
+    if not selectedZone then
+        playerTargets[source] = nil
+        return nil
+    end
 
     local existing = playerTargets[source]
-    if existing and existing.zone == selectedZone.id then return existing end
+    if existing and existing.zone == selectedZone.id then
+        return existing
+    end
 
-    local available = {}
-    for _, target in ipairs(targets[selectedZone.id] or {}) do
-        local collectedAt = collectedTargets[target.id]
-        if not collectedAt or os.time() - collectedAt >= Config.Search.respawnSeconds then
-            available[#available + 1] = target
+    local minDistance = Config.Search.targetMinDistance or 6.0
+    local maxDistance = Config.Search.targetMaxDistance or math.max(minDistance + 1.0, Config.Search.maxSignalDistance * 0.8)
+    local target
+
+    for _ = 1, 20 do
+        local angle = math.random() * math.pi * 2
+        local radius = minDistance + (math.random() * (maxDistance - minDistance))
+        local x = playerCoords.x + math.cos(angle) * radius
+        local y = playerCoords.y + math.sin(angle) * radius
+        local candidate = vector3(x, y, playerCoords.z)
+
+        if distance2D(candidate, selectedZone.center) <= selectedZone.radius then
+            target = {
+                id = ('%s:%s:%s'):format(selectedZone.id, source, os.time()),
+                x = x,
+                y = y,
+                z = playerCoords.z,
+                zone = selectedZone.id
+            }
+            break
         end
     end
 
-    if #available == 0 then return nil end
-    local target = available[math.random(1, #available)]
+    if not target then return nil end
+
     playerTargets[source] = target
     return target
 end)
@@ -183,7 +209,7 @@ lib.callback.register('sb_metaldetecting:server:collectTarget', function(source,
 
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
-    if #(coords - vector3(target.x, target.y, target.z)) > 3.0 then
+    if distance2D(coords, vector3(target.x, target.y, target.z)) > 3.0 then
         return { success = false, message = 'Du er for langt væk fra fundet.' }
     end
 

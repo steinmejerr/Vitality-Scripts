@@ -34,6 +34,13 @@ local function notify(description, notifyType)
     })
 end
 
+local function clearDetectorFeedback()
+    lib.hideTextUI()
+    SendNUIMessage({ action = 'stopDetectorSound' })
+    lastSignal = 0
+    lastScanSound = 0
+end
+
 local function loadModel(model)
     if not IsModelInCdimage(model) then return false end
     RequestModel(model)
@@ -148,6 +155,7 @@ local function setDetectorActive(state)
         detectorActive = false
         currentTarget = nil
         currentZone = nil
+        clearDetectorFeedback()
         deleteDetectorObject()
         notify('Metaldetektoren er pakket væk.', 'inform')
     end
@@ -279,6 +287,12 @@ local function createShopPed()
     end
 end
 
+local function distance2D(a, b)
+    local dx = a.x - b.x
+    local dy = a.y - b.y
+    return math.sqrt((dx * dx) + (dy * dy))
+end
+
 local function requestTarget()
     local coords = GetEntityCoords(PlayerPedId())
     local target = lib.callback.await('sb_metaldetecting:server:getTarget', false, {
@@ -301,7 +315,7 @@ local function digTarget()
 
     local ped = PlayerPedId()
     local coords = GetEntityCoords(ped)
-    if #(coords - currentTarget) > Config.Search.minFindDistance + 0.35 then return end
+    if distance2D(coords, currentTarget) > Config.Search.minFindDistance + 0.35 then return end
 
     searching = true
     FreezeEntityPosition(ped, true)
@@ -395,6 +409,7 @@ CreateThread(function()
 
     while true do
         if not detectorActive then
+            clearDetectorFeedback()
             Wait(800)
         else
             Wait(0)
@@ -431,7 +446,7 @@ CreateThread(function()
                     requestTarget()
                 else
                     local coords = GetEntityCoords(ped)
-                    local distance = #(coords - currentTarget)
+                    local distance = distance2D(coords, currentTarget)
                     local now = GetGameTimer()
                     local scanSound = Config.Search.scanSound
 
@@ -484,6 +499,6 @@ AddEventHandler('onResourceStop', function(resource)
     deleteDetectorObject()
     clearZoneBlips()
     if shopPed and DoesEntityExist(shopPed) then DeleteEntity(shopPed) end
-    lib.hideTextUI()
+    clearDetectorFeedback()
     SetNuiFocus(false, false)
 end)
