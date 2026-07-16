@@ -136,18 +136,30 @@ local function deleteGearObjects()
     gearObjects = {}
 end
 
+local function cloneTable(value)
+    if type(value) ~= 'table' then
+        return value
+    end
+
+    local copy = {}
+    for key, entry in pairs(value) do
+        copy[cloneTable(key)] = cloneTable(entry)
+    end
+    return copy
+end
+
 local function captureSkinchangerSkin()
     local skin
     local completed = false
 
     TriggerEvent('skinchanger:getSkin', function(currentSkin)
         if type(currentSkin) == 'table' then
-            skin = currentSkin
+            skin = cloneTable(currentSkin)
         end
         completed = true
     end)
 
-    local timeout = GetGameTimer() + 500
+    local timeout = GetGameTimer() + 1500
     while not completed and GetGameTimer() < timeout do
         Wait(0)
     end
@@ -210,23 +222,10 @@ local function restoreAppearance(ped)
     savedAppearance = nil
 
     if appearance.skin then
-        TriggerEvent('skinchanger:loadSkin', appearance.skin)
-        Wait(150)
+        TriggerEvent('skinchanger:loadSkin', cloneTable(appearance.skin))
+    else
+        applyNativeAppearance(ped, appearance)
     end
-
-    applyNativeAppearance(ped, appearance)
-
-    CreateThread(function()
-        Wait(500)
-        local currentPed = PlayerPedId()
-        if not gearEnabled and DoesEntityExist(currentPed) then
-            if appearance.skin then
-                TriggerEvent('skinchanger:loadSkin', appearance.skin)
-                Wait(100)
-            end
-            applyNativeAppearance(currentPed, appearance)
-        end
-    end)
 end
 
 local function applyDivingOutfit(ped)

@@ -101,7 +101,7 @@ Config.Locations = {
         label = 'Vespucci Diving',
         ped = {
             model = 's_m_y_baywatch_01',
-            coords = vec4(-1604.72, -1072.02, 13.02, 139.0),
+            coords = vec4(-1605.65, -1072.27, 13.02, 52.01),
             scenario = 'WORLD_HUMAN_CLIPBOARD'
         },
         blip = {
