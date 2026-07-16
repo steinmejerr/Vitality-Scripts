@@ -9,6 +9,8 @@ local mining = false
 local pickaxeObject
 local equippedPickaxe
 local equippedPickaxeItem
+local rockOreTypes = {}
+local rockOreVisuals = {}
 
 local function notify(description, notifyType)
     lib.notify({ title = 'Minearbejde', description = description, type = notifyType or 'inform', position = 'top-right' })
@@ -46,6 +48,24 @@ local function openNui(tab)
     nuiOpen = true
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'open', tab = tab or 'shop', data = data })
+end
+
+
+local function getRockLabel(oreKey)
+    local labels = Config.RockVisuals and Config.RockVisuals.labels or {}
+    return labels[oreKey] or 'Malmåre'
+end
+
+local function fetchRockVisuals()
+    local state = lib.callback.await('sb_mining:server:getRockVisuals', false)
+    if state then
+        rockOreVisuals = state
+    end
+end
+
+local function setRockVisual(zoneKey, rockIndex, oreKey)
+    rockOreVisuals[zoneKey] = rockOreVisuals[zoneKey] or {}
+    rockOreVisuals[zoneKey][rockIndex] = oreKey
 end
 
 local function deletePickaxe()
@@ -137,33 +157,77 @@ local function mineRock(zoneKey, rockIndex)
     mining = false
 end
 
-local function createRocks()
-    for zoneKey, zone in pairs(Config.Zones) do
-        rockObjects[zoneKey] = rockObjects[zoneKey] or {}
-        for index, coords in ipairs(zone.rocks) do
-            if not rockObjects[zoneKey][index] or not DoesEntityExist(rockObjects[zoneKey][index]) then
-                if loadModel(Config.Rock.model) then
-                    local object = CreateObject(Config.Rock.model, coords.x, coords.y, coords.z - 1.0, false, false, false)
-                    SetEntityHeading(object, coords.w)
-                    FreezeEntityPosition(object, true)
-                    PlaceObjectOnGroundProperly(object)
-                    rockObjects[zoneKey][index] = object
-                    exports.ox_target:addLocalEntity(object, {
-                        {
-                            name = ('sb_mining_%s_%s'):format(zoneKey, index),
-                            icon = 'fas fa-hammer',
-                            label = 'Bryd sten',
-                            distance = Config.Rock.interactionDistance,
-                            canInteract = function()
-                                return activeMission and activeMission.zone == zoneKey and not mining and not rockStates[zoneKey .. ':' .. index]
-                            end,
-                            onSelect = function()
-                                mineRock(zoneKey, index)
-                            end
-                        }
-                    })
-                end
+local function getOreLabel(oreKey)
+    local ore = Config.Ores[oreKey]
+    return ore and ore.label or 'Malm'
+end
+
+local function getOreModel(oreKey, rockIndex)
+    local data = Config.MiningProps[oreKey] or Config.MiningProps.stone
+    local variants = data.variants or { data.model }
+    return variants[((rockIndex - 1) % #variants) + 1]
+end
+
+local function removeRock(zoneKey, rockIndex)
+    local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
+    if object and DoesEntityExist(object) then
+        exports.ox_target:removeLocalEntity(object)
+        DeleteEntity(object)
+    end
+    if rockObjects[zoneKey] then
+        rockObjects[zoneKey][rockIndex] = nil
+    end
+end
+
+local function createRock(zoneKey, rockIndex)
+    local zone = Config.Zones[zoneKey]
+    local coords = zone and zone.rocks[rockIndex]
+    local oreKey = rockOreTypes[zoneKey] and rockOreTypes[zoneKey][rockIndex]
+    if not coords or not oreKey then return end
+
+    removeRock(zoneKey, rockIndex)
+    local model = getOreModel(oreKey, rockIndex)
+    if not loadModel(model) then
+        notify(('Mine-proppet til %s kunne ikke indlæses.'):format(getOreLabel(oreKey)), 'error')
+        return
+    end
+
+    local object = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
+    SetEntityHeading(object, coords.w)
+    PlaceObjectOnGroundProperly(object)
+    FreezeEntityPosition(object, true)
+    rockObjects[zoneKey] = rockObjects[zoneKey] or {}
+    rockObjects[zoneKey][rockIndex] = object
+
+    exports.ox_target:addLocalEntity(object, {
+        {
+            name = ('sb_mining_%s_%s'):format(zoneKey, rockIndex),
+            icon = 'fas fa-hammer',
+            label = ('Mine %s'):format(getOreLabel(oreKey)),
+            distance = Config.Rock.interactionDistance,
+            canInteract = function()
+                return activeMission and activeMission.zone == zoneKey and not mining and not rockStates[zoneKey .. ':' .. rockIndex]
+            end,
+            onSelect = function()
+                mineRock(zoneKey, rockIndex)
             end
+        }
+    })
+
+    SetModelAsNoLongerNeeded(model)
+end
+
+local function createRocks()
+    local state = lib.callback.await('sb_mining:server:getRockState', false)
+    if type(state) ~= 'table' then
+        notify('Mine-props kunne ikke synkroniseres.', 'error')
+        return
+    end
+
+    rockOreTypes = state
+    for zoneKey, zone in pairs(Config.Zones) do
+        for rockIndex = 1, #zone.rocks do
+            createRock(zoneKey, rockIndex)
         end
     end
 end
@@ -248,17 +312,16 @@ RegisterNetEvent('sb_mining:client:missionCancelled', function()
     notify('Missionen blev annulleret.', 'error')
 end)
 
-RegisterNetEvent('sb_mining:client:rockRespawn', function(zoneKey, rockIndex, seconds)
+RegisterNetEvent('sb_mining:client:rockRespawn', function(zoneKey, rockIndex, seconds, oreKey)
     CreateThread(function()
         Wait(seconds * 1000)
         rockStates[zoneKey .. ':' .. rockIndex] = nil
-        local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
-        if object and DoesEntityExist(object) then
-            SetEntityVisible(object, true, false)
-            SetEntityCollision(object, true, true)
-        end
+        rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
+        rockOreTypes[zoneKey][rockIndex] = oreKey or rockOreTypes[zoneKey][rockIndex]
+        createRock(zoneKey, rockIndex)
     end)
 end)
+
 
 CreateThread(function()
     while true do
@@ -286,6 +349,9 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    while GetResourceState(Config.PropResource) ~= 'started' do
+        Wait(500)
+    end
     createShop()
     createRocks()
 end)

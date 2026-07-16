@@ -1,6 +1,7 @@
 Config = {}
 
 Config.UseOxInventory = true
+Config.PropResource = 'bzzz_mine_props'
 Config.PaymentAccount = 'money'
 Config.XPPerRock = 20
 Config.OresPerRock = 4
@@ -86,6 +87,38 @@ Config.Ores = {
     diamond = { item = 'mining_diamond', label = 'Rå diamant', minLevel = 10, weight = 2, sellPrice = 1450 }
 }
 
+
+Config.MiningProps = {
+    stone = {
+        model = `bzzz_prop_mine_flint_big`,
+        variants = { `bzzz_prop_mine_flint_big`, `bzzz_prop_mine_flint`, `bzzz_prop_mine_flint_a`, `bzzz_prop_mine_flint_b`, `bzzz_prop_mine_flint_c` }
+    },
+    coal = {
+        model = `bzzz_prop_mine_coal`,
+        variants = { `bzzz_prop_mine_coal`, `bzzz_prop_mine_coal_a`, `bzzz_prop_mine_coal_b`, `bzzz_prop_mine_coal_c` }
+    },
+    copper = {
+        model = `bzzz_prop_mine_copper`,
+        variants = { `bzzz_prop_mine_copper`, `bzzz_prop_mine_copper_a`, `bzzz_prop_mine_copper_b`, `bzzz_prop_mine_copper_c` }
+    },
+    iron = {
+        model = `bzzz_prop_mine_lead`,
+        variants = { `bzzz_prop_mine_lead`, `bzzz_prop_mine_lead_a`, `bzzz_prop_mine_lead_b`, `bzzz_prop_mine_lead_c` }
+    },
+    silver = {
+        model = `bzzz_prop_mine_titanium`,
+        variants = { `bzzz_prop_mine_titanium`, `bzzz_prop_mine_titanium_a`, `bzzz_prop_mine_titanium_b`, `bzzz_prop_mine_titanium_c` }
+    },
+    gold = {
+        model = `bzzz_prop_mine_pinksapphire`,
+        variants = { `bzzz_prop_mine_pinksapphire`, `bzzz_prop_mine_pinksapphire_a`, `bzzz_prop_mine_pinksapphire_b`, `bzzz_prop_mine_pinksapphire_c` }
+    },
+    diamond = {
+        model = `bzzz_prop_mine_crystal5_big`,
+        variants = { `bzzz_prop_mine_crystal5_big`, `bzzz_prop_mine_crystal5_a`, `bzzz_prop_mine_crystal5_b`, `bzzz_prop_mine_crystal5_c` }
+    }
+}
+
 Config.Missions = {
     quarry_start = {
         label = 'Stenbruddets begyndelse',
@@ -126,6 +159,7 @@ Config.Zones = {
         label = 'Davis Quartz',
         center = vec3(2954.0, 2795.0, 41.5),
         radius = 120.0,
+        orePool = { 'stone', 'coal', 'copper', 'iron' },
         rocks = {
             vec4(2963.8, 2775.4, 39.8, 20.0),
             vec4(2974.2, 2788.8, 40.3, 185.0),
@@ -143,6 +177,7 @@ Config.Zones = {
         label = 'Den dybe mine',
         center = vec3(2930.0, 2750.0, 43.0),
         radius = 100.0,
+        orePool = { 'iron', 'silver', 'gold', 'diamond' },
         rocks = {
             vec4(2918.8, 2752.5, 43.1, 10.0),
             vec4(2908.1, 2744.0, 43.0, 170.0),
@@ -153,6 +188,7 @@ Config.Zones = {
         }
     }
 }
+
 
 Config.Rock = {
     model = `prop_rock_4_cl_2`,

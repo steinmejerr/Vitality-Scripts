@@ -30,6 +30,7 @@ files {
 }
 
 dependencies {
+    'bzzz_mine_props',
     'es_extended',
     'ox_lib',
     'ox_target',
