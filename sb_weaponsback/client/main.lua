@@ -2,11 +2,22 @@ local attachedObjects = {}
 local syncedWeapons = {}
 local lastOwnWeapons = {}
 local oxInventoryAvailable = false
+local placementOverrides = {}
+local forceSync = false
 
 local function debugPrint(...)
     if Config.Debug then
         print('[sb_weaponsback]', ...)
     end
+end
+
+local function notify(description, notifyType)
+    lib.notify({
+        title = 'Våbenplacering',
+        description = description,
+        type = notifyType or 'inform',
+        position = 'top-right'
+    })
 end
 
 local function requestModel(model)
@@ -54,18 +65,47 @@ local function clearAllObjects()
     end
 end
 
-local function arraysEqual(first, second)
+local function getStoredPlacement(weaponHash)
+    local cached = placementOverrides[weaponHash]
+    if cached then
+        return cached
+    end
+
+    local stored = GetResourceKvpString(('placement_%s'):format(weaponHash))
+    local placement = stored == 'front' and 'front' or 'back'
+    placementOverrides[weaponHash] = placement
+    return placement
+end
+
+local function setStoredPlacement(weaponHash, placement)
+    placement = placement == 'front' and 'front' or 'back'
+    placementOverrides[weaponHash] = placement
+    SetResourceKvp(('placement_%s'):format(weaponHash), placement)
+    forceSync = true
+end
+
+local function entriesEqual(first, second)
     if #first ~= #second then
         return false
     end
 
     for index = 1, #first do
-        if first[index] ~= second[index] then
+        local a = first[index]
+        local b = second[index]
+
+        if not a or not b or a.hash ~= b.hash or a.placement ~= b.placement then
             return false
         end
     end
 
     return true
+end
+
+local function addWeaponEntry(result, weaponHash)
+    result[#result + 1] = {
+        hash = weaponHash,
+        placement = getStoredPlacement(weaponHash)
+    }
 end
 
 local function getOxInventoryWeapons()
@@ -83,7 +123,7 @@ local function getOxInventoryWeapons()
             local weaponHash = joaat(string.upper(slot.name))
 
             if Config.Weapons[weaponHash] and weaponHash ~= selectedWeapon then
-                result[#result + 1] = weaponHash
+                addWeaponEntry(result, weaponHash)
 
                 if #result >= Config.MaxVisibleWeapons then
                     break
@@ -102,7 +142,7 @@ local function getNativeWeapons()
 
     for weaponHash in pairs(Config.Weapons) do
         if HasPedGotWeapon(ped, weaponHash, false) and weaponHash ~= selectedWeapon then
-            result[#result + 1] = weaponHash
+            addWeaponEntry(result, weaponHash)
 
             if #result >= Config.MaxVisibleWeapons then
                 break
@@ -135,8 +175,43 @@ local function getOwnedBackWeapons()
     return getNativeWeapons()
 end
 
-local function attachWeaponToPed(serverId, ped, weaponHash, slotIndex)
-    local settings = Config.Weapons[weaponHash]
+local function getOwnedSupportedHashes()
+    local result = {}
+
+    if oxInventoryAvailable then
+        local success, inventory = pcall(function()
+            return exports.ox_inventory:GetPlayerItems()
+        end)
+
+        if success and type(inventory) == 'table' then
+            local seen = {}
+
+            for _, slot in pairs(inventory) do
+                if slot and slot.name then
+                    local hash = joaat(string.upper(slot.name))
+                    if Config.Weapons[hash] and not seen[hash] then
+                        seen[hash] = true
+                        result[#result + 1] = hash
+                    end
+                end
+            end
+        end
+    else
+        local ped = PlayerPedId()
+        for hash in pairs(Config.Weapons) do
+            if HasPedGotWeapon(ped, hash, false) then
+                result[#result + 1] = hash
+            end
+        end
+    end
+
+    table.sort(result)
+    return result
+end
+
+local function attachWeaponToPed(serverId, ped, entry, slotIndex)
+    local weaponHash = type(entry) == 'table' and tonumber(entry.hash) or tonumber(entry)
+    local settings = weaponHash and Config.Weapons[weaponHash]
 
     if not settings or not DoesEntityExist(ped) then
         return
@@ -156,18 +231,23 @@ local function attachWeaponToPed(serverId, ped, weaponHash, slotIndex)
     SetEntityCollision(object, false, false)
     SetEntityCompletelyDisableCollision(object, false, false)
 
-    local bone = GetPedBoneIndex(ped, settings.bone or Config.DefaultBone)
-    local pos = settings.position
-    local rot = settings.rotation
-    
-    local spacing = (slotIndex - 1) * 0.025
+    local category = settings.category or 'rifle'
+    local requestedPlacement = type(entry) == 'table' and entry.placement or settings.placement
+    local placementName = requestedPlacement == 'front' and 'front' or 'back'
+    local categoryPlacements = Config.Placements[category] or Config.Placements.rifle
+    local placement = categoryPlacements[placementName] or categoryPlacements.back
+    local bone = GetPedBoneIndex(ped, placement.bone or Config.DefaultBone)
+    local pos = placement.position
+    local rot = placement.rotation
+    local spacingDirection = placementName == 'front' and 1 or -1
+    local spacing = (slotIndex - 1) * 0.025 * spacingDirection
 
     AttachEntityToEntity(
         object,
         ped,
         bone,
         pos.x,
-        pos.y - spacing,
+        pos.y + spacing,
         pos.z,
         rot.x,
         rot.y,
@@ -203,9 +283,83 @@ local function refreshPlayerWeapons(serverId)
 
     local weapons = syncedWeapons[serverId] or {}
 
-    for index, weaponHash in ipairs(weapons) do
-        attachWeaponToPed(serverId, ped, weaponHash, index)
+    for index, entry in ipairs(weapons) do
+        attachWeaponToPed(serverId, ped, entry, index)
     end
+end
+
+local function openPlacementChoice(weaponHash)
+    local settings = Config.Weapons[weaponHash]
+    if not settings then
+        return
+    end
+
+    local current = getStoredPlacement(weaponHash)
+    local menuId = ('sb_weaponsback_choice_%s'):format(weaponHash)
+
+    lib.registerContext({
+        id = menuId,
+        title = settings.label or 'Våben',
+        menu = 'sb_weaponsback_main',
+        options = {
+            {
+                title = 'På ryggen',
+                description = current == 'back' and 'Valgt placering' or 'Placér våbnet på ryggen',
+                icon = 'person-rifle',
+                iconColor = current == 'back' and '#52ffaa' or nil,
+                onSelect = function()
+                    setStoredPlacement(weaponHash, 'back')
+                    notify(('%s vises nu på ryggen.'):format(settings.label or 'Våbnet'), 'success')
+                end
+            },
+            {
+                title = 'På maven/brystet',
+                description = current == 'front' and 'Valgt placering' or 'Placér våbnet foran på kroppen',
+                icon = 'vest',
+                iconColor = current == 'front' and '#52ffaa' or nil,
+                onSelect = function()
+                    setStoredPlacement(weaponHash, 'front')
+                    notify(('%s vises nu foran på kroppen.'):format(settings.label or 'Våbnet'), 'success')
+                end
+            }
+        }
+    })
+
+    lib.showContext(menuId)
+end
+
+local function openPlacementMenu()
+    local hashes = getOwnedSupportedHashes()
+
+    if #hashes == 0 then
+        notify('Du har ingen understøttede våben i dit inventory.', 'error')
+        return
+    end
+
+    local options = {}
+
+    for _, weaponHash in ipairs(hashes) do
+        local settings = Config.Weapons[weaponHash]
+        local placement = getStoredPlacement(weaponHash)
+
+        options[#options + 1] = {
+            title = settings.label or ('Våben %s'):format(weaponHash),
+            description = placement == 'front' and 'Placering: Mave/bryst' or 'Placering: Ryg',
+            icon = placement == 'front' and 'vest' or 'person-rifle',
+            arrow = true,
+            onSelect = function()
+                openPlacementChoice(weaponHash)
+            end
+        }
+    end
+
+    lib.registerContext({
+        id = 'sb_weaponsback_main',
+        title = Config.Menu.title,
+        options = options
+    })
+
+    lib.showContext('sb_weaponsback_main')
 end
 
 RegisterNetEvent('sb_weaponsback:client:updatePlayerWeapons', function(serverId, weapons)
@@ -243,6 +397,9 @@ RegisterNetEvent('sb_weaponsback:client:removePlayer', function(serverId)
     clearPlayerObjects(serverId)
 end)
 
+RegisterCommand(Config.Menu.command, openPlacementMenu, false)
+RegisterKeyMapping(Config.Menu.command, 'Åbn våbenplacering', 'keyboard', Config.Menu.key)
+
 CreateThread(function()
     oxInventoryAvailable = Config.UseOxInventory and GetResourceState('ox_inventory') == 'started'
     TriggerServerEvent('sb_weaponsback:server:requestSync')
@@ -250,9 +407,12 @@ CreateThread(function()
     while true do
         local weapons = getOwnedBackWeapons()
 
-        table.sort(weapons)
+        table.sort(weapons, function(a, b)
+            return a.hash < b.hash
+        end)
 
-        if not arraysEqual(weapons, lastOwnWeapons) then
+        if forceSync or not entriesEqual(weapons, lastOwnWeapons) then
+            forceSync = false
             lastOwnWeapons = weapons
             TriggerServerEvent('sb_weaponsback:server:updateWeapons', weapons)
         end

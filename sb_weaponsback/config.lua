@@ -9,114 +9,161 @@ Config.RemoveOnDeath = true
 
 Config.UseOxInventory = true
 
+-- Menu til valg af våbenplacering.
+Config.Menu = {
+    command = 'weaponplacement',
+    key = 'F7',
+    title = 'Våbenplacering'
+}
+
+
 Config.DefaultBone = 24818
+
+Config.Placements = {
+    rifle = {
+        back = {
+            bone = 24818,
+            position = vec3(-0.10, -0.17, 0.02),
+            rotation = vec3(0.0, 165.0, 0.0)
+        },
+        front = {
+            bone = 24818,
+            position = vec3(0.10, 0.18, 0.05),
+            rotation = vec3(0.0, 15.0, 180.0)
+        }
+    },
+    shotgun = {
+        back = {
+            bone = 24818,
+            position = vec3(0.08, -0.18, 0.04),
+            rotation = vec3(0.0, 165.0, 180.0)
+        },
+        front = {
+            bone = 24818,
+            position = vec3(-0.08, 0.18, 0.06),
+            rotation = vec3(0.0, 15.0, 0.0)
+        }
+    },
+    melee = {
+        back = {
+            bone = 24818,
+            position = vec3(0.18, -0.15, -0.03),
+            rotation = vec3(0.0, 90.0, 0.0)
+        },
+        front = {
+            bone = 24818,
+            position = vec3(0.17, 0.16, -0.02),
+            rotation = vec3(0.0, 90.0, 180.0)
+        }
+    }
+}
 
 Config.Weapons = {
     -- Rifler
     [`WEAPON_ASSAULTRIFLE`] = {
+        label = 'Assault Rifle',
         model = `w_ar_assaultrifle`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_ASSAULTRIFLE_MK2`] = {
+        label = 'Assault Rifle Mk II',
         model = `w_ar_assaultrifle`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_CARBINERIFLE`] = {
+        label = 'Carbine Rifle',
         model = `w_ar_carbinerifle`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_CARBINERIFLE_MK2`] = {
+        label = 'Carbine Rifle Mk II',
         model = `w_ar_carbineriflemk2`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_SPECIALCARBINE`] = {
+        label = 'Special Carbine',
         model = `w_ar_specialcarbine`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_BULLPUPRIFLE`] = {
+        label = 'Bullpup Rifle',
         model = `w_ar_bullpuprifle`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
     [`WEAPON_COMPACTRIFLE`] = {
+        label = 'Compact Rifle',
         model = `w_ar_assaultrifle_smg`,
-        bone = 24818,
-        position = vec3(-0.10, -0.17, 0.02),
-        rotation = vec3(0.0, 165.0, 0.0)
+        category = 'rifle',
+        placement = 'back'
     },
 
     -- Shotguns
     [`WEAPON_PUMPSHOTGUN`] = {
+        label = 'Pump Shotgun',
         model = `w_sg_pumpshotgun`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
     [`WEAPON_PUMPSHOTGUN_MK2`] = {
+        label = 'Pump Shotgun Mk II',
         model = `w_sg_pumpshotgunmk2`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
     [`WEAPON_SAWNOFFSHOTGUN`] = {
+        label = 'Sawed-Off Shotgun',
         model = `w_sg_sawnoff`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
     [`WEAPON_BULLPUPSHOTGUN`] = {
+        label = 'Bullpup Shotgun',
         model = `w_sg_bullpupshotgun`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
     [`WEAPON_ASSAULTSHOTGUN`] = {
+        label = 'Assault Shotgun',
         model = `w_sg_assaultshotgun`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
     [`WEAPON_HEAVYSHOTGUN`] = {
+        label = 'Heavy Shotgun',
         model = `w_sg_heavyshotgun`,
-        bone = 24818,
-        position = vec3(0.08, -0.18, 0.04),
-        rotation = vec3(0.0, 165.0, 180.0)
+        category = 'shotgun',
+        placement = 'back'
     },
 
     -- Melee
     [`WEAPON_BAT`] = {
+        label = 'Bat',
         model = `w_me_bat`,
-        bone = 24818,
-        position = vec3(0.18, -0.15, -0.03),
-        rotation = vec3(0.0, 90.0, 0.0)
+        category = 'melee',
+        placement = 'back'
     },
     [`WEAPON_CROWBAR`] = {
+        label = 'Crowbar',
         model = `w_me_crowbar`,
-        bone = 24818,
-        position = vec3(0.18, -0.15, -0.03),
-        rotation = vec3(0.0, 90.0, 0.0)
+        category = 'melee',
+        placement = 'back'
     },
     [`WEAPON_GOLFCLUB`] = {
+        label = 'Golf Club',
         model = `w_me_gclub`,
-        bone = 24818,
-        position = vec3(0.18, -0.15, -0.03),
-        rotation = vec3(0.0, 90.0, 0.0)
+        category = 'melee',
+        placement = 'back'
     },
     [`WEAPON_POOLCUE`] = {
+        label = 'Pool Cue',
         model = `w_me_poolcue`,
-        bone = 24818,
-        position = vec3(0.18, -0.15, -0.03),
-        rotation = vec3(0.0, 90.0, 0.0)
+        category = 'melee',
+        placement = 'back'
     }
 }
