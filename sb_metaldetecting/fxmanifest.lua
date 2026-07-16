@@ -5,7 +5,7 @@ lua54 'yes'
 
 author 'Steinmejer'
 description 'Metal detecting for ESX Legacy'
-version '1.6.0'
+version '1.6.6'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -31,7 +31,7 @@ files {
     'stream/skv_metaldetector.ytyp'
 }
 
-data_file 'DLC_ITYP_REQUEST' 'stream/skv_metaldetector.ytyp'
+data_file 'DLC_ITYP_REQUEST' 'stream/bostra_detector.ytyp'
 
 dependencies {
     'es_extended',

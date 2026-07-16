@@ -91,7 +91,7 @@ local function createDetectorObject(ped)
         true,
         false,
         true,
-        2,
+        1,
         true
     )
 

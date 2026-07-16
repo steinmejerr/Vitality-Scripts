@@ -22,19 +22,13 @@ Config.Detector = {
     item = 'metal_detector',
     label = 'Metaldetektor',
     price = 2500,
-    model = `skv_metaldetector`,
+    model = `bostra_detector`,
 
-    -- Placering af den streamede metaldetektor i højre hånd.
+    -- Samme model og placering som md-metaldetecting-main.
     bone = 57005,
-    offset = vec3(0.06, 0.02, -0.02),
-    rotation = vec3(-102.0, -8.0, 8.0),
-
-    -- Animation mens metaldetektoren er aktiv.
-    animation = {
-        dict = 'move_weapon@jerrycan@generic',
-        clip = 'idle',
-        flag = 49
-    },
+    offset = vec3(0.8, 0.06, 0.1),
+    rotation = vec3(5.0, -99.0, 56.0),
+    animation = nil,
 
     toggleCommand = 'metaldetector',
     toggleKey = 'J'
