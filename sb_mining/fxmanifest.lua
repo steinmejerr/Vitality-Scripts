@@ -5,7 +5,7 @@ lua54 'yes'
 
 author 'Steinmejer'
 description 'ESX mining job with NUI, missions, levels and multiplayer support'
-version '1.0.0'
+version '1.0.5'
 
 shared_scripts {
     '@ox_lib/init.lua',

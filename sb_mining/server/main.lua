@@ -2,6 +2,7 @@ local ESX = exports['es_extended']:getSharedObject()
 local activeMissions = {}
 local rockLocks = {}
 local invites = {}
+local equippedPickaxes = {}
 
 MySQL.ready(function()
     MySQL.query.await([[
@@ -94,16 +95,28 @@ local function weightedOre(level)
     end
 end
 
-local function getBestPickaxe(source, level)
-    local selected
+local function getPickaxeByItem(itemName)
     for key, pickaxe in pairs(Config.Pickaxes) do
-        if level >= pickaxe.requiredLevel and countItem(source, pickaxe.item) > 0 then
-            if not selected or pickaxe.requiredLevel > selected.data.requiredLevel then
-                selected = { key = key, data = pickaxe }
-            end
+        if pickaxe.item == itemName then
+            return key, pickaxe
         end
     end
-    return selected
+end
+
+local function getEquippedPickaxe(source, level)
+    local key = equippedPickaxes[source]
+    local pickaxe = key and Config.Pickaxes[key]
+
+    if not pickaxe then
+        return nil
+    end
+
+    if level < pickaxe.requiredLevel or countItem(source, pickaxe.item) < 1 then
+        equippedPickaxes[source] = nil
+        return nil
+    end
+
+    return { key = key, data = pickaxe }
 end
 
 local function missionForPlayer(source)
@@ -115,6 +128,59 @@ local function missionForPlayer(source)
         end
     end
 end
+
+lib.callback.register('sb_mining:server:equipPickaxe', function(source, itemName)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return false, 'Spilleren kunne ikke findes.'
+    end
+
+    local key, pickaxe = getPickaxeByItem(itemName)
+    if not key or not pickaxe then
+        return false, 'Denne hakke kan ikke bruges.'
+    end
+
+    local profile = getProfile(getIdentifier(xPlayer))
+    if profile.level < pickaxe.requiredLevel then
+        return false, ('Hakken kræver mining-level %s.'):format(pickaxe.requiredLevel)
+    end
+
+    if countItem(source, pickaxe.item) < 1 then
+        return false, 'Du har ikke denne hakke.'
+    end
+
+    if equippedPickaxes[source] == key then
+        equippedPickaxes[source] = nil
+        return true, ('Du pakkede %s væk.'):format(pickaxe.label), 'unequipped'
+    end
+
+    equippedPickaxes[source] = key
+    return true, ('Du tog %s frem.'):format(pickaxe.label), 'equipped', key, pickaxe.label
+end)
+
+lib.callback.register('sb_mining:server:unequipPickaxe', function(source)
+    equippedPickaxes[source] = nil
+    return true
+end)
+
+lib.callback.register('sb_mining:server:getEquippedPickaxe', function(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return nil, 'Spilleren kunne ikke findes.'
+    end
+
+    local profile = getProfile(getIdentifier(xPlayer))
+    local equipped = getEquippedPickaxe(source, profile.level)
+    if not equipped then
+        return nil, 'Brug en hakke fra dit inventory først.'
+    end
+
+    return {
+        key = equipped.key,
+        label = equipped.data.label,
+        speedMultiplier = equipped.data.speedMultiplier or 1.0
+    }
+end)
 
 lib.callback.register('sb_mining:server:getMenuData', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
@@ -215,8 +281,8 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
     local xPlayer = ESX.GetPlayerFromId(source)
     local profile = xPlayer and getProfile(getIdentifier(xPlayer))
     if not profile then return false, 'Spilleren kunne ikke findes.' end
-    local pickaxe = getBestPickaxe(source, profile.level)
-    if not pickaxe then return false, 'Du har ingen brugbar hakke.' end
+    local pickaxe = getEquippedPickaxe(source, profile.level)
+    if not pickaxe then return false, 'Brug en hakke fra dit inventory først.' end
     rockLocks[lockKey] = now + Config.Rock.respawnSeconds
     local rewards = {}
     for _ = 1, Config.OresPerRock do
@@ -313,4 +379,8 @@ AddEventHandler('playerDropped', function()
             end
         end
     end
+end)
+
+AddEventHandler('playerDropped', function()
+    equippedPickaxes[source] = nil
 end)

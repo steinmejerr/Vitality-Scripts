@@ -7,6 +7,8 @@ local rockObjects = {}
 local rockStates = {}
 local mining = false
 local pickaxeObject
+local equippedPickaxe
+local equippedPickaxeItem
 
 local function notify(description, notifyType)
     lib.notify({ title = 'Minearbejde', description = description, type = notifyType or 'inform', position = 'top-right' })
@@ -61,20 +63,64 @@ local function attachPickaxe()
     SetModelAsNoLongerNeeded(data.model)
 end
 
+local function usePickaxe(itemName)
+    local ok, message, action, key, label = lib.callback.await('sb_mining:server:equipPickaxe', false, itemName)
+    notify(message, ok and 'success' or 'error')
+
+    if not ok then
+        return
+    end
+
+    if action == 'unequipped' then
+        equippedPickaxe = nil
+        equippedPickaxeItem = nil
+        deletePickaxe()
+        return
+    end
+
+    equippedPickaxe = {
+        key = key,
+        label = label
+    }
+    equippedPickaxeItem = itemName
+    attachPickaxe()
+end
+
+exports('usePickaxe', function(data)
+    local itemName = type(data) == 'table' and data.name or data
+    if not itemName then
+        notify('Hakken kunne ikke genkendes.', 'error')
+        return
+    end
+
+    usePickaxe(itemName)
+end)
+
 local function mineRock(zoneKey, rockIndex)
     if mining or not activeMission then return end
     local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
     if not object or not DoesEntityExist(object) then return end
+
+    local pickaxe, errorMessage = lib.callback.await('sb_mining:server:getEquippedPickaxe', false)
+    if not pickaxe then
+        equippedPickaxe = nil
+        notify(errorMessage or 'Brug en hakke fra dit inventory først.', 'error')
+        return
+    end
+
+    equippedPickaxe = pickaxe
     mining = true
     local ped = PlayerPedId()
     TaskTurnPedToFaceEntity(ped, object, 500)
     Wait(500)
-    attachPickaxe()
+    if not pickaxeObject or not DoesEntityExist(pickaxeObject) then
+        attachPickaxe()
+    end
     local animation = Config.Rock.animation
     if loadAnim(animation.dict) then TaskPlayAnim(ped, animation.dict, animation.clip, 3.0, 3.0, -1, animation.flag, 0.0, false, false, false) end
-    local success = lib.progressCircle({ duration = Config.Rock.mineDuration, label = 'Bryder stenen...', position = 'bottom', canCancel = true, disable = { move = true, car = true, combat = true } })
+    local duration = math.floor(Config.Rock.mineDuration * (pickaxe.speedMultiplier or 1.0))
+    local success = lib.progressCircle({ duration = duration, label = 'Bryder stenen...', position = 'bottom', canCancel = true, disable = { move = true, car = true, combat = true } })
     ClearPedTasks(ped)
-    deletePickaxe()
     if success then
         local ok, message = lib.callback.await('sb_mining:server:mineRock', false, zoneKey, rockIndex)
         if ok then
@@ -212,6 +258,31 @@ RegisterNetEvent('sb_mining:client:rockRespawn', function(zoneKey, rockIndex, se
             SetEntityCollision(object, true, true)
         end
     end)
+end)
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        if equippedPickaxeItem then
+            local ped = PlayerPedId()
+            local shouldUnequip = IsEntityDead(ped)
+
+            if not shouldUnequip and Config.UseOxInventory then
+                local count = exports.ox_inventory:Search('count', equippedPickaxeItem) or 0
+                shouldUnequip = count < 1
+            end
+
+            if shouldUnequip then
+                lib.callback.await('sb_mining:server:unequipPickaxe', false)
+                equippedPickaxe = nil
+                equippedPickaxeItem = nil
+                deletePickaxe()
+            elseif not pickaxeObject or not DoesEntityExist(pickaxeObject) then
+                attachPickaxe()
+            end
+        end
+    end
 end)
 
 CreateThread(function()
