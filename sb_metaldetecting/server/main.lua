@@ -1,8 +1,7 @@
 local ESX = exports['es_extended']:getSharedObject()
 
 local targets = {}
-local playerTargets = {}
-local collectedTargets = {}
+local targetSequence = 0
 
 local function getInventoryCount(source, item)
     if Config.UseOxInventory and GetResourceState('ox_inventory') == 'started' then
@@ -76,22 +75,42 @@ local function weightedFind()
     end
 end
 
+local function getZoneById(zoneId)
+    for _, zone in ipairs(Config.Zones) do
+        if zone.id == zoneId then
+            return zone
+        end
+    end
+end
+
+local function createZoneTarget(zone)
+    targetSequence += 1
+    local angle = math.random() * math.pi * 2
+    local radius = math.sqrt(math.random()) * math.max(1.0, zone.radius - 3.0)
+
+    return {
+        id = ('%s:%s'):format(zone.id, targetSequence),
+        x = zone.center.x + math.cos(angle) * radius,
+        y = zone.center.y + math.sin(angle) * radius,
+        z = zone.center.z,
+        zone = zone.id,
+        claimed = false
+    }
+end
+
+local function fillZoneTargets(zone)
+    targets[zone.id] = targets[zone.id] or {}
+    local wanted = zone.findCount or Config.Search.activeFindsPerZone or 10
+
+    while #targets[zone.id] < wanted do
+        targets[zone.id][#targets[zone.id] + 1] = createZoneTarget(zone)
+    end
+end
+
 local function generateTargets()
     for _, zone in ipairs(Config.Zones) do
         targets[zone.id] = {}
-        for i = 1, zone.findCount do
-            local angle = math.random() * math.pi * 2
-            local radius = math.sqrt(math.random()) * zone.radius
-            local x = zone.center.x + math.cos(angle) * radius
-            local y = zone.center.y + math.sin(angle) * radius
-            targets[zone.id][i] = {
-                id = ('%s:%s'):format(zone.id, i),
-                x = x,
-                y = y,
-                z = zone.center.z,
-                zone = zone.id
-            }
-        end
+        fillZoneTargets(zone)
     end
 end
 
@@ -159,51 +178,58 @@ lib.callback.register('sb_metaldetecting:server:getTarget', function(source, coo
         end
     end
 
-    if not selectedZone then
-        playerTargets[source] = nil
-        return nil
-    end
+    if not selectedZone then return nil end
 
-    local existing = playerTargets[source]
-    if existing and existing.zone == selectedZone.id then
-        return existing
-    end
+    fillZoneTargets(selectedZone)
 
-    local minDistance = Config.Search.targetMinDistance or 6.0
-    local maxDistance = Config.Search.targetMaxDistance or math.max(minDistance + 1.0, Config.Search.maxSignalDistance * 0.8)
-    local target
+    local nearest
+    local nearestDistance
 
-    for _ = 1, 20 do
-        local angle = math.random() * math.pi * 2
-        local radius = minDistance + (math.random() * (maxDistance - minDistance))
-        local x = playerCoords.x + math.cos(angle) * radius
-        local y = playerCoords.y + math.sin(angle) * radius
-        local candidate = vector3(x, y, playerCoords.z)
-
-        if distance2D(candidate, selectedZone.center) <= selectedZone.radius then
-            target = {
-                id = ('%s:%s:%s'):format(selectedZone.id, source, os.time()),
-                x = x,
-                y = y,
-                z = playerCoords.z,
-                zone = selectedZone.id
-            }
-            break
+    for _, target in ipairs(targets[selectedZone.id]) do
+        if not target.claimed then
+            local targetDistance = distance2D(playerCoords, vector3(target.x, target.y, target.z))
+            if not nearestDistance or targetDistance < nearestDistance then
+                nearest = target
+                nearestDistance = targetDistance
+            end
         end
     end
 
-    if not target then return nil end
+    if not nearest then return nil end
 
-    playerTargets[source] = target
-    return target
+    return {
+        id = nearest.id,
+        x = nearest.x,
+        y = nearest.y,
+        z = nearest.z,
+        zone = nearest.zone
+    }
 end)
 
 lib.callback.register('sb_metaldetecting:server:collectTarget', function(source, data)
     local xPlayer = ESX.GetPlayerFromId(source)
-    local target = playerTargets[source]
-    if not xPlayer or not target then return { success = false, message = 'Fundet findes ikke længere.' } end
+    local zone = getZoneById(data.zone)
+    if not xPlayer or not zone then
+        return { success = false, message = 'Fundet findes ikke længere.' }
+    end
 
-    if target.zone ~= data.zone or math.abs(target.x - data.x) > 0.1 or math.abs(target.y - data.y) > 0.1 then
+    local zoneTargets = targets[zone.id] or {}
+    local targetIndex
+    local target
+
+    for index, entry in ipairs(zoneTargets) do
+        if entry.id == data.id then
+            targetIndex = index
+            target = entry
+            break
+        end
+    end
+
+    if not target or target.claimed then
+        return { success = false, message = 'Fundet er allerede blevet gravet op.' }
+    end
+
+    if math.abs(target.x - data.x) > 0.1 or math.abs(target.y - data.y) > 0.1 then
         return { success = false, message = 'Ugyldigt fund.' }
     end
 
@@ -213,16 +239,25 @@ lib.callback.register('sb_metaldetecting:server:collectTarget', function(source,
         return { success = false, message = 'Du er for langt væk fra fundet.' }
     end
 
+    target.claimed = true
+
     local key, find = weightedFind()
     local amount = math.random(find.amount.min, find.amount.max)
     if not addItem(source, find.item, amount) then
+        target.claimed = false
         return { success = false, message = 'Du har ikke plads i dit inventory.' }
     end
 
-    collectedTargets[target.id] = os.time()
-    playerTargets[source] = nil
+    table.remove(zoneTargets, targetIndex)
+    zoneTargets[#zoneTargets + 1] = createZoneTarget(zone)
 
-    return { success = true, key = key, label = find.label, amount = amount }
+    return {
+        success = true,
+        key = key,
+        label = find.label,
+        amount = amount,
+        remaining = #zoneTargets
+    }
 end)
 
 lib.callback.register('sb_metaldetecting:server:sellItem', function(source, key)
@@ -261,9 +296,6 @@ lib.callback.register('sb_metaldetecting:server:sellAll', function(source)
     return { success = true, message = ('Du solgte %s fund for $%s.'):format(sold, total), clear = true }
 end)
 
-AddEventHandler('playerDropped', function()
-    playerTargets[source] = nil
-end)
 
 
 ESX.RegisterUsableItem(Config.Detector.item, function(source)

@@ -56,7 +56,7 @@ Config.Search = {
     interactKey = 38, -- E
     digDuration = 5000,
     respawnSeconds = 180,
-    maxActiveFindsPerPlayer = 1,
+    activeFindsPerZone = 10,
     scanSound = {
         interval = 900,
         volume = 0.12,
@@ -82,7 +82,7 @@ Config.Zones = {
         radius = 240.0,
         minZ = -3.0,
         maxZ = 8.0,
-        findCount = 35
+        findCount = 30
     },
     {
         id = 'del_perro_beach',
@@ -91,7 +91,7 @@ Config.Zones = {
         radius = 170.0,
         minZ = -2.0,
         maxZ = 12.0,
-        findCount = 24
+        findCount = 10
     }
 }
 

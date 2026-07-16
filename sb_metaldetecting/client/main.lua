@@ -6,6 +6,7 @@ local detectorActive = false
 local detectorObject
 local previousWeapon
 local currentTarget
+local currentTargetId
 local currentZone
 local searching = false
 local lastSignal = 0
@@ -154,6 +155,7 @@ local function setDetectorActive(state)
     else
         detectorActive = false
         currentTarget = nil
+        currentTargetId = nil
         currentZone = nil
         clearDetectorFeedback()
         deleteDetectorObject()
@@ -303,9 +305,11 @@ local function requestTarget()
 
     if target then
         currentTarget = vec3(target.x, target.y, target.z)
+        currentTargetId = target.id
         currentZone = target.zone
     else
         currentTarget = nil
+        currentTargetId = nil
         currentZone = nil
     end
 end
@@ -342,6 +346,7 @@ local function digTarget()
 
     if completed then
         local result = lib.callback.await('sb_metaldetecting:server:collectTarget', false, {
+            id = currentTargetId,
             zone = currentZone,
             x = currentTarget.x,
             y = currentTarget.y,
@@ -351,6 +356,7 @@ local function digTarget()
         if result and result.success then
             notify(('Du fandt %sx %s.'):format(result.amount, result.label), 'success')
             currentTarget = nil
+            currentTargetId = nil
             currentZone = nil
             Wait(700)
             requestTarget()
