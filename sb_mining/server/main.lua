@@ -134,20 +134,20 @@ local function rockStateKey(zoneKey, rockIndex, nodeIndex)
     return ('%s:%s:%s'):format(zoneKey, rockIndex, nodeIndex)
 end
 
-local function chooseZoneOre(zoneKey, excludedOreKey)
+local function chooseZoneOre(zoneKey)
     local zone = Config.Zones[zoneKey]
     local pool = zone and zone.orePool or {}
     if #pool < 1 then return 'coal' end
 
     local available = {}
     for _, oreKey in ipairs(pool) do
-        if Config.Ores[oreKey] and (#pool == 1 or oreKey ~= excludedOreKey) then
+        if Config.Ores[oreKey] then
             available[#available + 1] = oreKey
         end
     end
 
     if #available < 1 then
-        return Config.Ores[pool[1]] and pool[1] or 'coal'
+        return 'coal'
     end
 
     return available[math.random(1, #available)]
@@ -407,7 +407,7 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
         end
     end
 
-    local nextOreKey = chooseZoneOre(zoneKey, oreKey)
+    local nextOreKey = chooseZoneOre(zoneKey)
     rockOreTypes[zoneKey][rockIndex][nodeIndex] = nextOreKey
 
     TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex, nodeIndex)
