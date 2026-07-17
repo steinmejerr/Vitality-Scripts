@@ -22,7 +22,7 @@
   const validPositions = ['top', 'top-right', 'top-left', 'bottom', 'bottom-right', 'bottom-left', 'center-right', 'center-left'];
 
   const getNotifyStack = (position) => {
-    const value = validPositions.includes(position) ? position : 'top-right';
+    const value = validPositions.includes(position) ? position : 'bottom';
     if (notifyStacks.has(value)) return notifyStacks.get(value);
     const stack = document.createElement('div');
     stack.className = `v-notify-stack v-pos-${value}`;
@@ -115,10 +115,10 @@
     if (complete) postComplete();
   };
 
-  const addCancelHint = (card, canCancel) => {
+  const addCancelHint = (card, canCancel, extraClass) => {
     if (!canCancel) return;
     const hint = document.createElement('div');
-    hint.className = 'v-progress-cancel';
+    hint.className = `v-progress-cancel${extraClass ? ` ${extraClass}` : ''}`;
     const key = document.createElement('span');
     key.className = 'v-key';
     key.textContent = 'X';
@@ -208,7 +208,7 @@
     svg.append(track, ring);
     shell.append(svg, value);
     card.append(kicker, label, shell);
-    addCancelHint(card, data.canCancel);
+    addCancelHint(card, data.canCancel, "v-circle-cancel");
     wrap.appendChild(card);
     progressRoot.appendChild(wrap);
 

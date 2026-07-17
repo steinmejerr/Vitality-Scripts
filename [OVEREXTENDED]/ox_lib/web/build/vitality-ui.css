@@ -42,9 +42,9 @@ body,
 .v-pos-top-right { top: 24px; right: 24px; }
 .v-pos-top-left { top: 24px; left: 24px; }
 .v-pos-top { top: 24px; left: 50%; transform: translateX(-50%); }
-.v-pos-bottom-right { bottom: 24px; right: 24px; flex-direction: column-reverse; }
-.v-pos-bottom-left { bottom: 24px; left: 24px; flex-direction: column-reverse; }
-.v-pos-bottom { bottom: 24px; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
+.v-pos-bottom-right { bottom: 18vh; right: 24px; flex-direction: column-reverse; }
+.v-pos-bottom-left { bottom: 18vh; left: 24px; flex-direction: column-reverse; }
+.v-pos-bottom { bottom: 18vh; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
 .v-pos-center-right { top: 50%; right: 24px; transform: translateY(-50%); }
 .v-pos-center-left { top: 50%; left: 24px; transform: translateY(-50%); }
 
@@ -145,7 +145,7 @@ body,
 .v-progress-wrap {
   position: absolute;
   left: 50%;
-  bottom: 7vh;
+  bottom: 14vh;
   width: min(500px, calc(100vw - 32px));
   opacity: 0;
   transform: translate(-50%, 18px) scale(.985);
@@ -263,6 +263,15 @@ body,
   display: none !important;
 }
 
+.v-circle-label,
+.v-circle-cancel {
+  padding: 9px 12px;
+  background: linear-gradient(180deg, rgba(23,23,23,.94), rgba(12,12,12,.94));
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
+}
+
 .v-circle-label {
   margin-top: 7px;
   max-width: 100%;
@@ -278,6 +287,16 @@ body,
   margin-top: 14px;
   display: grid;
   place-items: center;
+}
+
+.v-circle-shell::before {
+  content: "";
+  position: absolute;
+  inset: 17px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 50% 35%, rgba(32,32,32,.98), rgba(16,16,16,.96));
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
 }
 
 .v-circle-svg {
@@ -308,6 +327,7 @@ body,
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  z-index: 1;
 }
 
 @keyframes vNotifyIn {
@@ -334,6 +354,6 @@ body,
 @media (max-width: 600px) {
   .v-notify-stack { width: calc(100vw - 24px); }
   .v-pos-top-right, .v-pos-top-left, .v-pos-top { top: 12px; left: 12px; right: 12px; transform: none; }
-  .v-pos-bottom-right, .v-pos-bottom-left, .v-pos-bottom { bottom: 12px; left: 12px; right: 12px; transform: none; }
-  .v-progress-wrap { width: calc(100vw - 24px); bottom: 12px; }
+  .v-pos-bottom-right, .v-pos-bottom-left, .v-pos-bottom { bottom: 16vh; left: 12px; right: 12px; transform: none; }
+  .v-progress-wrap { width: calc(100vw - 24px); bottom: 12vh; }
 }
