@@ -470,39 +470,48 @@ end
 
 local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading, settings)
     settings = settings or {}
-    local attempts = settings.attempts or 20
-    local delay = settings.attemptDelay or 50
-    local spawnAbove = settings.spawnAbove or 1.0
+    local spawnBelow = settings.spawnBelow or 2.0
+    local collisionTimeout = settings.collisionTimeout or 3000
     local zOffset = settings.zOffset or 0.0
 
+    FreezeEntityPosition(object, true)
     SetEntityCollision(object, true, true)
     SetEntityHeading(object, heading)
-    FreezeEntityPosition(object, false)
+    SetEntityCoordsNoOffset(object, x, y, fallbackZ - spawnBelow, false, false, false)
 
-    RequestCollisionAtCoord(x, y, fallbackZ)
-
-    for attempt = 1, attempts do
-        SetEntityCoordsNoOffset(object, x, y, fallbackZ + spawnAbove, false, false, false)
-        SetEntityHeading(object, heading)
-        PlaceObjectOnGroundProperly(object)
-        Wait(delay)
-
-        local placedCoords = GetEntityCoords(object)
-        if math.abs(placedCoords.z - fallbackZ) <= 1.5 then
-            SetEntityCoordsNoOffset(object, x, y, placedCoords.z + zOffset, false, false, false)
-            SetEntityHeading(object, heading)
-            FreezeEntityPosition(object, true)
-            return placedCoords.z + zOffset
-        end
-
+    local started = GetGameTimer()
+    while GetGameTimer() - started < collisionTimeout do
         RequestCollisionAtCoord(x, y, fallbackZ)
+        RequestAdditionalCollisionAtCoord(x, y, fallbackZ)
+        if HasCollisionLoadedAroundEntity(object) then
+            break
+        end
+        Wait(0)
     end
 
-    SetEntityCoordsNoOffset(object, x, y, fallbackZ + zOffset, false, false, false)
+    FreezeEntityPosition(object, false)
+    SetEntityHasGravity(object, false)
+    SetEntityDynamic(object, false)
+    SetEntityCoordsNoOffset(object, x, y, fallbackZ - spawnBelow, false, false, false)
     SetEntityHeading(object, heading)
+
+    local placed = PlaceObjectOnGroundProperly(object)
+    Wait(50)
+
+    if not placed then
+        SetEntityCoordsNoOffset(object, x, y, fallbackZ + zOffset, false, false, false)
+    elseif zOffset ~= 0.0 then
+        local placedCoords = GetEntityCoords(object)
+        SetEntityCoordsNoOffset(object, x, y, placedCoords.z + zOffset, false, false, false)
+    end
+
+    SetEntityHeading(object, heading)
+    SetEntityVelocity(object, 0.0, 0.0, 0.0)
+    SetEntityHasGravity(object, false)
+    SetEntityDynamic(object, false)
     FreezeEntityPosition(object, true)
 
-    return fallbackZ + zOffset
+    return GetEntityCoords(object).z
 end
 
 local function createRock(zoneKey, rockIndex)
