@@ -251,8 +251,16 @@ body,
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 17px 18px 15px;
+  padding: 0;
   text-align: center;
+  overflow: visible;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.v-circle-card::before {
+  display: none !important;
 }
 
 .v-circle-label {
