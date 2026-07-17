@@ -467,6 +467,42 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
     SetModelAsNoLongerNeeded(model)
 end
 
+
+local function getReliableGroundZ(x, y, fallbackZ, settings)
+    settings = settings or {}
+    local checks = settings.groundChecks or 30
+    local probeHeight = settings.probeHeight or 20.0
+    local delay = settings.attemptDelay or 50
+
+    RequestCollisionAtCoord(x, y, fallbackZ)
+
+    for attempt = 1, checks do
+        local found, groundZ = GetGroundZFor_3dCoord(x, y, fallbackZ + probeHeight + attempt, false)
+        if found then
+            return groundZ
+        end
+        RequestCollisionAtCoord(x, y, fallbackZ)
+        Wait(delay)
+    end
+
+    return fallbackZ
+end
+
+local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading, settings)
+    settings = settings or {}
+    local groundZ = getReliableGroundZ(x, y, fallbackZ, settings)
+    local minDim = GetModelDimensions(model)
+    local z = groundZ - minDim.z + (settings.zOffset or 0.0)
+
+    SetEntityCollision(object, true, true)
+    SetEntityRotation(object, 0.0, 0.0, heading, 2, true)
+    SetEntityCoordsNoOffset(object, x, y, z, false, false, false)
+    SetEntityHeading(object, heading)
+    FreezeEntityPosition(object, true)
+
+    return z
+end
+
 local function createRock(zoneKey, rockIndex)
     local zone = Config.Zones[zoneKey]
     local coords = zone and zone.rocks[rockIndex]
@@ -481,44 +517,8 @@ local function createRock(zoneKey, rockIndex)
         return
     end
 
-    local placement = Config.Rock.groundPlacement or {}
-    local groundZ = coords.z
-    local foundGround = false
-
-    RequestCollisionAtCoord(coords.x, coords.y, coords.z)
-
-    for attempt = 1, placement.groundChecks or 20 do
-        local probeHeight = coords.z + (placement.probeHeight or 10.0) + attempt
-        local found, result = GetGroundZFor_3dCoord(coords.x, coords.y, probeHeight, false)
-
-        if found then
-            groundZ = result
-            foundGround = true
-            break
-        end
-
-        Wait(placement.attemptDelay or 50)
-    end
-
-    if not foundGround then
-        groundZ = coords.z
-    end
-
-    local object = CreateObjectNoOffset(model, coords.x, coords.y, groundZ + (placement.spawnAboveGround or 0.5), false, false, false)
-    SetEntityHeading(object, coords.w)
-    SetEntityCollision(object, true, true)
-    FreezeEntityPosition(object, false)
-    PlaceObjectOnGroundProperly(object)
-    Wait(0)
-
-    local finalCoords = GetEntityCoords(object)
-    if math.abs(finalCoords.z - groundZ) > (placement.maxGroundDifference or 1.0) then
-        finalCoords = vec3(coords.x, coords.y, groundZ)
-    end
-
-    SetEntityCoordsNoOffset(object, coords.x, coords.y, finalCoords.z + (placement.zOffset or 0.0), false, false, false)
-    SetEntityHeading(object, coords.w)
-    FreezeEntityPosition(object, true)
+    local object = CreateObjectNoOffset(model, coords.x, coords.y, coords.z, false, false, false)
+    placeObjectOnGroundLocked(object, model, coords.x, coords.y, coords.z, coords.w, Config.Rock.groundPlacement)
 
     rockObjects[zoneKey] = rockObjects[zoneKey] or {}
     rockObjects[zoneKey][rockIndex] = object
@@ -562,12 +562,10 @@ local function createShop()
     local tableData = Config.Shop.table
     if shopPed and DoesEntityExist(shopPed) and loadModel(tableData.model) then
         local coords = GetOffsetFromEntityInWorldCoords(shopPed, tableData.offset.x, tableData.offset.y, tableData.offset.z)
-        tableObject = CreateObject(tableData.model, coords.x, coords.y, coords.z, false, false, false)
         local heading = pedData.coords.w + tableData.headingOffset
-        SetEntityHeading(tableObject, heading)
-        PlaceObjectOnGroundProperly(tableObject)
-        SetEntityRotation(tableObject, 0.0, 0.0, heading, 2, true)
-        FreezeEntityPosition(tableObject, true)
+        tableObject = CreateObjectNoOffset(tableData.model, coords.x, coords.y, coords.z, false, false, false)
+        placeObjectOnGroundLocked(tableObject, tableData.model, coords.x, coords.y, coords.z, heading, tableData.groundPlacement)
+        SetModelAsNoLongerNeeded(tableData.model)
     end
     if Config.Shop.blip.enabled then
         local blip = AddBlipForCoord(pedData.coords.x, pedData.coords.y, pedData.coords.z)

@@ -424,9 +424,10 @@ nav button:active {
 
 .xp-hud {
     position: fixed;
-    left: 50%;
-    bottom: 4.5vh;
-    transform: translateX(-50%);
+    left: 18px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
     width: min(430px, 38vw);
     padding: 14px 16px;
     border: 1px solid rgba(255, 255, 255, .1);
@@ -442,7 +443,7 @@ nav button:active {
     display: block !important;
     opacity: 0;
     visibility: hidden;
-    transform: translate(-50%, 12px);
+    transform: translate(-12px, -50%);
 }
 
 .xp-hud-row {
