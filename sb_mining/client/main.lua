@@ -13,6 +13,7 @@ local equippedPickaxe
 local equippedPickaxeItem
 local rockOreTypes = {}
 local rockOreVisuals = {}
+local miningSoundSession = 0
 
 local function notify(description, notifyType)
     lib.notify({ title = 'Minearbejde', description = description, type = notifyType or 'inform', position = 'top-right' })
@@ -137,6 +138,29 @@ end
 
 
 
+local function stopMiningSound()
+    miningSoundSession = miningSoundSession + 1
+end
+
+local function startMiningSound(ped, animation)
+    local sound = Config.Rock.miningSound
+    if not sound or not sound.enabled then
+        return
+    end
+
+    miningSoundSession = miningSoundSession + 1
+    local session = miningSoundSession
+
+    CreateThread(function()
+        Wait(sound.firstDelay or 320)
+
+        while mining and session == miningSoundSession and IsEntityPlayingAnim(ped, animation.dict, animation.clip, 3) do
+            SendNUIMessage({ action = 'playMiningSound', volume = sound.volume or 0.42 })
+            Wait(sound.interval or 760)
+        end
+    end)
+end
+
 local function deletePickaxe()
     if pickaxeObject and DoesEntityExist(pickaxeObject) then DeleteEntity(pickaxeObject) end
     pickaxeObject = nil
@@ -241,11 +265,15 @@ local function mineOreNode(zoneKey, rockIndex, nodeIndex)
         attachPickaxe()
     end
     local animation = Config.Rock.animation
+    local animationStarted = false
     if loadAnim(animation.dict) then
         TaskPlayAnim(ped, animation.dict, animation.clip, 3.0, 3.0, -1, animation.flag, 0.0, false, false, false)
+        animationStarted = true
+        startMiningSound(ped, animation)
     end
     local duration = math.floor(Config.Rock.mineDuration * (pickaxe.speedMultiplier or 1.0))
     local success = lib.progressCircle({ duration = duration, label = 'Bryder malmen...', position = 'bottom', canCancel = true, disable = { move = true, car = true, combat = true } })
+    stopMiningSound()
     ClearPedTasks(ped)
 
     if success then
@@ -257,6 +285,7 @@ local function mineOreNode(zoneKey, rockIndex, nodeIndex)
         end
     end
 
+    stopMiningSound()
     mining = false
 end
 

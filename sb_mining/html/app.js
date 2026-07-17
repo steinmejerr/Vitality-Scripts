@@ -2,6 +2,15 @@ const app = document.getElementById('app');
 const content = document.getElementById('content');
 const profile = document.getElementById('profile');
 
+const miningClang = new Audio('sounds/mining_clang.wav');
+miningClang.preload = 'auto';
+
+function playMiningClang(volume) {
+    const sound = miningClang.cloneNode();
+    sound.volume = Math.max(0, Math.min(1, Number(volume ?? 0.42)));
+    sound.play().catch(() => {});
+}
+
 let state = {
     tab: 'shop',
     data: null
@@ -171,6 +180,10 @@ window.addEventListener('message', event => {
 
     if (data.action === 'close') {
         app.classList.add('hidden');
+    }
+
+    if (data.action === 'playMiningSound') {
+        playMiningClang(data.volume);
     }
 
     if (data.action === 'missionProgress' && state.data) {

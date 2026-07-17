@@ -26,7 +26,8 @@ ui_page 'html/index.html'
 files {
     'html/index.html',
     'html/style.css',
-    'html/app.js'
+    'html/app.js',
+    'html/sounds/mining_clang.wav'
 }
 
 dependencies {

@@ -262,6 +262,12 @@ Config.Rock = {
         clip = 'ground_attack_0',
         flag = 1
     },
+    miningSound = {
+        enabled = true,
+        interval = 760,
+        firstDelay = 320,
+        volume = 0.42
+    },
     pickaxeProp = {
         model = `prop_tool_pickaxe`,
         bone = 57005,
