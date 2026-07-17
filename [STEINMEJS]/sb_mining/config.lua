@@ -20,9 +20,9 @@ Config.Shop = {
         offset = vec3(0.0, 0.82, 0.0),
         headingOffset = 0.0,
         groundPlacement = {
-            groundChecks = 30,
-            probeHeight = 20.0,
+            attempts = 20,
             attemptDelay = 50,
+            spawnAbove = 1.0,
             zOffset = 0.0
         }
     },
@@ -254,9 +254,9 @@ Config.Rock = {
         { offset = vec3(0.01, 0.78, 0.61), rotation = vec3(72.0, 0.0, 4.0), radius = 0.34 }
     },
     groundPlacement = {
-        groundChecks = 30,
-        probeHeight = 20.0,
+        attempts = 20,
         attemptDelay = 50,
+        spawnAbove = 1.0,
         zOffset = 0.0
     },
     interactionDistance = 2.0,

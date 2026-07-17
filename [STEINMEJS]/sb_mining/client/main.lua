@@ -468,39 +468,41 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
 end
 
 
-local function getReliableGroundZ(x, y, fallbackZ, settings)
+local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading, settings)
     settings = settings or {}
-    local checks = settings.groundChecks or 30
-    local probeHeight = settings.probeHeight or 20.0
+    local attempts = settings.attempts or 20
     local delay = settings.attemptDelay or 50
+    local spawnAbove = settings.spawnAbove or 1.0
+    local zOffset = settings.zOffset or 0.0
+
+    SetEntityCollision(object, true, true)
+    SetEntityHeading(object, heading)
+    FreezeEntityPosition(object, false)
 
     RequestCollisionAtCoord(x, y, fallbackZ)
 
-    for attempt = 1, checks do
-        local found, groundZ = GetGroundZFor_3dCoord(x, y, fallbackZ + probeHeight + attempt, false)
-        if found then
-            return groundZ
-        end
-        RequestCollisionAtCoord(x, y, fallbackZ)
+    for attempt = 1, attempts do
+        SetEntityCoordsNoOffset(object, x, y, fallbackZ + spawnAbove, false, false, false)
+        SetEntityHeading(object, heading)
+        PlaceObjectOnGroundProperly(object)
         Wait(delay)
+
+        local placedCoords = GetEntityCoords(object)
+        if math.abs(placedCoords.z - fallbackZ) <= 1.5 then
+            SetEntityCoordsNoOffset(object, x, y, placedCoords.z + zOffset, false, false, false)
+            SetEntityHeading(object, heading)
+            FreezeEntityPosition(object, true)
+            return placedCoords.z + zOffset
+        end
+
+        RequestCollisionAtCoord(x, y, fallbackZ)
     end
 
-    return fallbackZ
-end
-
-local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading, settings)
-    settings = settings or {}
-    local groundZ = getReliableGroundZ(x, y, fallbackZ, settings)
-    local minDim = GetModelDimensions(model)
-    local z = groundZ - minDim.z + (settings.zOffset or 0.0)
-
-    SetEntityCollision(object, true, true)
-    SetEntityRotation(object, 0.0, 0.0, heading, 2, true)
-    SetEntityCoordsNoOffset(object, x, y, z, false, false, false)
+    SetEntityCoordsNoOffset(object, x, y, fallbackZ + zOffset, false, false, false)
     SetEntityHeading(object, heading)
     FreezeEntityPosition(object, true)
 
-    return z
+    return fallbackZ + zOffset
 end
 
 local function createRock(zoneKey, rockIndex)
