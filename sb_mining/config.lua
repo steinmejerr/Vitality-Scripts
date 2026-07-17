@@ -226,7 +226,7 @@ Config.BlockedVehicles = {
 }
 
 Config.Rock = {
-    baseModel = `bzzz_prop_mine_stone_big`,
+    baseModel = `prop_rock_3_c`,
     oresPerStone = 3,
     respawnSeconds = 2,
     oreNodes = {
