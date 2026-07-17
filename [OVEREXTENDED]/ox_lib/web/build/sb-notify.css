@@ -130,3 +130,17 @@
   .sb-pos-top-right, .sb-pos-top-left, .sb-pos-top { top: 14px; left: 12px; right: 12px; transform: none; }
   .sb-pos-bottom-right, .sb-pos-bottom-left, .sb-pos-bottom { bottom: 14px; left: 12px; right: 12px; transform: none; }
 }
+
+html,
+body,
+#root,
+#sb-notify-root,
+.sb-notify-stack {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.sb-notify {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
