@@ -230,9 +230,9 @@ Config.Rock = {
     oresPerStone = 3,
     respawnSeconds = 2,
     oreNodes = {
-        { offset = vec3(0.34, -0.16, 0.48), rotation = vec3(0.0, 82.0, 8.0), radius = 0.38 },
-        { offset = vec3(-0.31, -0.02, 0.34), rotation = vec3(0.0, -82.0, -6.0), radius = 0.38 },
-        { offset = vec3(0.02, 0.02, 0.72), rotation = vec3(88.0, 0.0, 12.0), radius = 0.38 }
+        { offset = vec3(-0.27, -0.56, 0.38), rotation = vec3(2.0, -72.0, -8.0), radius = 0.34 },
+        { offset = vec3(0.27, -0.76, 0.40), rotation = vec3(-3.0, 72.0, 10.0), radius = 0.34 },
+        { offset = vec3(0.01, 0.78, 0.61), rotation = vec3(72.0, 0.0, 4.0), radius = 0.34 }
     },
     groundPlacement = {
         spawnHeight = 3.0,
