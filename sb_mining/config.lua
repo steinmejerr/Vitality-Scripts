@@ -264,9 +264,8 @@ Config.Rock = {
     },
     miningSound = {
         enabled = true,
-        interval = 760,
-        firstDelay = 320,
-        volume = 0.42
+        hitDelays = { 0, 3000, 6000 },
+        volume = 0.18
     },
     pickaxeProp = {
         model = `prop_tool_pickaxe`,

@@ -7,7 +7,7 @@ miningClang.preload = 'auto';
 
 function playMiningClang(volume) {
     const sound = miningClang.cloneNode();
-    sound.volume = Math.max(0, Math.min(1, Number(volume ?? 0.42)));
+    sound.volume = Math.max(0, Math.min(1, Number(volume ?? 0.18)));
     sound.play().catch(() => {});
 }
 

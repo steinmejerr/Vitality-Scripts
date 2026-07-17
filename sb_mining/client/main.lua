@@ -150,13 +150,21 @@ local function startMiningSound(ped, animation)
 
     miningSoundSession = miningSoundSession + 1
     local session = miningSoundSession
+    local hitDelays = sound.hitDelays or { 0, 3000, 6000 }
 
     CreateThread(function()
-        Wait(sound.firstDelay or 320)
+        local elapsed = 0
 
-        while mining and session == miningSoundSession and IsEntityPlayingAnim(ped, animation.dict, animation.clip, 3) do
-            SendNUIMessage({ action = 'playMiningSound', volume = sound.volume or 0.42 })
-            Wait(sound.interval or 760)
+        for _, delay in ipairs(hitDelays) do
+            local waitTime = math.max(0, delay - elapsed)
+            Wait(waitTime)
+            elapsed = delay
+
+            if not mining or session ~= miningSoundSession or not IsEntityPlayingAnim(ped, animation.dict, animation.clip, 3) then
+                break
+            end
+
+            SendNUIMessage({ action = 'playMiningSound', volume = sound.volume or 0.18 })
         end
     end)
 end
