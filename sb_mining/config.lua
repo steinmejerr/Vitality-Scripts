@@ -89,26 +89,11 @@ Config.Ores = {
 
 
 Config.MiningProps = {
-    coal = {
-        model = `bzzz_prop_mine_coal_big`,
-        variants = { `bzzz_prop_mine_coal_big` }
-    },
-    iron = {
-        model = `bzzz_prop_mine_iron_big`,
-        variants = { `bzzz_prop_mine_iron_big` }
-    },
-    silver = {
-        model = `bzzz_prop_mine_silver_big`,
-        variants = { `bzzz_prop_mine_silver_big` }
-    },
-    gold = {
-        model = `bzzz_prop_mine_gold_big`,
-        variants = { `bzzz_prop_mine_gold_big` }
-    },
-    diamond = {
-        model = `bzzz_prop_mine_diamond_big`,
-        variants = { `bzzz_prop_mine_diamond_big` }
-    }
+    coal = { model = `bzzz_prop_mine_coal_big` },
+    iron = { model = `bzzz_prop_mine_iron_big` },
+    silver = { model = `bzzz_prop_mine_silver_big` },
+    gold = { model = `bzzz_prop_mine_gold_big` },
+    diamond = { model = `bzzz_prop_mine_diamond_big` }
 }
 
 
@@ -206,11 +191,16 @@ Config.BlockedVehicles = {
 }
 
 Config.Rock = {
-    baseModel = `bzzz_prop_mine_stone_big`,
-    groundSpawnHeight = 3.0,
-    groundZOffset = 0.02,
-    collisionLoadTime = 1000,
+    oresPerStone = 1,
     respawnSeconds = 90,
+
+    -- Stenene beholder X/Y og heading fra zonens vector4, men sættes fysisk ned på terrænet.
+    groundPlacement = {
+        spawnHeight = 5.0,
+        attempts = 8,
+        attemptDelay = 50,
+        zOffset = 0.0
+    },
     interactionDistance = 2.0,
     mineDuration = 6500,
     animation = {

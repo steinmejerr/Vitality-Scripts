@@ -130,24 +130,25 @@ local function missionForPlayer(source)
     end
 end
 
-local function rockStateKey(zoneKey, rockIndex)
-    return ('%s:%s'):format(zoneKey, rockIndex)
+local function rockStateKey(zoneKey, rockIndex, nodeIndex)
+    return ('%s:%s:%s'):format(zoneKey, rockIndex, nodeIndex)
 end
 
 local function chooseZoneOre(zoneKey)
     local zone = Config.Zones[zoneKey]
     local pool = zone and zone.orePool or {}
-    if #pool < 1 then
-        return 'stone'
-    end
+    if #pool < 1 then return 'coal' end
     local key = pool[math.random(1, #pool)]
-    return Config.Ores[key] and key or 'stone'
+    return Config.Ores[key] and key or 'coal'
 end
 
-local function ensureRockOre(zoneKey, rockIndex)
+local function ensureRockOres(zoneKey, rockIndex)
     rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
-    if not rockOreTypes[zoneKey][rockIndex] then
-        rockOreTypes[zoneKey][rockIndex] = chooseZoneOre(zoneKey)
+    rockOreTypes[zoneKey][rockIndex] = rockOreTypes[zoneKey][rockIndex] or {}
+    for nodeIndex = 1, Config.Rock.oresPerStone do
+        if not rockOreTypes[zoneKey][rockIndex][nodeIndex] then
+            rockOreTypes[zoneKey][rockIndex][nodeIndex] = chooseZoneOre(zoneKey)
+        end
     end
     return rockOreTypes[zoneKey][rockIndex]
 end
@@ -157,12 +158,11 @@ local function getRockVisualState()
     for zoneKey, zone in pairs(Config.Zones) do
         payload[zoneKey] = {}
         for rockIndex = 1, #zone.rocks do
-            payload[zoneKey][rockIndex] = ensureRockOre(zoneKey, rockIndex)
+            payload[zoneKey][rockIndex] = ensureRockOres(zoneKey, rockIndex)
         end
     end
     return payload
 end
-
 
 lib.callback.register('sb_mining:server:equipPickaxe', function(source, itemName)
     local xPlayer = ESX.GetPlayerFromId(source)
@@ -315,87 +315,66 @@ lib.callback.register('sb_mining:server:startMission', function(source, missionK
     return true, ('Mission startet med %s spiller(e).'):format(#members)
 end)
 
-lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, rockIndex)
+lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, rockIndex, nodeIndex)
     local zone = Config.Zones[zoneKey]
     rockIndex = tonumber(rockIndex)
+    nodeIndex = tonumber(nodeIndex)
 
-    if not zone or not rockIndex or not zone.rocks[rockIndex] then
+    if not zone or not rockIndex or not nodeIndex or not zone.rocks[rockIndex] or nodeIndex < 1 or nodeIndex > (Config.Rock.oresPerStone or 1) then
         return false, 'Ugyldig mineåre.'
     end
 
-    local lockKey = rockStateKey(zoneKey, rockIndex)
+    local lockKey = rockStateKey(zoneKey, rockIndex, nodeIndex)
     local now = os.time()
-
     if rockLocks[lockKey] and rockLocks[lockKey] > now then
         return false, 'Denne ore er ved at respawne.'
     end
 
     local xPlayer = ESX.GetPlayerFromId(source)
     local profile = xPlayer and getProfile(getIdentifier(xPlayer))
-
-    if not profile then
-        return false, 'Spilleren kunne ikke findes.'
-    end
+    if not profile then return false, 'Spilleren kunne ikke findes.' end
 
     if zone.minLevel and profile.level < zone.minLevel then
         return false, ('Dette mineområde kræver mindst mining-level %s.'):format(zone.minLevel)
     end
-
     if zone.maxLevel and profile.level > zone.maxLevel then
         return false, ('Dette mineområde er kun til og med mining-level %s.'):format(zone.maxLevel)
     end
 
     local pickaxe = getEquippedPickaxe(source, profile.level)
+    if not pickaxe then return false, 'Brug en hakke fra dit inventory først.' end
 
-    if not pickaxe then
-        return false, 'Brug en hakke fra dit inventory først.'
-    end
-
-    local rockOreKey = ensureRockOre(zoneKey, rockIndex)
-    local rockOre = Config.Ores[rockOreKey]
-
-    if not rockOre then
-        return false, 'Denne malmåre kunne ikke findes.'
-    end
-
-    if profile.level < rockOre.minLevel then
-        return false, ('Denne malmåre kræver mining-level %s.'):format(rockOre.minLevel)
+    local rockOres = ensureRockOres(zoneKey, rockIndex)
+    local oreKey = rockOres[nodeIndex]
+    local ore = Config.Ores[oreKey]
+    if not ore then return false, 'Denne malmåre kunne ikke findes.' end
+    if profile.level < ore.minLevel then
+        return false, ('Denne malmåre kræver mining-level %s.'):format(ore.minLevel)
     end
 
     local playerCoords = GetEntityCoords(GetPlayerPed(source))
     local rockCoords = zone.rocks[rockIndex]
-    local distance = #(playerCoords - vec3(rockCoords.x, rockCoords.y, rockCoords.z))
-
-    if distance > (Config.Rock.interactionDistance + 3.0) then
+    if #(playerCoords - vec3(rockCoords.x, rockCoords.y, rockCoords.z)) > (Config.Rock.interactionDistance + 3.0) then
         return false, 'Du er for langt væk fra malmåren.'
     end
 
-    local rewards = { [rockOreKey] = Config.OresPerRock }
-
-    for key, amount in pairs(rewards) do
-        local ore = Config.Ores[key]
-
-        if not addItem(source, ore.item, amount) then
-            return false, 'Du har ikke plads til malmen.'
-        end
+    if not addItem(source, ore.item, Config.OresPerRock) then
+        return false, 'Du har ikke plads til malmen.'
     end
 
     rockLocks[lockKey] = now + Config.Rock.respawnSeconds
-
     local xp, level = saveXP(getIdentifier(xPlayer), Config.XPPerRock)
     local leader, mission = missionForPlayer(source)
 
     if mission and mission.zone == zoneKey then
-        mission.ores[rockOreKey] = (mission.ores[rockOreKey] or 0) + Config.OresPerRock
+        mission.ores[oreKey] = (mission.ores[oreKey] or 0) + Config.OresPerRock
         mission.mined = mission.mined + 1
-
         for _, member in ipairs(mission.members) do
             TriggerClientEvent('sb_mining:client:missionProgress', member, mission)
         end
 
         local configMission = Config.Missions[mission.key]
         local complete = mission.mined >= configMission.rocks
-
         if configMission.requiredOre then
             complete = complete and (mission.ores[configMission.requiredOre] or 0) >= configMission.requiredOreAmount
         end
@@ -403,7 +382,6 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
         if complete then
             for _, member in ipairs(mission.members) do
                 local memberPlayer = ESX.GetPlayerFromId(member)
-
                 if memberPlayer then
                     memberPlayer.addMoney(configMission.moneyBonus)
                     local memberIdentifier = getIdentifier(memberPlayer)
@@ -412,24 +390,16 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
                     TriggerClientEvent('sb_mining:client:missionComplete', member, configMission.moneyBonus, configMission.xpBonus)
                 end
             end
-
             activeMissions[leader] = nil
         end
     end
 
     local nextOreKey = chooseZoneOre(zoneKey)
-    rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
-    rockOreTypes[zoneKey][rockIndex] = nextOreKey
-    TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex)
-    TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, Config.Rock.respawnSeconds, nextOreKey)
+    rockOreTypes[zoneKey][rockIndex][nodeIndex] = nextOreKey
+    TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex, nodeIndex)
+    TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, nodeIndex, Config.Rock.respawnSeconds, nextOreKey)
 
-    local list = {}
-
-    for key, amount in pairs(rewards) do
-        list[#list + 1] = ('%sx %s'):format(amount, Config.Ores[key].label)
-    end
-
-    return true, table.concat(list, ', '), pickaxe.data.speedMultiplier, xp, level
+    return true, ('%sx %s'):format(Config.OresPerRock, ore.label), pickaxe.data.speedMultiplier, xp, level
 end)
 
 lib.callback.register('sb_mining:server:sellOre', function(source, oreKey, amount)
