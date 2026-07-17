@@ -89,11 +89,11 @@ Config.Ores = {
 
 
 Config.MiningProps = {
-    coal = { model = `bzzz_prop_mine_coal_big` },
-    iron = { model = `bzzz_prop_mine_iron_big` },
-    silver = { model = `bzzz_prop_mine_silver_big` },
-    gold = { model = `bzzz_prop_mine_gold_big` },
-    diamond = { model = `bzzz_prop_mine_diamond_big` }
+    coal = { model = `bzzz_prop_mine_scale_stone` },
+    iron = { model = `bzzz_prop_mine_scale_iron` },
+    silver = { model = `bzzz_prop_mine_scale_silver` },
+    gold = { model = `bzzz_prop_mine_scale_gold` },
+    diamond = { model = `bzzz_prop_mine_scale_diamond` }
 }
 
 
@@ -197,22 +197,19 @@ Config.BlockedVehicles = {
 }
 
 Config.Rock = {
+    baseModel = `bzzz_prop_mine_stone_big`,
     oresPerStone = 3,
-    respawnSeconds = 90,
-
-    -- Separate ox_target-punkter for de tre synlige ores på den store stenmodel.
-    targetNodes = {
-        { offset = vec3(0.34, 0.12, 0.48), radius = 0.34 },
-        { offset = vec3(-0.30, 0.06, 0.40), radius = 0.34 },
-        { offset = vec3(0.04, -0.32, 0.62), radius = 0.34 }
+    respawnSeconds = 2,
+    oreNodes = {
+        { offset = vec3(0.38, 0.13, 0.50), rotation = vec3(0.0, 78.0, 8.0), radius = 0.30 },
+        { offset = vec3(-0.32, 0.08, 0.39), rotation = vec3(0.0, -76.0, -6.0), radius = 0.30 },
+        { offset = vec3(0.05, -0.34, 0.64), rotation = vec3(16.0, 168.0, 2.0), radius = 0.30 }
     },
-
-    -- Stenene beholder X/Y og heading fra zonens vector4, men sættes fysisk ned på terrænet.
     groundPlacement = {
-        spawnHeight = 5.0,
+        spawnHeight = 3.0,
         attempts = 8,
         attemptDelay = 50,
-        zOffset = 0.0
+        zOffset = 0.02
     },
     interactionDistance = 2.0,
     mineDuration = 6500,
