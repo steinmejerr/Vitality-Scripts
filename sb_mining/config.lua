@@ -89,11 +89,40 @@ Config.Ores = {
 
 
 Config.MiningProps = {
-    coal = { model = `bzzz_prop_mine_scale_stone` },
-    iron = { model = `bzzz_prop_mine_scale_iron` },
-    silver = { model = `bzzz_prop_mine_scale_silver` },
-    gold = { model = `bzzz_prop_mine_scale_gold` },
-    diamond = { model = `bzzz_prop_mine_scale_diamond` }
+    coal = { model = `bzzz_prop_mine_coal_b` },
+    iron = { model = `bzzz_prop_mine_iron_b` },
+    silver = { model = `bzzz_prop_mine_silver_b` },
+    gold = { model = `bzzz_prop_mine_gold_b` },
+    diamond = { model = `bzzz_prop_mine_diamond_b` }
+}
+
+Config.LegacyMiningProps = {
+    `bzzz_prop_mine_stone_big`,
+    `bzzz_prop_mine_coal_big`,
+    `bzzz_prop_mine_iron_big`,
+    `bzzz_prop_mine_silver_big`,
+    `bzzz_prop_mine_gold_big`,
+    `bzzz_prop_mine_diamond_big`,
+    `bzzz_prop_mine_scale_stone`,
+    `bzzz_prop_mine_scale_iron`,
+    `bzzz_prop_mine_scale_silver`,
+    `bzzz_prop_mine_scale_gold`,
+    `bzzz_prop_mine_scale_diamond`,
+    `bzzz_prop_mine_coal_a`,
+    `bzzz_prop_mine_coal_b`,
+    `bzzz_prop_mine_coal_c`,
+    `bzzz_prop_mine_iron_a`,
+    `bzzz_prop_mine_iron_b`,
+    `bzzz_prop_mine_iron_c`,
+    `bzzz_prop_mine_silver_a`,
+    `bzzz_prop_mine_silver_b`,
+    `bzzz_prop_mine_silver_c`,
+    `bzzz_prop_mine_gold_a`,
+    `bzzz_prop_mine_gold_b`,
+    `bzzz_prop_mine_gold_c`,
+    `bzzz_prop_mine_diamond_a`,
+    `bzzz_prop_mine_diamond_b`,
+    `bzzz_prop_mine_diamond_c`
 }
 
 
@@ -201,9 +230,9 @@ Config.Rock = {
     oresPerStone = 3,
     respawnSeconds = 2,
     oreNodes = {
-        { offset = vec3(0.38, 0.13, 0.50), rotation = vec3(0.0, 78.0, 8.0), radius = 0.30 },
-        { offset = vec3(-0.32, 0.08, 0.39), rotation = vec3(0.0, -76.0, -6.0), radius = 0.30 },
-        { offset = vec3(0.05, -0.34, 0.64), rotation = vec3(16.0, 168.0, 2.0), radius = 0.30 }
+        { offset = vec3(0.34, -0.16, 0.48), rotation = vec3(0.0, 82.0, 8.0), radius = 0.38 },
+        { offset = vec3(-0.31, -0.02, 0.34), rotation = vec3(0.0, -82.0, -6.0), radius = 0.38 },
+        { offset = vec3(0.02, 0.02, 0.72), rotation = vec3(88.0, 0.0, 12.0), radius = 0.38 }
     },
     groundPlacement = {
         spawnHeight = 3.0,

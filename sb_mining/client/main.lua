@@ -5,7 +5,7 @@ local nuiOpen = false
 local activeMission
 local rockObjects = {}
 local oreObjects = {}
-local oreTargetZones = {}
+local oreTargetEntities = {}
 local rockStates = {}
 local mining = false
 local pickaxeObject
@@ -77,6 +77,11 @@ local function isMiningPropModel(model)
     end
     for _, data in pairs(Config.MiningProps or {}) do
         if data.model == model then
+            return true
+        end
+    end
+    for _, legacyModel in ipairs(Config.LegacyMiningProps or {}) do
+        if legacyModel == model then
             return true
         end
     end
@@ -196,15 +201,17 @@ end
 
 local function deleteOreObject(zoneKey, rockIndex, nodeIndex)
     local key = oreStateKey(zoneKey, rockIndex, nodeIndex)
-    local zoneId = oreTargetZones[key]
-    if zoneId then
-        exports.ox_target:removeZone(zoneId)
-        oreTargetZones[key] = nil
+    local object = oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex] and oreObjects[zoneKey][rockIndex][nodeIndex]
+    local targetId = oreTargetEntities[key]
+
+    if targetId then
+        exports.ox_target:removeZone(targetId)
+        oreTargetEntities[key] = nil
     end
 
-    local object = oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex] and oreObjects[zoneKey][rockIndex][nodeIndex]
     if object and DoesEntityExist(object) then
         DetachEntity(object, true, true)
+        SetEntityAsMissionEntity(object, true, true)
         DeleteEntity(object)
     end
 
@@ -267,6 +274,7 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
 
     local model = getOreModel(oreKey)
     if not model or not loadModel(model) then
+        notify(('Ore-proppet til %s kunne ikke indlæses.'):format(getOreLabel(oreKey)), 'error')
         return
     end
 
@@ -291,9 +299,11 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
         true
     )
 
-    local zoneId = exports.ox_target:addSphereZone({
-        coords = worldCoords,
-        radius = node.radius or 0.34,
+    Wait(0)
+    local targetCoords = GetEntityCoords(object)
+    local targetId = exports.ox_target:addSphereZone({
+        coords = targetCoords,
+        radius = node.radius or 0.38,
         debug = false,
         options = {
             {
@@ -302,7 +312,7 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
                 label = ('Mine %s'):format(getOreLabel(oreKey)),
                 distance = Config.Rock.interactionDistance,
                 canInteract = function()
-                    return not mining and not rockStates[stateKey] and oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex] and DoesEntityExist(oreObjects[zoneKey][rockIndex][nodeIndex])
+                    return not mining and not rockStates[stateKey] and DoesEntityExist(object)
                 end,
                 onSelect = function()
                     mineOreNode(zoneKey, rockIndex, nodeIndex)
@@ -314,7 +324,7 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
     oreObjects[zoneKey] = oreObjects[zoneKey] or {}
     oreObjects[zoneKey][rockIndex] = oreObjects[zoneKey][rockIndex] or {}
     oreObjects[zoneKey][rockIndex][nodeIndex] = object
-    oreTargetZones[stateKey] = zoneId
+    oreTargetEntities[stateKey] = targetId
     SetModelAsNoLongerNeeded(model)
 end
 
@@ -352,7 +362,7 @@ local function createRock(zoneKey, rockIndex)
     rockObjects[zoneKey] = rockObjects[zoneKey] or {}
     rockObjects[zoneKey][rockIndex] = object
 
-    for nodeIndex = 1, Config.Rock.oresPerStone do
+    for nodeIndex = 1, math.min(Config.Rock.oresPerStone or 1, #(Config.Rock.oreNodes or {})) do
         createOreNode(zoneKey, rockIndex, nodeIndex)
     end
 
@@ -527,6 +537,13 @@ AddEventHandler('onResourceStop', function(resource)
                     exports.ox_target:removeLocalEntity(object)
                     DeleteEntity(object)
                 end
+            end
+        end
+    end
+    for zoneKey, rocks in pairs(oreObjects) do
+        for rockIndex, nodes in pairs(rocks) do
+            for nodeIndex in pairs(nodes) do
+                deleteOreObject(zoneKey, rockIndex, nodeIndex)
             end
         end
     end
