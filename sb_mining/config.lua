@@ -231,7 +231,7 @@ Config.Rock = {
     respawnSeconds = 2,
     oreNodes = {
         { offset = vec3(-0.27, -0.56, 0.38), rotation = vec3(2.0, -72.0, -8.0), radius = 0.34 },
-        { offset = vec3(0.27, -0.76, 0.40), rotation = vec3(-3.0, 72.0, 10.0), radius = 0.34 },
+        { offset = vec3(0.48, -0.72, 0.33), rotation = vec3(-3.0, 72.0, 10.0), radius = 0.34 },
         { offset = vec3(0.01, 0.78, 0.61), rotation = vec3(72.0, 0.0, 4.0), radius = 0.34 }
     },
     groundPlacement = {
