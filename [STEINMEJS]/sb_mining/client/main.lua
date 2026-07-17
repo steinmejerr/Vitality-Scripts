@@ -470,14 +470,17 @@ end
 
 local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading, settings)
     settings = settings or {}
-    local spawnBelow = settings.spawnBelow or 2.0
+    local spawnAbove = settings.spawnAbove or 2.0
     local collisionTimeout = settings.collisionTimeout or 3000
     local zOffset = settings.zOffset or 0.0
+    local attempts = settings.attempts or 8
 
-    FreezeEntityPosition(object, true)
+    FreezeEntityPosition(object, false)
     SetEntityCollision(object, true, true)
+    SetEntityHasGravity(object, false)
+    SetEntityDynamic(object, true)
     SetEntityHeading(object, heading)
-    SetEntityCoordsNoOffset(object, x, y, fallbackZ - spawnBelow, false, false, false)
+    SetEntityCoordsNoOffset(object, x, y, fallbackZ + spawnAbove, false, false, false)
 
     local started = GetGameTimer()
     while GetGameTimer() - started < collisionTimeout do
@@ -489,14 +492,16 @@ local function placeObjectOnGroundLocked(object, model, x, y, fallbackZ, heading
         Wait(0)
     end
 
-    FreezeEntityPosition(object, false)
-    SetEntityHasGravity(object, false)
-    SetEntityDynamic(object, false)
-    SetEntityCoordsNoOffset(object, x, y, fallbackZ - spawnBelow, false, false, false)
-    SetEntityHeading(object, heading)
-
-    local placed = PlaceObjectOnGroundProperly(object)
-    Wait(50)
+    local placed = false
+    for _ = 1, attempts do
+        SetEntityCoordsNoOffset(object, x, y, fallbackZ + spawnAbove, false, false, false)
+        SetEntityHeading(object, heading)
+        placed = PlaceObjectOnGroundProperly(object)
+        Wait(50)
+        if placed then
+            break
+        end
+    end
 
     if not placed then
         SetEntityCoordsNoOffset(object, x, y, fallbackZ + zOffset, false, false, false)
