@@ -248,10 +248,12 @@ Config.Rock = {
         { offset = vec3(0.01, 0.78, 0.61), rotation = vec3(72.0, 0.0, 4.0), radius = 0.34 }
     },
     groundPlacement = {
-        spawnHeight = 3.0,
-        attempts = 8,
+        groundChecks = 20,
+        probeHeight = 10.0,
+        spawnAboveGround = 0.5,
         attemptDelay = 50,
-        zOffset = 0.02
+        maxGroundDifference = 1.0,
+        zOffset = 0.0
     },
     interactionDistance = 2.0,
     mineDuration = 6500,

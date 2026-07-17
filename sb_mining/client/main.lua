@@ -343,18 +343,40 @@ local function createRock(zoneKey, rockIndex)
     end
 
     local placement = Config.Rock.groundPlacement or {}
-    local object = CreateObjectNoOffset(model, coords.x, coords.y, coords.z + (placement.spawnHeight or 5.0), false, false, false)
-    SetEntityHeading(object, coords.w)
-    SetEntityCollision(object, true, true)
-    FreezeEntityPosition(object, false)
+    local groundZ = coords.z
+    local foundGround = false
 
-    for _ = 1, placement.attempts or 8 do
-        RequestCollisionAtCoord(coords.x, coords.y, coords.z)
-        PlaceObjectOnGroundProperly(object)
+    RequestCollisionAtCoord(coords.x, coords.y, coords.z)
+
+    for attempt = 1, placement.groundChecks or 20 do
+        local probeHeight = coords.z + (placement.probeHeight or 10.0) + attempt
+        local found, result = GetGroundZFor_3dCoord(coords.x, coords.y, probeHeight, false)
+
+        if found then
+            groundZ = result
+            foundGround = true
+            break
+        end
+
         Wait(placement.attemptDelay or 50)
     end
 
+    if not foundGround then
+        groundZ = coords.z
+    end
+
+    local object = CreateObjectNoOffset(model, coords.x, coords.y, groundZ + (placement.spawnAboveGround or 0.5), false, false, false)
+    SetEntityHeading(object, coords.w)
+    SetEntityCollision(object, true, true)
+    FreezeEntityPosition(object, false)
+    PlaceObjectOnGroundProperly(object)
+    Wait(0)
+
     local finalCoords = GetEntityCoords(object)
+    if math.abs(finalCoords.z - groundZ) > (placement.maxGroundDifference or 1.0) then
+        finalCoords = vec3(coords.x, coords.y, groundZ)
+    end
+
     SetEntityCoordsNoOffset(object, coords.x, coords.y, finalCoords.z + (placement.zOffset or 0.0), false, false, false)
     SetEntityHeading(object, coords.w)
     FreezeEntityPosition(object, true)
