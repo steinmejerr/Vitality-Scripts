@@ -190,6 +190,8 @@ local function startProgress(data, nuiMessage)
 
         if interruptProgress(progress) then
             progress = false
+        elseif GetGameTimer() - startTime >= data.duration then
+            progress = nil
         end
 
         Wait(0)

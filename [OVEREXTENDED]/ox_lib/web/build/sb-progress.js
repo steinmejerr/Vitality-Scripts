@@ -7,11 +7,12 @@
   let active = null;
 
   const postComplete = () => {
-    fetch(`https://${GetParentResourceName()}/progressComplete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-      body: '{}'
-    }).catch(() => {});
+    try {
+      const request = new XMLHttpRequest();
+      request.open('POST', `https://${GetParentResourceName()}/progressComplete`, true);
+      request.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+      request.send('{}');
+    } catch (_) {}
   };
 
   const clearActive = (sendComplete) => {
