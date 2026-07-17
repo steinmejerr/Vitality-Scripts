@@ -178,6 +178,33 @@ end
 
 
 
+
+local function hideXpHud()
+    SendNUIMessage({ action = 'hideXpHud' })
+end
+
+local function showXpHud(data)
+    if not data then
+        hideXpHud()
+        return
+    end
+
+    SendNUIMessage({
+        action = 'showXpHud',
+        xp = data
+    })
+end
+
+local function refreshXpHud()
+    if not equippedPickaxeItem then
+        hideXpHud()
+        return
+    end
+
+    local data = lib.callback.await('sb_mining:server:getXpData', false)
+    showXpHud(data)
+end
+
 local function stopMiningSound()
     miningSoundSession = miningSoundSession + 1
 end
@@ -236,6 +263,7 @@ local function usePickaxe(itemName)
         equippedPickaxe = nil
         equippedPickaxeItem = nil
         deletePickaxe()
+        hideXpHud()
         return
     end
 
@@ -245,6 +273,7 @@ local function usePickaxe(itemName)
     }
     equippedPickaxeItem = itemName
     attachPickaxe()
+    refreshXpHud()
 end
 
 exports('usePickaxe', function(data)
@@ -325,9 +354,15 @@ local function mineOreNode(zoneKey, rockIndex, nodeIndex)
     ClearPedTasks(ped)
 
     if success then
-        local ok, message = lib.callback.await('sb_mining:server:mineRock', false, zoneKey, rockIndex, nodeIndex)
+        local ok, message, _, _, _, gainedXp, xpData = lib.callback.await('sb_mining:server:mineRock', false, zoneKey, rockIndex, nodeIndex)
         if ok then
             notify(('Du fandt: %s'):format(message), 'success')
+            if gainedXp and gainedXp > 0 then
+                notify(('Du fik %s mining XP.'):format(gainedXp), 'success')
+            end
+            if equippedPickaxeItem then
+                showXpHud(xpData)
+            end
         else
             notify(message or 'Malmen kunne ikke brydes.', 'error')
         end
@@ -609,6 +644,7 @@ CreateThread(function()
                 equippedPickaxe = nil
                 equippedPickaxeItem = nil
                 deletePickaxe()
+                hideXpHud()
             elseif not pickaxeObject or not DoesEntityExist(pickaxeObject) then
                 attachPickaxe()
             end
@@ -629,6 +665,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     closeNui()
+    hideXpHud()
     deletePickaxe()
     if shopPed and DoesEntityExist(shopPed) then DeleteEntity(shopPed) end
     if tableObject and DoesEntityExist(tableObject) then DeleteEntity(tableObject) end

@@ -420,3 +420,82 @@ nav button:active {
         right: 18px;
     }
 }
+
+
+.xp-hud {
+    position: fixed;
+    left: 50%;
+    bottom: 4.5vh;
+    transform: translateX(-50%);
+    width: min(430px, 38vw);
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 11px;
+    background: rgba(15, 19, 22, .94);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .34);
+    color: #fff;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.xp-hud.hidden {
+    display: block !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 12px);
+}
+
+.xp-hud-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.xp-hud-row > div {
+    display: grid;
+    gap: 2px;
+}
+
+.xp-hud-eyebrow {
+    color: var(--green);
+    font-size: 10px;
+    letter-spacing: .14em;
+}
+
+.xp-hud-level {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#xp-hud-value {
+    color: #d9e0dd;
+    font-size: 12px;
+}
+
+.xp-progress-track {
+    height: 6px;
+    margin: 11px 0 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .09);
+}
+
+.xp-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--green);
+    transition: width .25s ease;
+}
+
+#xp-hud-remaining {
+    color: #98a39f;
+    font-size: 11px;
+}
+
+@media (max-width: 900px) {
+    .xp-hud {
+        width: 360px;
+    }
+}

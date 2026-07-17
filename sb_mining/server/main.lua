@@ -32,6 +32,30 @@ local function calculateLevel(xp)
     return level
 end
 
+
+local function getXpData(xp)
+    xp = tonumber(xp) or 0
+    local level = calculateLevel(xp)
+    local currentLevelXp = Config.Levels[level] and Config.Levels[level].xp or 0
+    local nextLevelData = Config.Levels[level + 1]
+    local nextLevelXp = nextLevelData and nextLevelData.xp or currentLevelXp
+    local progressXp = math.max(0, xp - currentLevelXp)
+    local requiredXp = nextLevelData and math.max(1, nextLevelXp - currentLevelXp) or 0
+    local remainingXp = nextLevelData and math.max(0, nextLevelXp - xp) or 0
+
+    return {
+        xp = xp,
+        level = level,
+        currentLevelXp = currentLevelXp,
+        nextLevelXp = nextLevelXp,
+        progressXp = progressXp,
+        requiredXp = requiredXp,
+        remainingXp = remainingXp,
+        maxLevel = nextLevelData == nil
+    }
+end
+
+
 local function getProfile(identifier)
     local row = MySQL.single.await('SELECT xp, level, completed_missions FROM sb_mining_players WHERE identifier = ?', { identifier })
     if not row then
@@ -230,6 +254,17 @@ lib.callback.register('sb_mining:server:getEquippedPickaxe', function(source)
     }
 end)
 
+
+lib.callback.register('sb_mining:server:getXpData', function(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then
+        return nil
+    end
+
+    local profile = getProfile(getIdentifier(xPlayer))
+    return getXpData(profile.xp)
+end)
+
 lib.callback.register('sb_mining:server:getRockVisuals', function(source)
     return getRockVisualState()
 end)
@@ -413,7 +448,7 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
     TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex, nodeIndex)
     TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, nodeIndex, Config.Rock.respawnSeconds, nextOreKey)
 
-    return true, ('%sx %s'):format(Config.OresPerRock, ore.label), pickaxe.data.speedMultiplier, xp, level
+    return true, ('%sx %s'):format(Config.OresPerRock, ore.label), pickaxe.data.speedMultiplier, xp, level, Config.XPPerRock, getXpData(xp)
 end)
 
 lib.callback.register('sb_mining:server:sellOre', function(source, oreKey, amount)

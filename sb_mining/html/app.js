@@ -5,6 +5,11 @@ const missionHud = document.getElementById('mission-hud');
 const missionHudTitle = document.getElementById('mission-hud-title');
 const missionHudDescription = document.getElementById('mission-hud-description');
 const missionHudRequirements = document.getElementById('mission-hud-requirements');
+const xpHud = document.getElementById('xp-hud');
+const xpHudLevel = document.getElementById('xp-hud-level');
+const xpHudValue = document.getElementById('xp-hud-value');
+const xpProgressFill = document.getElementById('xp-progress-fill');
+const xpHudRemaining = document.getElementById('xp-hud-remaining');
 
 const miningClang = new Audio('sounds/mining_clang.wav');
 miningClang.preload = 'auto';
@@ -43,6 +48,35 @@ function setTab(tab) {
 }
 
 
+
+
+function renderXpHud(data) {
+    if (!data) {
+        xpHud.classList.add('hidden');
+        return;
+    }
+
+    const level = Number(data.level || 1);
+    const progressXp = Math.max(0, Number(data.progressXp || 0));
+    const requiredXp = Math.max(0, Number(data.requiredXp || 0));
+    const remainingXp = Math.max(0, Number(data.remainingXp || 0));
+    const percentage = data.maxLevel || requiredXp <= 0
+        ? 100
+        : Math.min(100, (progressXp / requiredXp) * 100);
+
+    xpHudLevel.textContent = `Level ${level}`;
+    xpProgressFill.style.width = `${percentage}%`;
+
+    if (data.maxLevel) {
+        xpHudValue.textContent = `${Number(data.xp || 0).toLocaleString('da-DK')} XP`;
+        xpHudRemaining.textContent = 'Maksimum level nået';
+    } else {
+        xpHudValue.textContent = `${progressXp.toLocaleString('da-DK')} / ${requiredXp.toLocaleString('da-DK')} XP`;
+        xpHudRemaining.textContent = `${remainingXp.toLocaleString('da-DK')} XP til næste level`;
+    }
+
+    xpHud.classList.remove('hidden');
+}
 
 function renderMissionHud(mission) {
     if (!mission || !Array.isArray(mission.requirements)) {
@@ -230,6 +264,14 @@ window.addEventListener('message', event => {
 
     if (data.action === 'hideMissionHud') {
         missionHud.classList.add('hidden');
+    }
+
+    if (data.action === 'showXpHud') {
+        renderXpHud(data.xp);
+    }
+
+    if (data.action === 'hideXpHud') {
+        xpHud.classList.add('hidden');
     }
 
     if (data.action === 'missionProgress' && state.data) {
