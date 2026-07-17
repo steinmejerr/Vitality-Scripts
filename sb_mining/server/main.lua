@@ -145,10 +145,9 @@ end
 local function ensureRockOres(zoneKey, rockIndex)
     rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
     rockOreTypes[zoneKey][rockIndex] = rockOreTypes[zoneKey][rockIndex] or {}
+    local oreKey = rockOreTypes[zoneKey][rockIndex][1] or chooseZoneOre(zoneKey)
     for nodeIndex = 1, Config.Rock.oresPerStone do
-        if not rockOreTypes[zoneKey][rockIndex][nodeIndex] then
-            rockOreTypes[zoneKey][rockIndex][nodeIndex] = chooseZoneOre(zoneKey)
-        end
+        rockOreTypes[zoneKey][rockIndex][nodeIndex] = oreKey
     end
     return rockOreTypes[zoneKey][rockIndex]
 end
@@ -394,10 +393,8 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
         end
     end
 
-    local nextOreKey = chooseZoneOre(zoneKey)
-    rockOreTypes[zoneKey][rockIndex][nodeIndex] = nextOreKey
     TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex, nodeIndex)
-    TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, nodeIndex, Config.Rock.respawnSeconds, nextOreKey)
+    TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, nodeIndex, Config.Rock.respawnSeconds, oreKey)
 
     return true, ('%sx %s'):format(Config.OresPerRock, ore.label), pickaxe.data.speedMultiplier, xp, level
 end)

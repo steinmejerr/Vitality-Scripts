@@ -4,7 +4,7 @@ local tableObject
 local nuiOpen = false
 local activeMission
 local rockObjects = {}
-local oreObjects = {}
+local oreTargetZones = {}
 local rockStates = {}
 local mining = false
 local pickaxeObject
@@ -153,21 +153,18 @@ local function getOreModel(oreKey)
     return data and data.model or nil
 end
 
-local function removeOreNode(zoneKey, rockIndex, nodeIndex)
-    local rockOres = oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex]
-    local object = rockOres and rockOres[nodeIndex]
-    if object and DoesEntityExist(object) then
-        exports.ox_target:removeLocalEntity(object)
-        DeleteEntity(object)
-    end
-    if rockOres then
-        rockOres[nodeIndex] = nil
+local function removeOreTarget(zoneKey, rockIndex, nodeIndex)
+    local zones = oreTargetZones[zoneKey] and oreTargetZones[zoneKey][rockIndex]
+    local zoneId = zones and zones[nodeIndex]
+    if zoneId then
+        exports.ox_target:removeZone(zoneId)
+        zones[nodeIndex] = nil
     end
 end
 
 local function mineOreNode(zoneKey, rockIndex, nodeIndex)
     if mining then return end
-    local object = oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex] and oreObjects[zoneKey][rockIndex][nodeIndex]
+    local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
     if not object or not DoesEntityExist(object) then return end
 
     local pickaxe, errorMessage = lib.callback.await('sb_mining:server:getEquippedPickaxe', false)
@@ -205,13 +202,48 @@ local function mineOreNode(zoneKey, rockIndex, nodeIndex)
     mining = false
 end
 
-local function createOreNode(zoneKey, rockIndex, nodeIndex)
+local function createOreTarget(zoneKey, rockIndex, nodeIndex)
+    local object = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
+    local node = Config.Rock.targetNodes and Config.Rock.targetNodes[nodeIndex]
+    local oreKey = rockOreTypes[zoneKey] and rockOreTypes[zoneKey][rockIndex] and rockOreTypes[zoneKey][rockIndex][nodeIndex]
+    if not object or not DoesEntityExist(object) or not node or not oreKey or rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)] then return end
+
+    removeOreTarget(zoneKey, rockIndex, nodeIndex)
+    local world = GetOffsetFromEntityInWorldCoords(object, node.offset.x, node.offset.y, node.offset.z)
+    local zoneId = exports.ox_target:addSphereZone({
+        coords = world,
+        radius = node.radius or 0.34,
+        debug = false,
+        options = {
+            {
+                name = ('sb_mining_%s_%s_%s'):format(zoneKey, rockIndex, nodeIndex),
+                icon = 'fas fa-hammer',
+                label = ('Mine %s'):format(getOreLabel(oreKey)),
+                distance = Config.Rock.interactionDistance,
+                canInteract = function()
+                    return not mining and not rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)]
+                end,
+                onSelect = function()
+                    mineOreNode(zoneKey, rockIndex, nodeIndex)
+                end
+            }
+        }
+    })
+
+    oreTargetZones[zoneKey] = oreTargetZones[zoneKey] or {}
+    oreTargetZones[zoneKey][rockIndex] = oreTargetZones[zoneKey][rockIndex] or {}
+    oreTargetZones[zoneKey][rockIndex][nodeIndex] = zoneId
+end
+
+local function createRock(zoneKey, rockIndex)
     local zone = Config.Zones[zoneKey]
     local coords = zone and zone.rocks[rockIndex]
-    local oreKey = rockOreTypes[zoneKey] and rockOreTypes[zoneKey][rockIndex] and rockOreTypes[zoneKey][rockIndex][nodeIndex]
-    if not coords or not oreKey or rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)] then return end
+    local oreKey = rockOreTypes[zoneKey] and rockOreTypes[zoneKey][rockIndex] and rockOreTypes[zoneKey][rockIndex][1]
+    if not coords or not oreKey then return end
 
-    removeOreNode(zoneKey, rockIndex, nodeIndex)
+    local existing = rockObjects[zoneKey] and rockObjects[zoneKey][rockIndex]
+    if existing and DoesEntityExist(existing) then return end
+
     local model = getOreModel(oreKey)
     if not model or not loadModel(model) then
         notify(('Ore-stenen til %s kunne ikke indlæses.'):format(getOreLabel(oreKey)), 'error')
@@ -219,45 +251,28 @@ local function createOreNode(zoneKey, rockIndex, nodeIndex)
     end
 
     local placement = Config.Rock.groundPlacement or {}
-    local spawnHeight = placement.spawnHeight or 5.0
-    RequestCollisionAtCoord(coords.x, coords.y, coords.z)
-    local object = CreateObjectNoOffset(model, coords.x, coords.y, coords.z + spawnHeight, false, false, false)
+    local object = CreateObjectNoOffset(model, coords.x, coords.y, coords.z + (placement.spawnHeight or 5.0), false, false, false)
     SetEntityHeading(object, coords.w)
     SetEntityCollision(object, true, true)
     FreezeEntityPosition(object, false)
 
-    local attempts = placement.attempts or 8
-    local attemptDelay = placement.attemptDelay or 50
-    for _ = 1, attempts do
+    for _ = 1, placement.attempts or 8 do
         RequestCollisionAtCoord(coords.x, coords.y, coords.z)
         PlaceObjectOnGroundProperly(object)
-        Wait(attemptDelay)
+        Wait(placement.attemptDelay or 50)
     end
 
     local finalCoords = GetEntityCoords(object)
-    local zOffset = placement.zOffset or 0.0
-    SetEntityCoordsNoOffset(object, coords.x, coords.y, finalCoords.z + zOffset, false, false, false)
+    SetEntityCoordsNoOffset(object, coords.x, coords.y, finalCoords.z + (placement.zOffset or 0.0), false, false, false)
     SetEntityHeading(object, coords.w)
     FreezeEntityPosition(object, true)
 
-    oreObjects[zoneKey] = oreObjects[zoneKey] or {}
-    oreObjects[zoneKey][rockIndex] = oreObjects[zoneKey][rockIndex] or {}
-    oreObjects[zoneKey][rockIndex][nodeIndex] = object
+    rockObjects[zoneKey] = rockObjects[zoneKey] or {}
+    rockObjects[zoneKey][rockIndex] = object
 
-    exports.ox_target:addLocalEntity(object, {
-        {
-            name = ('sb_mining_%s_%s_%s'):format(zoneKey, rockIndex, nodeIndex),
-            icon = 'fas fa-hammer',
-            label = ('Mine %s'):format(getOreLabel(oreKey)),
-            distance = Config.Rock.interactionDistance,
-            canInteract = function()
-                return not mining and not rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)]
-            end,
-            onSelect = function()
-                mineOreNode(zoneKey, rockIndex, nodeIndex)
-            end
-        }
-    })
+    for nodeIndex = 1, Config.Rock.oresPerStone do
+        createOreTarget(zoneKey, rockIndex, nodeIndex)
+    end
 
     SetModelAsNoLongerNeeded(model)
 end
@@ -270,48 +285,11 @@ local function createRocks()
     end
 
     rockOreTypes = state
-    local models = {}
-
     for zoneKey, zone in pairs(Config.Zones) do
         for rockIndex = 1, #zone.rocks do
-            local oreKey = rockOreTypes[zoneKey] and rockOreTypes[zoneKey][rockIndex] and rockOreTypes[zoneKey][rockIndex][1]
-            local model = oreKey and getOreModel(oreKey)
-            if model then models[model] = true end
+            createRock(zoneKey, rockIndex)
         end
     end
-
-    for model in pairs(models) do RequestModel(model) end
-    local timeout = GetGameTimer() + 10000
-    while GetGameTimer() < timeout do
-        local ready = true
-        for model in pairs(models) do
-            if not HasModelLoaded(model) then
-                ready = false
-                break
-            end
-        end
-        if ready then break end
-        Wait(0)
-    end
-
-    local spawned = {}
-    for zoneKey, zone in pairs(Config.Zones) do
-        for rockIndex = 1, #zone.rocks do
-            createOreNode(zoneKey, rockIndex, 1)
-            local object = oreObjects[zoneKey] and oreObjects[zoneKey][rockIndex] and oreObjects[zoneKey][rockIndex][1]
-            if object then
-                SetEntityAlpha(object, 0, false)
-                spawned[#spawned + 1] = object
-            end
-        end
-    end
-
-    Wait(0)
-    for _, object in ipairs(spawned) do
-        if DoesEntityExist(object) then ResetEntityAlpha(object) end
-    end
-
-    for model in pairs(models) do SetModelAsNoLongerNeeded(model) end
 end
 
 local function createShop()
@@ -396,17 +374,17 @@ end)
 
 RegisterNetEvent('sb_mining:client:oreDepleted', function(zoneKey, rockIndex, nodeIndex)
     rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)] = true
+    removeOreTarget(zoneKey, rockIndex, nodeIndex)
 end)
 
 RegisterNetEvent('sb_mining:client:rockRespawn', function(zoneKey, rockIndex, nodeIndex, seconds, oreKey)
     CreateThread(function()
         Wait(seconds * 1000)
+        rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)] = nil
         rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
         rockOreTypes[zoneKey][rockIndex] = rockOreTypes[zoneKey][rockIndex] or {}
         rockOreTypes[zoneKey][rockIndex][nodeIndex] = oreKey
-        removeOreNode(zoneKey, rockIndex, nodeIndex)
-        rockStates[oreStateKey(zoneKey, rockIndex, nodeIndex)] = nil
-        createOreNode(zoneKey, rockIndex, nodeIndex)
+        createOreTarget(zoneKey, rockIndex, nodeIndex)
     end)
 end)
 
@@ -458,6 +436,13 @@ AddEventHandler('onResourceStop', function(resource)
     deletePickaxe()
     if shopPed and DoesEntityExist(shopPed) then DeleteEntity(shopPed) end
     if tableObject and DoesEntityExist(tableObject) then DeleteEntity(tableObject) end
+    for _, rocks in pairs(oreTargetZones) do
+        for _, nodes in pairs(rocks) do
+            for _, zoneId in pairs(nodes) do
+                exports.ox_target:removeZone(zoneId)
+            end
+        end
+    end
     for _, rocks in pairs(rockObjects) do
         for _, object in pairs(rocks) do
             if DoesEntityExist(object) then DeleteEntity(object) end

@@ -191,8 +191,15 @@ Config.BlockedVehicles = {
 }
 
 Config.Rock = {
-    oresPerStone = 1,
+    oresPerStone = 3,
     respawnSeconds = 90,
+
+    -- Separate ox_target-punkter for de tre synlige ores på den store stenmodel.
+    targetNodes = {
+        { offset = vec3(0.34, 0.12, 0.48), radius = 0.34 },
+        { offset = vec3(-0.30, 0.06, 0.40), radius = 0.34 },
+        { offset = vec3(0.04, -0.32, 0.62), radius = 0.34 }
+    },
 
     -- Stenene beholder X/Y og heading fra zonens vector4, men sættes fysisk ned på terrænet.
     groundPlacement = {
