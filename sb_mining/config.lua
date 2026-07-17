@@ -183,6 +183,12 @@ Config.Zones = {
     }
 }
 
+
+Config.CleanupUnusedMiningProps = {
+    enabled = true,
+    radiusPadding = 12.0
+}
+
 Config.BlockedVehicles = {
     enabled = true,
     models = { `dump` },

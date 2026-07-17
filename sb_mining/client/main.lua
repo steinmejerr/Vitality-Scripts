@@ -69,6 +69,43 @@ local function removeBlockedVehicles()
     end
 end
 
+
+local function isMiningPropModel(model)
+    for _, data in pairs(Config.MiningProps or {}) do
+        if data.model == model then
+            return true
+        end
+    end
+    return false
+end
+
+local function cleanupUnusedMiningProps()
+    local cleanup = Config.CleanupUnusedMiningProps
+    if not cleanup or not cleanup.enabled then
+        return
+    end
+
+    for _, object in ipairs(GetGamePool('CObject')) do
+        if DoesEntityExist(object) and isMiningPropModel(GetEntityModel(object)) then
+            local objectCoords = GetEntityCoords(object)
+            local insideArea = false
+
+            for _, zone in pairs(Config.Zones) do
+                local radius = (zone.radius or 0.0) + (cleanup.radiusPadding or 0.0)
+                if #(objectCoords - zone.center) <= radius then
+                    insideArea = true
+                    break
+                end
+            end
+
+            if insideArea then
+                SetEntityAsMissionEntity(object, true, true)
+                DeleteEntity(object)
+            end
+        end
+    end
+end
+
 local function closeNui()
     nuiOpen = false
     SetNuiFocus(false, false)
@@ -426,6 +463,8 @@ CreateThread(function()
     while GetResourceState(Config.PropResource) ~= 'started' do
         Wait(500)
     end
+    cleanupUnusedMiningProps()
+    Wait(250)
     createShop()
     createRocks()
 end)
@@ -446,16 +485,6 @@ AddEventHandler('onResourceStop', function(resource)
     for _, rocks in pairs(rockObjects) do
         for _, object in pairs(rocks) do
             if DoesEntityExist(object) then DeleteEntity(object) end
-        end
-    end
-    for _, rocks in pairs(oreObjects) do
-        for _, nodes in pairs(rocks) do
-            for _, object in pairs(nodes) do
-                if DoesEntityExist(object) then
-                    exports.ox_target:removeLocalEntity(object)
-                    DeleteEntity(object)
-                end
-            end
         end
     end
 end)
