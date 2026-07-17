@@ -211,7 +211,7 @@ local function startProgress(data, nuiMessage)
     local duration = progress ~= false and GetGameTimer() - startTime + 100 -- give slight leeway
 
     if progress == false or duration <= data.duration then
-        SendNUIMessage({ action = 'progressCancel' })
+        SendNUIMessage({ action = 'sbProgressCancel' })
         return false
     end
 
@@ -225,10 +225,12 @@ function lib.progressBar(data)
 
     if not interruptProgress(data) then
         return startProgress(data, {
-            action = 'progress',
+            action = 'sbProgress',
             data = {
                 label = data.label,
-                duration = data.duration
+                duration = data.duration,
+                variant = 'bar',
+                canCancel = data.canCancel == true
             }
         })
     end
@@ -241,11 +243,13 @@ function lib.progressCircle(data)
 
     if not interruptProgress(data) then
         return startProgress(data, {
-            action = 'circleProgress',
+            action = 'sbProgress',
             data = {
                 duration = data.duration,
                 position = data.position,
-                label = data.label
+                label = data.label,
+                variant = 'circle',
+                canCancel = data.canCancel == true
             }
         })
     end
