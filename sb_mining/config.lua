@@ -89,17 +89,9 @@ Config.Ores = {
 
 
 Config.MiningProps = {
-    stone = {
-        model = `bzzz_prop_mine_stone_big`,
-        variants = { `bzzz_prop_mine_stone_big` }
-    },
     coal = {
         model = `bzzz_prop_mine_coal_big`,
         variants = { `bzzz_prop_mine_coal_big` }
-    },
-    copper = {
-        model = `bzzz_prop_mine_copper_big`,
-        variants = { `bzzz_prop_mine_copper_big` }
     },
     iron = {
         model = `bzzz_prop_mine_iron_big`,
@@ -118,6 +110,7 @@ Config.MiningProps = {
         variants = { `bzzz_prop_mine_diamond_big` }
     }
 }
+
 
 Config.Missions = {
     quarry_start = {
@@ -213,7 +206,10 @@ Config.BlockedVehicles = {
 }
 
 Config.Rock = {
-    model = `prop_rock_4_cl_2`,
+    baseModel = `bzzz_prop_mine_stone_big`,
+    groundSpawnHeight = 3.0,
+    groundZOffset = 0.02,
+    collisionLoadTime = 1000,
     respawnSeconds = 90,
     interactionDistance = 2.0,
     mineDuration = 6500,

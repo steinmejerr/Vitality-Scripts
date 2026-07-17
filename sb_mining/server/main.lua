@@ -327,7 +327,7 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
     local now = os.time()
 
     if rockLocks[lockKey] and rockLocks[lockKey] > now then
-        return false, 'Stenen er allerede brudt.'
+        return false, 'Denne ore er ved at respawne.'
     end
 
     local xPlayer = ESX.GetPlayerFromId(source)
@@ -420,6 +420,7 @@ lib.callback.register('sb_mining:server:mineRock', function(source, zoneKey, roc
     local nextOreKey = chooseZoneOre(zoneKey)
     rockOreTypes[zoneKey] = rockOreTypes[zoneKey] or {}
     rockOreTypes[zoneKey][rockIndex] = nextOreKey
+    TriggerClientEvent('sb_mining:client:oreDepleted', -1, zoneKey, rockIndex)
     TriggerClientEvent('sb_mining:client:rockRespawn', -1, zoneKey, rockIndex, Config.Rock.respawnSeconds, nextOreKey)
 
     local list = {}
