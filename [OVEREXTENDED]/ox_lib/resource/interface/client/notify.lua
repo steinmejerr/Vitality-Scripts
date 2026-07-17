@@ -36,7 +36,7 @@ function lib.notify(data)
     data.position = data.position or settings.notification_position
 
     SendNUIMessage({
-        action = 'sbNotify',
+        action = 'vitalityNotify',
         data = data
     })
 

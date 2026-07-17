@@ -1,0 +1,331 @@
+:root {
+  --v-bg: rgba(18, 18, 18, 0.97);
+  --v-bg-soft: rgba(25, 25, 25, 0.96);
+  --v-border: rgba(255, 255, 255, 0.08);
+  --v-text: #f7f7f7;
+  --v-muted: #a8aaa9;
+  --v-green: #36e374;
+  --v-green-dark: #1fad56;
+  --v-red: #f05a5a;
+  --v-amber: #f2b84b;
+  --v-blue: #5ba7ff;
+}
+
+html,
+body,
+#root,
+#vitality-notify-root,
+#vitality-progress-root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+#vitality-notify-root,
+#vitality-progress-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  font-family: Roboto, Arial, sans-serif;
+}
+
+#vitality-notify-root { z-index: 2147483647; }
+#vitality-progress-root { z-index: 2147483646; }
+
+.v-notify-stack {
+  position: absolute;
+  width: min(390px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.v-pos-top-right { top: 24px; right: 24px; }
+.v-pos-top-left { top: 24px; left: 24px; }
+.v-pos-top { top: 24px; left: 50%; transform: translateX(-50%); }
+.v-pos-bottom-right { bottom: 24px; right: 24px; flex-direction: column-reverse; }
+.v-pos-bottom-left { bottom: 24px; left: 24px; flex-direction: column-reverse; }
+.v-pos-bottom { bottom: 24px; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
+.v-pos-center-right { top: 50%; right: 24px; transform: translateY(-50%); }
+.v-pos-center-left { top: 50%; left: 24px; transform: translateY(-50%); }
+
+.v-notify {
+  --accent: var(--v-blue);
+  position: relative;
+  overflow: hidden;
+  padding: 14px 15px 14px 17px;
+  color: var(--v-text);
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.025), transparent 35%),
+    linear-gradient(180deg, var(--v-bg-soft), var(--v-bg));
+  border: 1px solid var(--v-border);
+  border-radius: 8px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transform: translateX(24px) scale(.985);
+  animation: vNotifyIn 240ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.v-notify::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.v-notify.v-leaving { animation: vNotifyOut 210ms ease forwards; }
+.v-notify-success { --accent: var(--v-green); }
+.v-notify-error { --accent: var(--v-red); }
+.v-notify-warning { --accent: var(--v-amber); }
+.v-notify-info,
+.v-notify-inform { --accent: var(--v-blue); }
+
+.v-notify-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v-notify-kicker {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.v-notify-title {
+  margin-top: 5px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.v-notify-time {
+  flex: 0 0 auto;
+  min-width: 35px;
+  text-align: right;
+  color: var(--v-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-notify-description {
+  margin-top: 5px;
+  color: var(--v-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.v-notify-progress {
+  position: absolute;
+  left: 17px;
+  right: 15px;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255,255,255,.04);
+}
+
+.v-notify-progress::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: vNotifyTimer var(--duration) linear forwards;
+}
+
+.v-progress-wrap {
+  position: absolute;
+  left: 50%;
+  bottom: 7vh;
+  width: min(500px, calc(100vw - 32px));
+  opacity: 0;
+  transform: translate(-50%, 18px) scale(.985);
+  animation: vProgressIn 240ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.v-progress-wrap.v-middle {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, calc(-50% + 18px)) scale(.985);
+}
+
+.v-progress-wrap.v-circle-wrap { width: 280px; }
+.v-progress-wrap.v-leaving { animation: vProgressOut 210ms ease forwards; }
+
+.v-progress-card {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 17px 14px;
+  color: var(--v-text);
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.025), transparent 38%),
+    linear-gradient(180deg, var(--v-bg-soft), var(--v-bg));
+  border: 1px solid var(--v-border);
+  border-radius: 9px;
+  box-shadow: 0 18px 42px rgba(0,0,0,.4);
+}
+
+.v-progress-kicker {
+  color: var(--v-green);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.v-progress-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 7px;
+}
+
+.v-progress-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.v-progress-value {
+  flex: 0 0 auto;
+  color: var(--v-text);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.v-progress-track {
+  position: relative;
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.45);
+}
+
+.v-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--v-green-dark), var(--v-green));
+  box-shadow: 0 0 12px rgba(54,227,116,.3);
+}
+
+.v-progress-cancel {
+  margin-top: 10px;
+  color: var(--v-muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.v-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  padding: 0 5px;
+  color: #fff;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.v-circle-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 17px 18px 15px;
+  text-align: center;
+}
+
+.v-circle-label {
+  margin-top: 7px;
+  max-width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.v-circle-shell {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  margin-top: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.v-circle-svg {
+  width: 116px;
+  height: 116px;
+  transform: rotate(-90deg);
+}
+
+.v-circle-track,
+.v-circle-ring {
+  fill: none;
+  stroke-width: 8;
+}
+
+.v-circle-track { stroke: rgba(255,255,255,.07); }
+.v-circle-ring {
+  stroke: var(--v-green);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(54,227,116,.26));
+}
+
+.v-circle-value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--v-text);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes vNotifyIn {
+  to { opacity: 1; transform: translate(0,0) scale(1); }
+}
+
+@keyframes vNotifyOut {
+  to { opacity: 0; transform: translateX(22px) scale(.98); }
+}
+
+@keyframes vNotifyTimer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes vProgressIn {
+  to { opacity: 1; transform: translate(-50%,0) scale(1); }
+}
+
+@keyframes vProgressOut {
+  to { opacity: 0; transform: translate(-50%,16px) scale(.98); }
+}
+
+@media (max-width: 600px) {
+  .v-notify-stack { width: calc(100vw - 24px); }
+  .v-pos-top-right, .v-pos-top-left, .v-pos-top { top: 12px; left: 12px; right: 12px; transform: none; }
+  .v-pos-bottom-right, .v-pos-bottom-left, .v-pos-bottom { bottom: 12px; left: 12px; right: 12px; transform: none; }
+  .v-progress-wrap { width: calc(100vw - 24px); bottom: 12px; }
+}

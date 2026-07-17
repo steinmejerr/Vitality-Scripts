@@ -213,7 +213,7 @@ local function startProgress(data, nuiMessage)
     local duration = progress ~= false and GetGameTimer() - startTime + 100 -- give slight leeway
 
     if progress == false or duration <= data.duration then
-        SendNUIMessage({ action = 'sbProgressCancel' })
+        SendNUIMessage({ action = 'vitalityProgressCancel' })
         return false
     end
 
@@ -225,12 +225,15 @@ end
 function lib.progressBar(data)
     while progress ~= nil do Wait(0) end
 
+    if data.canCancel == nil then data.canCancel = true end
+
     if not interruptProgress(data) then
         return startProgress(data, {
-            action = 'sbProgress',
+            action = 'vitalityProgress',
             data = {
                 label = data.label,
                 duration = data.duration,
+                position = data.position,
                 variant = 'bar',
                 canCancel = data.canCancel == true
             }
@@ -243,9 +246,11 @@ end
 function lib.progressCircle(data)
     while progress ~= nil do Wait(0) end
 
+    if data.canCancel == nil then data.canCancel = true end
+
     if not interruptProgress(data) then
         return startProgress(data, {
-            action = 'sbProgress',
+            action = 'vitalityProgress',
             data = {
                 duration = data.duration,
                 position = data.position,
