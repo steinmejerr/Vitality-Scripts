@@ -316,3 +316,107 @@ nav button:active {
 ::-webkit-scrollbar-thumb:hover {
     background: #4a5a51;
 }
+
+
+.mission-hud {
+    position: fixed;
+    top: 7vh;
+    right: 2.2vw;
+    width: min(360px, 28vw);
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    background: rgba(15, 19, 22, .94);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .34);
+    color: #fff;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.mission-hud.hidden {
+    display: block;
+    opacity: 0;
+    transform: translateX(20px);
+    visibility: hidden;
+}
+
+.mission-hud-header {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.mission-hud-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--green);
+    font-size: 11px;
+    letter-spacing: .13em;
+}
+
+.mission-hud h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.mission-hud-description {
+    margin: 12px 0 14px;
+    color: #aeb8b3;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.mission-hud-requirements {
+    display: grid;
+    gap: 12px;
+}
+
+.mission-requirement {
+    padding: 11px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .035);
+}
+
+.mission-requirement-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.mission-requirement-row strong {
+    font-weight: 500;
+}
+
+.mission-progress-track {
+    height: 5px;
+    margin: 9px 0 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+}
+
+.mission-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--green);
+    transition: width .22s ease;
+}
+
+.mission-requirement small {
+    color: #8f9a95;
+    font-size: 11px;
+}
+
+.mission-requirement.complete small {
+    color: var(--green);
+}
+
+@media (max-width: 900px) {
+    .mission-hud {
+        width: 320px;
+        right: 18px;
+    }
+}

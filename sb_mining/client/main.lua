@@ -137,6 +137,46 @@ local function openNui(tab)
 end
 
 
+local function updateMissionHud(mission)
+    if not mission then
+        SendNUIMessage({ action = 'hideMissionHud' })
+        return
+    end
+
+    local missionConfig = Config.Missions[mission.key]
+    if not missionConfig then
+        SendNUIMessage({ action = 'hideMissionHud' })
+        return
+    end
+
+    local requirements = {
+        {
+            label = 'Mine ores',
+            current = mission.mined or 0,
+            required = missionConfig.rocks or mission.rocks or 0
+        }
+    }
+
+    if missionConfig.requiredOre and missionConfig.requiredOreAmount then
+        local ore = Config.Ores[missionConfig.requiredOre]
+        requirements[#requirements + 1] = {
+            label = ore and ore.label or missionConfig.requiredOre,
+            current = mission.ores and mission.ores[missionConfig.requiredOre] or 0,
+            required = missionConfig.requiredOreAmount
+        }
+    end
+
+    SendNUIMessage({
+        action = 'showMissionHud',
+        mission = {
+            label = mission.label or missionConfig.label,
+            description = missionConfig.description,
+            requirements = requirements
+        }
+    })
+end
+
+
 
 local function stopMiningSound()
     miningSoundSession = miningSoundSession + 1
@@ -504,22 +544,25 @@ end)
 
 RegisterNetEvent('sb_mining:client:missionStarted', function(mission)
     activeMission = mission
-    SetNewWaypoint(Config.Zones[mission.zone].center.x, Config.Zones[mission.zone].center.y)
+    updateMissionHud(mission)
     notify(('Mission startet: %s'):format(mission.label), 'success')
 end)
 
 RegisterNetEvent('sb_mining:client:missionProgress', function(mission)
     activeMission = mission
+    updateMissionHud(mission)
     SendNUIMessage({ action = 'missionProgress', mission = mission })
 end)
 
 RegisterNetEvent('sb_mining:client:missionComplete', function(money, xp)
     activeMission = nil
+    updateMissionHud(nil)
     notify(('Mission fuldført. Bonus: %s kr. og %s XP.'):format(money, xp), 'success')
 end)
 
 RegisterNetEvent('sb_mining:client:missionCancelled', function()
     activeMission = nil
+    updateMissionHud(nil)
     notify('Missionen blev annulleret.', 'error')
 end)
 

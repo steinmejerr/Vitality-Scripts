@@ -1,6 +1,10 @@
 const app = document.getElementById('app');
 const content = document.getElementById('content');
 const profile = document.getElementById('profile');
+const missionHud = document.getElementById('mission-hud');
+const missionHudTitle = document.getElementById('mission-hud-title');
+const missionHudDescription = document.getElementById('mission-hud-description');
+const missionHudRequirements = document.getElementById('mission-hud-requirements');
 
 const miningClang = new Audio('sounds/mining_clang.wav');
 miningClang.preload = 'auto';
@@ -36,6 +40,40 @@ function setTab(tab) {
         button.classList.toggle('active', button.dataset.tab === tab);
     });
     render();
+}
+
+
+
+function renderMissionHud(mission) {
+    if (!mission || !Array.isArray(mission.requirements)) {
+        missionHud.classList.add('hidden');
+        return;
+    }
+
+    missionHudTitle.textContent = mission.label || 'Aktiv mission';
+    missionHudDescription.textContent = mission.description || '';
+    missionHudRequirements.innerHTML = mission.requirements.map(requirement => {
+        const current = Math.max(0, Number(requirement.current || 0));
+        const required = Math.max(0, Number(requirement.required || 0));
+        const remaining = Math.max(0, required - current);
+        const percentage = required > 0 ? Math.min(100, (current / required) * 100) : 100;
+        const complete = remaining === 0;
+
+        return `
+            <div class="mission-requirement ${complete ? 'complete' : ''}">
+                <div class="mission-requirement-row">
+                    <span>${requirement.label}</span>
+                    <strong>${current} / ${required}</strong>
+                </div>
+                <div class="mission-progress-track">
+                    <div class="mission-progress-fill" style="width: ${percentage}%"></div>
+                </div>
+                <small>${complete ? 'Gennemført' : `${remaining} mangler`}</small>
+            </div>
+        `;
+    }).join('');
+
+    missionHud.classList.remove('hidden');
 }
 
 function renderProfile() {
@@ -184,6 +222,14 @@ window.addEventListener('message', event => {
 
     if (data.action === 'playMiningSound') {
         playMiningClang(data.volume);
+    }
+
+    if (data.action === 'showMissionHud') {
+        renderMissionHud(data.mission);
+    }
+
+    if (data.action === 'hideMissionHud') {
+        missionHud.classList.add('hidden');
     }
 
     if (data.action === 'missionProgress' && state.data) {
