@@ -236,9 +236,34 @@ local function startMiningSound(ped, animation)
     end)
 end
 
+local function removePickaxeEntity(object)
+    if not object or object == 0 or not DoesEntityExist(object) then
+        return
+    end
+
+    DetachEntity(object, true, true)
+    SetEntityAsMissionEntity(object, true, true)
+    DeleteObject(object)
+
+    if DoesEntityExist(object) then
+        DeleteEntity(object)
+    end
+end
+
 local function deletePickaxe()
-    if pickaxeObject and DoesEntityExist(pickaxeObject) then DeleteEntity(pickaxeObject) end
+    local ped = PlayerPedId()
+    local model = Config.Rock.pickaxeProp and Config.Rock.pickaxeProp.model
+
+    removePickaxeEntity(pickaxeObject)
     pickaxeObject = nil
+
+    if model then
+        for _, object in ipairs(GetGamePool('CObject')) do
+            if DoesEntityExist(object) and GetEntityModel(object) == model and IsEntityAttachedToEntity(object, ped) then
+                removePickaxeEntity(object)
+            end
+        end
+    end
 end
 
 local function attachPickaxe()
@@ -246,7 +271,9 @@ local function attachPickaxe()
     local ped = PlayerPedId()
     local data = Config.Rock.pickaxeProp
     if not loadModel(data.model) then return end
-    pickaxeObject = CreateObject(data.model, GetEntityCoords(ped), true, true, false)
+    local coords = GetEntityCoords(ped)
+    pickaxeObject = CreateObjectNoOffset(data.model, coords.x, coords.y, coords.z, false, false, false)
+    SetEntityCollision(pickaxeObject, false, false)
     AttachEntityToEntity(pickaxeObject, ped, GetPedBoneIndex(ped, data.bone), data.offset.x, data.offset.y, data.offset.z, data.rotation.x, data.rotation.y, data.rotation.z, true, true, false, true, 2, true)
     SetModelAsNoLongerNeeded(data.model)
 end
