@@ -78,22 +78,26 @@ Config.Levels = {
 }
 
 Config.Ores = {
-    stone = { item = 'mining_stone', label = 'Sten', minLevel = 1, weight = 50, sellPrice = 35 },
     coal = { item = 'mining_coal', label = 'Kul', minLevel = 1, weight = 30, sellPrice = 65 },
-    copper = { item = 'mining_copper', label = 'Kobbermalm', minLevel = 2, weight = 25, sellPrice = 110 },
     iron = { item = 'mining_iron', label = 'Jernmalm', minLevel = 1, weight = 22, sellPrice = 165 },
-    silver = { item = 'mining_silver', label = 'Sølvmalm', minLevel = 3, weight = 14, sellPrice = 280 },
     gold = { item = 'mining_gold', label = 'Guldmalm', minLevel = 3, weight = 8, sellPrice = 520 },
-    diamond = { item = 'mining_diamond', label = 'Rå diamant', minLevel = 6, weight = 2, sellPrice = 1450 }
+    silver = { item = 'mining_silver', label = 'Sølvmalm', minLevel = 3, weight = 14, sellPrice = 280 },
+    diamond = { item = 'mining_diamond', label = 'Rå diamant', minLevel = 3, weight = 2, sellPrice = 1450 },
+    sapphire = { item = 'mining_sapphire', label = 'Safir', minLevel = 6, weight = 6, sellPrice = 1900 },
+    ruby = { item = 'mining_ruby', label = 'Rubin', minLevel = 6, weight = 5, sellPrice = 2200 },
+    emerald = { item = 'mining_emerald', label = 'Smaragd', minLevel = 6, weight = 4, sellPrice = 2500 }
 }
 
 
 Config.MiningProps = {
     coal = { model = `bzzz_prop_mine_coal_b` },
     iron = { model = `bzzz_prop_mine_iron_b` },
-    silver = { model = `bzzz_prop_mine_silver_b` },
     gold = { model = `bzzz_prop_mine_gold_b` },
-    diamond = { model = `bzzz_prop_mine_diamond_b` }
+    silver = { model = `bzzz_prop_mine_silver_b` },
+    diamond = { model = `bzzz_prop_mine_diamond_b` },
+    sapphire = { model = `bzzz_prop_mine_sapphire_b` },
+    ruby = { model = `bzzz_prop_mine_ruby_b` },
+    emerald = { model = `bzzz_prop_mine_emerald_b` }
 }
 
 Config.LegacyMiningProps = {
@@ -122,7 +126,16 @@ Config.LegacyMiningProps = {
     `bzzz_prop_mine_gold_c`,
     `bzzz_prop_mine_diamond_a`,
     `bzzz_prop_mine_diamond_b`,
-    `bzzz_prop_mine_diamond_c`
+    `bzzz_prop_mine_diamond_c`,
+    `bzzz_prop_mine_sapphire_a`,
+    `bzzz_prop_mine_sapphire_b`,
+    `bzzz_prop_mine_sapphire_c`,
+    `bzzz_prop_mine_ruby_a`,
+    `bzzz_prop_mine_ruby_b`,
+    `bzzz_prop_mine_ruby_c`,
+    `bzzz_prop_mine_emerald_a`,
+    `bzzz_prop_mine_emerald_b`,
+    `bzzz_prop_mine_emerald_c`
 }
 
 
@@ -138,11 +151,11 @@ Config.Missions = {
         zone = 'level_1_3'
     },
     iron_run = {
-        label = 'Jernleverancen',
-        description = 'Bryd 14 sten og find mindst 8 jernmalm.',
+        label = 'Ædelmetal-leverancen',
+        description = 'Bryd 14 sten og find mindst 8 guldmalm.',
         requiredLevel = 3,
         rocks = 14,
-        requiredOre = 'iron',
+        requiredOre = 'gold',
         requiredOreAmount = 8,
         xpBonus = 280,
         moneyBonus = 2200,
@@ -184,7 +197,7 @@ Config.Zones = {
         radius = 24.0,
         minLevel = 3,
         maxLevel = 6,
-        orePool = { 'iron', 'silver', 'gold' },
+        orePool = { 'gold', 'silver', 'diamond' },
         rocks = {
             vector4(2927.98, 2799.61, 41.27, 313.97),
             vector4(2935.60, 2806.75, 41.99, 313.45),
@@ -200,7 +213,7 @@ Config.Zones = {
         radius = 24.0,
         minLevel = 6,
         maxLevel = 10,
-        orePool = { 'silver', 'gold', 'diamond' },
+        orePool = { 'sapphire', 'ruby', 'emerald' },
         rocks = {
             vector4(2971.69, 2780.48, 38.78, 260.56),
             vector4(2970.83, 2788.80, 39.81, 5.63),
