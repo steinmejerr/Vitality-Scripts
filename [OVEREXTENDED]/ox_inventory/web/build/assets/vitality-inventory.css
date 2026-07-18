@@ -574,3 +574,18 @@ body, #root, .app-wrapper {
   top: 50%;
   transform: translate(-50%, -50%);
 }
+
+
+/* Simple capacity text: remove decorative icon and fake bar */
+.inventory-grid-header-wrapper p:last-child {
+  min-width: auto;
+  padding: 0 14px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.inventory-grid-header-wrapper p:last-child::before,
+.inventory-grid-header-wrapper p:last-child::after {
+  content: none !important;
+  display: none !important;
+}
