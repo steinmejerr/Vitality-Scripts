@@ -8,7 +8,7 @@ Config.AdminGroup = {"group.admin", "group.god"} -- Groups allowed to use editor
 Config.ESXPrefix = "char" -- Only for ESX, prefix used for player identifier (prefix + slot, e.g. char1:licensexxxxx, char2:licensexxxxxx)
 Config.RelogCommand = "logout" -- or false to disable it
 Config.RelogGroups = {"group.admin", "group.god"} -- ACE Groups allowed to use relogcommand
-Config.DefaultSpawn = {x = -540.2664, y = -212.2669, z = 37.6498, heading = 208.3028} -- x, y, z, heading... default spawn after character register
+Config.DefaultSpawn = {x = -1037.74, y = -2738.25, z = 20.17, heading = 329.14} -- x, y, z, heading... default spawn after character register
 
 -- Character slots config
 Config.Slots = {

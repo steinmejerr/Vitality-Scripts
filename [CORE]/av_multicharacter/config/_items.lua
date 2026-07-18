@@ -13,4 +13,8 @@ Config.StarterItems = { -- Character starting items
         name = 'water',
         amount = 5
     },
+    {
+        name = 'lockpick',
+        amount = 5
+    },
 }
