@@ -143,3 +143,12 @@ Config.Blip = {
     labelOrder = 'Hent ordre',
     labelMission = 'Hent pakke'
 }
+
+Config.Admin = {
+    command = 'gangbuyadmin',
+    acePermission = 'sb_gangbuy.admin',
+    allowedGroups = {
+        superadmin = true,
+        admin = true
+    }
+}

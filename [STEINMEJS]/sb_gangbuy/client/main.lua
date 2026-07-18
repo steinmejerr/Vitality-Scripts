@@ -189,3 +189,31 @@ AddEventHandler('onResourceStop', function(resource)
     if npc and DoesEntityExist(npc) then DeleteEntity(npc) end
     SetNuiFocus(false, false)
 end)
+
+RegisterNetEvent('sb_gangbuy:client:openAdmin', function()
+    local data = lib.callback.await('sb_gangbuy:server:getAdminData', false)
+    if not data or not data.allowed then
+        return notify('Du har ikke adgang.', 'error')
+    end
+
+    menuOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openAdmin', data = data })
+end)
+
+RegisterNUICallback('adminSave', function(data, cb)
+    local result = lib.callback.await('sb_gangbuy:server:adminSave', false, data)
+    if result and result.message then notify(result.message, result.success and 'success' or 'error') end
+    cb(result or { success = false })
+end)
+
+RegisterNUICallback('adminDelete', function(data, cb)
+    local result = lib.callback.await('sb_gangbuy:server:adminDelete', false, data)
+    if result and result.message then notify(result.message, result.success and 'success' or 'error') end
+    cb(result or { success = false })
+end)
+
+RegisterNUICallback('adminRefresh', function(_, cb)
+    local data = lib.callback.await('sb_gangbuy:server:getAdminData', false)
+    cb(data or {})
+end)

@@ -11,22 +11,14 @@
     <main id="app" class="app hidden">
         <header>
             <div>
-                <span class="eyebrow">HANDEL</span>
-                <h1>Kontakten</h1>
-                <p>Køb varer og tag arbejde for kontakten.</p>
+                <span class="eyebrow" id="eyebrow">HANDEL</span>
+                <h1 id="title">Kontakten</h1>
+                <p id="subtitle">Køb varer og tag arbejde for kontakten.</p>
             </div>
             <button id="close" class="icon-button" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
         </header>
-
         <section class="profile" id="profile"></section>
-
-        <nav>
-            <button class="tab active" data-tab="overview"><i class="fa-solid fa-chart-line"></i> Overblik</button>
-            <button class="tab" data-tab="missions"><i class="fa-solid fa-list-check"></i> Missioner</button>
-            <button class="tab" data-tab="shop"><i class="fa-solid fa-boxes-stacked"></i> Varer</button>
-            <button class="tab" data-tab="delivery"><i class="fa-solid fa-truck-fast"></i> Levering</button>
-        </nav>
-
+        <nav id="tabs"></nav>
         <section id="content" class="content"></section>
     </main>
     <script src="app.js"></script>
