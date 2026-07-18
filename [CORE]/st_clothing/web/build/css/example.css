@@ -1,0 +1,59 @@
+.swipe-container {
+    position: absolute;
+    margin-left: 500px;
+}
+
+.clothing-container {
+    width: 650px;
+    padding-right: 150px;
+    padding-left: 20px;
+    background: linear-gradient(
+        to right,
+        rgba(5, 5, 5, 0.9) 0%,
+        rgba(5, 5, 5, 0.9) 80%,
+        rgba(5, 5, 5, 0.8) 85%,
+        rgba(5, 5, 5, 0.5) 92%,
+        rgba(5, 5, 5, 0.2) 98%,
+        rgba(5, 5, 5, 0) 100%
+    );
+}
+
+.clothing-sidemenu {
+    right: auto;
+    left: 515px;
+}
+
+.sub-categories {
+    padding: 0px;
+    padding-right: 10px;
+}
+
+.sub-category .sub-category-image {
+    background: radial-gradient(circle, rgb(64, 62, 71) 0%, rgb(41, 40, 47) 80%);
+    background-color: #403e47;
+    transition: background 0.3s ease;
+}
+
+.sub-category .sub-category-image:hover {
+    background: radial-gradient(circle, rgb(84, 82, 91) 0%, rgb(61, 60, 67) 80%);
+    background-color: #54525b;
+}
+
+.sub-element .sub-element-image {
+    background: radial-gradient(circle, rgb(64, 62, 71) 0%, rgb(41, 40, 47) 80%);
+    background-color: #403e47;
+    transition: background 0.3s ease;
+}
+
+.sub-element .sub-element-image:hover {
+    background: radial-gradient(circle, rgb(84, 82, 91) 0%, rgb(61, 60, 67) 80%);
+    background-color: #54525b;
+}
+
+.sub-elements {
+    padding-left: 0;
+}
+
+.sub-element .sub-element-price h3 {
+    color: #fff;
+}
