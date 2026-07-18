@@ -87,27 +87,19 @@ body, #root, .app-wrapper {
   pointer-events: none;
 }
 
-.inventory-player,
-.inventory-container,
-.inventory-shop,
-.inventory-crafting {
+.inventory-grid-wrapper.inventory-player,
+.inventory-grid-wrapper.inventory-container,
+.inventory-grid-wrapper.inventory-shop,
+.inventory-grid-wrapper.inventory-crafting {
   transform-style: preserve-3d;
-}
-
-.inventory-player {
   transform: var(--sb-skew-left);
+  transform-origin: left center;
 }
 
-.inventory-container,
-.inventory-shop,
-.inventory-crafting {
-  transform: var(--sb-skew-right);
-}
-
-.inventory-player > *,
-.inventory-container > *,
-.inventory-shop > *,
-.inventory-crafting > * {
+.inventory-grid-wrapper.inventory-player > *,
+.inventory-grid-wrapper.inventory-container > *,
+.inventory-grid-wrapper.inventory-shop > *,
+.inventory-grid-wrapper.inventory-crafting > * {
   transform: translateZ(0);
 }
 
