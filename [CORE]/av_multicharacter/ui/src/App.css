@@ -7,12 +7,22 @@
 .mantine-Popover-dropdown,
 .mantine-Combobox-dropdown,
 .mantine-DatePickerInput-dropdown {
+  background: linear-gradient(180deg, rgba(20, 22, 23, 0.97), rgba(9, 10, 11, 0.97)) !important;
+  padding: 6px !important;
+  border: 1px solid rgba(54, 227, 116, 0.18) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+.mantine-Combobox-options,
+.mantine-Calendar-month,
+.mantine-Month-month,
+.mantine-DatePickerInput-calendarHeader,
+.mantine-DatePickerInput-levelsGroup,
+.mantine-DatePickerInput-month,
+.mantine-Popover-dropdown > * {
   background: transparent !important;
-  padding: 0 !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
 }
 
 .mantine-Input-input:focus,
