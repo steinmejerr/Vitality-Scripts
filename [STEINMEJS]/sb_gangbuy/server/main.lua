@@ -87,6 +87,14 @@ local function seedRuntimeTables()
 end
 
 MySQL.ready(function()
+    MySQL.query.await([[CREATE TABLE IF NOT EXISTS `sb_gangbuy_gang_progress` (
+        `gang_job` varchar(50) NOT NULL,
+        `xp` int unsigned NOT NULL DEFAULT 0,
+        `completed_missions` int unsigned NOT NULL DEFAULT 0,
+        `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+        PRIMARY KEY (`gang_job`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]])
+
     seedRuntimeTables()
 end)
 
@@ -107,10 +115,10 @@ local function getLevelFromXp(xp)
     return level
 end
 
-local function getProgress(identifier)
-    local row = MySQL.single.await('SELECT xp, completed_missions FROM sb_gangbuy_progress WHERE identifier = ?', { identifier })
+local function getGangProgress(gangJob)
+    local row = MySQL.single.await('SELECT xp, completed_missions FROM sb_gangbuy_gang_progress WHERE gang_job = ?', { gangJob })
     if not row then
-        MySQL.insert.await('INSERT INTO sb_gangbuy_progress (identifier, xp, completed_missions) VALUES (?, 0, 0)', { identifier })
+        MySQL.insert.await('INSERT INTO sb_gangbuy_gang_progress (gang_job, xp, completed_missions) VALUES (?, 0, 0)', { gangJob })
         return { xp = 0, completed_missions = 0, level = 1 }
     end
     row.xp = tonumber(row.xp) or 0
@@ -232,8 +240,7 @@ lib.callback.register('sb_gangbuy:server:getMenuData', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
     local allowed, gang, grade = getGangAccess(xPlayer)
     if not allowed then return { allowed=false } end
-    local identifier = getCharacterIdentifier(xPlayer)
-    local progress = getProgress(identifier)
+    local progress = getGangProgress(xPlayer.job.name)
     local mission, order = activeMissions[source], activeOrders[source]
     if order and order.status == 'waiting' and os.time() >= order.readyAt then order.status='ready'; TriggerClientEvent('sb_gangbuy:client:orderReady',source,orderForClient(order)) end
     return {
@@ -251,7 +258,7 @@ lib.callback.register('sb_gangbuy:server:buyProduct', function(source, productId
     local xPlayer=ESX.GetPlayerFromId(source); local allowed,_,grade=getGangAccess(xPlayer); local product=Runtime.products[productId]
     if not allowed or not product then actionLocks[source]=nil return {success=false,message='Du har ikke adgang.'} end
     if activeOrders[source] then actionLocks[source]=nil return {success=false,message='Du har allerede en aktiv ordre.'} end
-    local progress=getProgress(getCharacterIdentifier(xPlayer))
+    local progress=getGangProgress(xPlayer.job.name)
     if progress.level<product.requiredLevel or grade<product.requiredGrade then actionLocks[source]=nil return {success=false,message='Dit level eller din rang er for lav.'} end
     local account=xPlayer.getAccount(Config.PaymentAccount)
     if not account or account.money<product.price then actionLocks[source]=nil return {success=false,message='Du har ikke råd.'} end
@@ -269,7 +276,7 @@ lib.callback.register('sb_gangbuy:server:startMission', function(source, mission
     if activeMissions[source] then return {success=false,message='Du har allerede en aktiv opgave.'} end
     local cooldown=Player(source).state.sbGangbuyMissionCooldown or 0
     if cooldown>os.time() then return {success=false,message=('Du kan tage en ny opgave om %s minutter.'):format(math.ceil((cooldown-os.time())/60))} end
-    local progress=getProgress(getCharacterIdentifier(xPlayer))
+    local progress=getGangProgress(xPlayer.job.name)
     if progress.level<mission.requiredLevel or grade<mission.requiredGrade then return {success=false,message='Dit level eller din rang er for lav.'} end
     local wait=math.random(mission.waitSeconds.min,mission.waitSeconds.max); local coords=Config.DeliveryLocations[math.random(#Config.DeliveryLocations)]
     activeMissions[source]={id=missionId,label=mission.label,xp=mission.xp,money=mission.money,status='waiting',readyAt=os.time()+wait,coords=coords}
@@ -293,11 +300,13 @@ lib.callback.register('sb_gangbuy:server:collectMission', function(source, missi
     if not allowed or not mission or mission.id~=missionId then return {success=false,message='Opgaven blev ikke fundet.'} end
     if os.time()<mission.readyAt then return {success=false,message='Pakken er ikke klar endnu.'} end
     local identifier=getCharacterIdentifier(xPlayer)
-    MySQL.update.await('UPDATE sb_gangbuy_progress SET xp=xp+?, completed_missions=completed_missions+1, updated_at=NOW() WHERE identifier=?',{mission.xp,identifier})
+    MySQL.prepare.await([[INSERT INTO sb_gangbuy_gang_progress (gang_job, xp, completed_missions) VALUES (?, ?, 1)
+        ON DUPLICATE KEY UPDATE xp = xp + VALUES(xp), completed_missions = completed_missions + 1, updated_at = NOW()]],
+        {xPlayer.job.name, mission.xp})
     xPlayer.addAccountMoney(Config.PaymentAccount,mission.money,'Gangbuy mission')
     MySQL.insert.await('INSERT INTO sb_gangbuy_mission_history (identifier,gang_job,mission_id,xp_reward,money_reward) VALUES (?,?,?,?,?)',{identifier,xPlayer.job.name,mission.id,mission.xp,mission.money})
     activeMissions[source]=nil; Player(source).state:set('sbGangbuyMissionCooldown',os.time()+(Config.MissionCooldownMinutes*60),true)
-    local progress=getProgress(identifier)
+    local progress=getGangProgress(xPlayer.job.name)
     return {success=true,message=('Opgave klaret: +%s XP og $%s.'):format(mission.xp,mission.money),level=progress.level,xp=progress.xp,nextLevelXp=getNextLevel(progress.level)}
 end)
 

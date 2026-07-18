@@ -1,3 +1,11 @@
+CREATE TABLE IF NOT EXISTS `sb_gangbuy_gang_progress` (
+    `gang_job` varchar(50) NOT NULL,
+    `xp` int unsigned NOT NULL DEFAULT 0,
+    `completed_missions` int unsigned NOT NULL DEFAULT 0,
+    `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+    PRIMARY KEY (`gang_job`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `sb_gangbuy_progress` (
     `identifier` varchar(80) NOT NULL,
     `xp` int unsigned NOT NULL DEFAULT 0,

@@ -3,7 +3,7 @@ Config = {}
 Config.Debug = false
 Config.UseOxInventory = true
 Config.PaymentAccount = 'black_money' -- money, bank eller black_money
-Config.ProgressPerCharacter = true
+-- XP og level gemmes fælles for hele banden via ESX-jobnavnet.
 Config.InteractionDistance = 2.0
 Config.OrderPickupDuration = 6500
 Config.MissionPickupDuration = 5500
