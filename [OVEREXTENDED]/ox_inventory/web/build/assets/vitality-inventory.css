@@ -556,3 +556,21 @@ body, #root, .app-wrapper {
 .inventory-grid-container {
   margin-bottom: 0 !important;
 }
+
+/* Fix alignment for header icon when no title text exists (e.g. right panel) */
+.inventory-grid-header-wrapper p:first-child:empty {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-grid-header-wrapper p:first-child:empty::before {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
