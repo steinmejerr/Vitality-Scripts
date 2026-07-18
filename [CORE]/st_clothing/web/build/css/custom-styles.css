@@ -390,3 +390,193 @@
     position: relative !important;
     z-index: 1 !important;
 }
+
+/* Vitality UI refresh v2 — inspired by sb_mining */
+:root {
+    --vitality-green: #39d77d;
+    --vitality-green-dark: #27b966;
+    --vitality-green-soft: rgba(57, 215, 125, 0.14);
+    --vitality-green-border: rgba(57, 215, 125, 0.34);
+    --vitality-panel: rgba(22, 27, 31, 0.94);
+    --vitality-panel-soft: rgba(27, 32, 37, 0.93);
+    --vitality-card: rgba(31, 37, 42, 0.94);
+    --vitality-card-hover: rgba(38, 46, 51, 0.97);
+    --vitality-border: rgba(255, 255, 255, 0.105);
+    --vitality-text: #f2f5f4;
+    --vitality-muted: #aab4b0;
+    --vitality-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+}
+
+.clothing-container,
+.tattoos-container {
+    background:
+        radial-gradient(circle at 90% 12%, rgba(57, 215, 125, 0.11), transparent 31%),
+        linear-gradient(90deg,
+            rgba(19, 23, 27, 0.10) 0%,
+            rgba(19, 23, 27, 0.68) 13%,
+            rgba(22, 27, 31, 0.92) 34%,
+            rgba(22, 27, 31, 0.97) 100%) !important;
+    backdrop-filter: blur(8px) saturate(115%) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(115%) !important;
+}
+
+.clothing-navigation,
+.tattoos-navigation {
+    padding: 10px !important;
+    gap: 9px !important;
+    background: rgba(29, 35, 40, 0.72) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+.clothing-navigation .clothing-button,
+.tattoos-navigation .tattoos-button {
+    height: 46px !important;
+    color: #c5ceca !important;
+    background: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(255, 255, 255, 0.075) !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.clothing-navigation .clothing-button:hover,
+.tattoos-navigation .tattoos-button:hover {
+    color: #ffffff !important;
+    background: rgba(57, 215, 125, 0.12) !important;
+    border-color: rgba(57, 215, 125, 0.34) !important;
+    box-shadow: none !important;
+    transform: translateY(-1px) !important;
+}
+
+.clothing-navigation .clothing-button.active,
+.tattoos-navigation .tattoos-button.active {
+    color: #ffffff !important;
+    background: linear-gradient(180deg, #45e88a, #2fc66f) !important;
+    border-color: rgba(112, 244, 167, 0.72) !important;
+    box-shadow: 0 8px 18px rgba(57, 215, 125, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+.clothing-sidemenu .side-element {
+    color: #bdc7c3 !important;
+    background: rgba(30, 36, 41, 0.93) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+.clothing-sidemenu .side-element:hover,
+.clothing-sidemenu .side-element.selected {
+    color: #ffffff !important;
+    background: linear-gradient(180deg, rgba(57, 215, 125, 0.23), rgba(35, 46, 41, 0.96)) !important;
+    border-color: rgba(57, 215, 125, 0.54) !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(57, 215, 125, 0.07) !important;
+    transform: translateX(-2px) !important;
+}
+
+.element-header,
+.wardrobe-header,
+.wardrobe-search {
+    background: rgba(34, 41, 46, 0.94) !important;
+    border-color: rgba(255, 255, 255, 0.11) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 7px 18px rgba(0, 0, 0, 0.11) !important;
+}
+
+.element-body .element-item,
+.element-range-item,
+.element-colour-body,
+.sub-element-body .element-item,
+.wardrobe-body .wardrobe-item {
+    background: linear-gradient(180deg, rgba(34, 41, 46, 0.96), rgba(27, 33, 38, 0.96)) !important;
+    border-color: rgba(255, 255, 255, 0.105) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 8px 20px rgba(0, 0, 0, 0.10) !important;
+    transition: background .16s ease, border-color .16s ease, transform .16s ease !important;
+}
+
+.element-body .element-item:hover,
+.element-range-item:hover,
+.sub-element-body .element-item:hover,
+.wardrobe-body .wardrobe-item:hover {
+    background: linear-gradient(180deg, rgba(40, 48, 53, 0.98), rgba(31, 38, 43, 0.98)) !important;
+    border-color: rgba(57, 215, 125, 0.26) !important;
+}
+
+.element-body .element-item button,
+.sub-element-body .element-item button,
+.wardrobe-body .wardrobe-item button,
+.clothing-footer button,
+.tattoos-footer button {
+    background: rgba(46, 54, 60, 0.92) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+}
+
+.element-body .element-item button:hover,
+.sub-element-body .element-item button:hover,
+.wardrobe-body .wardrobe-item button:hover,
+.clothing-footer button:hover,
+.tattoos-footer button:hover {
+    background: linear-gradient(180deg, #45e88a, #2fc66f) !important;
+    border-color: rgba(112, 244, 167, 0.72) !important;
+    box-shadow: 0 8px 18px rgba(57, 215, 125, 0.18) !important;
+    transform: translateY(-1px) !important;
+}
+
+.element-body .element-item input,
+.sub-element-body .element-item input,
+.wardrobe-search input,
+.swal2-input {
+    color: #ffffff !important;
+    background: rgba(13, 17, 20, 0.24) !important;
+    border-bottom-color: rgba(57, 215, 125, 0.62) !important;
+}
+
+.sub-category,
+.sub-element,
+.element-image {
+    background: rgba(31, 38, 43, 0.94) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+.sub-category .sub-category-image,
+.sub-element .sub-element-image,
+.elements-image .element-image {
+    background: radial-gradient(circle at 50% 35%, rgba(57, 215, 125, 0.10), rgba(28, 34, 39, 0.97) 72%) !important;
+}
+
+.sub-category .sub-category-text,
+.sub-element .sub-element-text,
+.element-image-text {
+    background: rgba(35, 42, 47, 0.97) !important;
+    border-top-color: rgba(255, 255, 255, 0.085) !important;
+}
+
+.clothing-footer,
+.tattoos-footer {
+    padding: 10px !important;
+    background: rgba(28, 34, 39, 0.82) !important;
+    border: 1px solid rgba(255, 255, 255, 0.085) !important;
+    border-radius: 13px !important;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+}
+
+.clothing-footer .clothing-prices,
+.tattoos-footer .tattoos-prices {
+    background: rgba(34, 41, 46, 0.94) !important;
+    border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.elements::-webkit-scrollbar-track,
+.elements-image::-webkit-scrollbar-track,
+.sub-elements-container::-webkit-scrollbar-track,
+.wardrobe-elements::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.elements::-webkit-scrollbar-thumb,
+.elements-image::-webkit-scrollbar-thumb,
+.sub-elements-container::-webkit-scrollbar-thumb,
+.wardrobe-elements::-webkit-scrollbar-thumb {
+    background: #39d77d !important;
+    box-shadow: 0 0 8px rgba(57, 215, 125, 0.25) !important;
+}
