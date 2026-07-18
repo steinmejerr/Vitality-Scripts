@@ -532,3 +532,13 @@ body, #root, .app-wrapper {
   display: none !important;
   background: transparent !important;
 }
+
+/* Right inventory panel should slant the opposite direction */
+.inventory-wrapper > .inventory-grid-wrapper:last-of-type {
+  transform: var(--sb-skew-right) !important;
+  transform-origin: right center !important;
+}
+
+.inventory-wrapper > .inventory-grid-wrapper:last-of-type > * {
+  transform: translateZ(0);
+}
