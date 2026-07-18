@@ -4,7 +4,7 @@ local menuOpen = false
 local currentPickup
 
 local function notify(description, type)
-    lib.notify({ title = 'Forbindelsen', description = description, type = type or 'inform' })
+    lib.notify({ title = 'Kontakten', description = description, type = type or 'inform' })
 end
 
 local function loadModel(model)
@@ -30,7 +30,7 @@ end
 local function openMenu()
     local data = lib.callback.await('sb_gangbuy:server:getMenuData', false)
     if not data or not data.allowed then
-        return notify('Du har ikke den nødvendige banderang.', 'error')
+        return notify('Din rang er for lav.', 'error')
     end
 
     menuOpen = true
@@ -104,7 +104,7 @@ local function createPickup(kind, payload)
                     clearPickup()
                     SendNUIMessage({ action = 'refreshRequested' })
                 else
-                    notify(result and result.message or 'Handlingen mislykkedes.', 'error')
+                    notify(result and result.message or 'Noget gik galt.', 'error')
                 end
             end
         }}
@@ -141,13 +141,13 @@ CreateThread(function()
 end)
 
 RegisterNetEvent('sb_gangbuy:client:orderReady', function(order)
-    notify('Din levering er klar. GPS-positionen er sendt.', 'success')
+    notify('Din ordre er klar. GPS er sendt.', 'success')
     createPickup('order', order)
     SendNUIMessage({ action = 'orderReady', order = order })
 end)
 
 RegisterNetEvent('sb_gangbuy:client:missionReady', function(mission)
-    notify('Kontakten har sendt missionens GPS-position.', 'success')
+    notify('GPS til opgaven er sendt.', 'success')
     createPickup('mission', mission)
     SendNUIMessage({ action = 'missionReady', mission = mission })
 end)
@@ -174,7 +174,7 @@ end)
 RegisterNUICallback('setGps', function(data, cb)
     if data.coords then
         SetNewWaypoint(data.coords.x + 0.0, data.coords.y + 0.0)
-        notify('GPS-positionen er markeret.', 'success')
+        notify('GPS er sat.', 'success')
     end
     cb(true)
 end)

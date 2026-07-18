@@ -5,7 +5,7 @@ local actionLocks = {}
 
 local function notify(source, description, type)
     TriggerClientEvent('ox_lib:notify', source, {
-        title = 'Forbindelsen',
+        title = 'Kontakten',
         description = description,
         type = type or 'inform'
     })
@@ -166,19 +166,19 @@ lib.callback.register('sb_gangbuy:server:buyProduct', function(source, productId
 
     if activeOrders[source] then
         actionLocks[source] = nil
-        return { success = false, message = 'Du har allerede en aktiv levering.' }
+        return { success = false, message = 'Du har allerede en aktiv ordre.' }
     end
 
     local progress = getProgress(getCharacterIdentifier(xPlayer))
     if progress.level < product.requiredLevel or grade < product.requiredGrade then
         actionLocks[source] = nil
-        return { success = false, message = 'Dit level eller din banderang er for lav.' }
+        return { success = false, message = 'Dit level eller din rang er for lav.' }
     end
 
     local account = xPlayer.getAccount(Config.PaymentAccount)
     if not account or account.money < product.price then
         actionLocks[source] = nil
-        return { success = false, message = 'Du har ikke nok penge.' }
+        return { success = false, message = 'Du har ikke råd.' }
     end
 
     xPlayer.removeAccountMoney(Config.PaymentAccount, product.price, 'Gangbuy ordre')
@@ -209,7 +209,7 @@ lib.callback.register('sb_gangbuy:server:buyProduct', function(source, productId
     }
 
     actionLocks[source] = nil
-    return { success = true, order = orderForClient(activeOrders[source]), message = ('Ordren leveres om cirka %s minutter.'):format(minutes) }
+    return { success = true, order = orderForClient(activeOrders[source]), message = ('Ordren er klar om cirka %s minutter.'):format(minutes) }
 end)
 
 lib.callback.register('sb_gangbuy:server:startMission', function(source, missionId)
@@ -217,16 +217,16 @@ lib.callback.register('sb_gangbuy:server:startMission', function(source, mission
     local allowed, _, grade = getGangAccess(xPlayer)
     local mission = Config.Missions[missionId]
     if not allowed or not mission then return { success = false, message = 'Du har ikke adgang.' } end
-    if activeMissions[source] then return { success = false, message = 'Du har allerede en aktiv mission.' } end
+    if activeMissions[source] then return { success = false, message = 'Du har allerede en aktiv opgave.' } end
 
     local cooldown = Player(source).state.sbGangbuyMissionCooldown or 0
     if cooldown > os.time() then
-        return { success = false, message = ('Du kan tage en ny mission om %s minutter.'):format(math.ceil((cooldown - os.time()) / 60)) }
+        return { success = false, message = ('Du kan tage en ny opgave om %s minutter.'):format(math.ceil((cooldown - os.time()) / 60)) }
     end
 
     local progress = getProgress(getCharacterIdentifier(xPlayer))
     if progress.level < mission.requiredLevel or grade < mission.requiredGrade then
-        return { success = false, message = 'Dit level eller din banderang er for lav.' }
+        return { success = false, message = 'Dit level eller din rang er for lav.' }
     end
 
     local wait = math.random(mission.waitSeconds.min, mission.waitSeconds.max)
@@ -249,7 +249,7 @@ lib.callback.register('sb_gangbuy:server:startMission', function(source, mission
             status = 'waiting',
             readyAt = os.time() + wait
         },
-        message = 'Kontakten gør pakken klar. Du får besked, når GPS-positionen er tilgængelig.'
+        message = 'Pakken bliver gjort klar. Du får GPS, når den er klar.'
     }
 end)
 
@@ -257,19 +257,19 @@ lib.callback.register('sb_gangbuy:server:collectOrder', function(source, orderId
     local xPlayer = ESX.GetPlayerFromId(source)
     local allowed = getGangAccess(xPlayer)
     local order = activeOrders[source]
-    if not allowed or not order or order.id ~= tonumber(orderId) then return { success = false, message = 'Leveringen blev ikke fundet.' } end
-    if os.time() < order.readyAt then return { success = false, message = 'Leveringen er ikke klar endnu.' } end
+    if not allowed or not order or order.id ~= tonumber(orderId) then return { success = false, message = 'Ordren blev ikke fundet.' } end
+    if os.time() < order.readyAt then return { success = false, message = 'Ordren er ikke klar endnu.' } end
     if os.time() > order.expiresAt then
         MySQL.update.await("UPDATE sb_gangbuy_orders SET status = 'expired' WHERE id = ?", { order.id })
         activeOrders[source] = nil
-        return { success = false, message = 'Leveringen er udløbet.' }
+        return { success = false, message = 'Ordren er udløbet.' }
     end
 
     local canCarry = true
     if Config.UseOxInventory then
         canCarry = exports.ox_inventory:CanCarryItem(source, order.item, order.amount)
     end
-    if not canCarry then return { success = false, message = 'Du har ikke plads i dit inventory.' } end
+    if not canCarry then return { success = false, message = 'Du har ikke plads i inventory.' } end
 
     if Config.UseOxInventory then
         exports.ox_inventory:AddItem(source, order.item, order.amount)
@@ -279,14 +279,14 @@ lib.callback.register('sb_gangbuy:server:collectOrder', function(source, orderId
 
     MySQL.update.await("UPDATE sb_gangbuy_orders SET status = 'collected', collected_at = NOW() WHERE id = ?", { order.id })
     activeOrders[source] = nil
-    return { success = true, message = ('Du modtog %sx %s.'):format(order.amount, order.label) }
+    return { success = true, message = ('Du fik %sx %s.'):format(order.amount, order.label) }
 end)
 
 lib.callback.register('sb_gangbuy:server:collectMission', function(source, missionId)
     local xPlayer = ESX.GetPlayerFromId(source)
     local allowed = getGangAccess(xPlayer)
     local mission = activeMissions[source]
-    if not allowed or not mission or mission.id ~= missionId then return { success = false, message = 'Missionen blev ikke fundet.' } end
+    if not allowed or not mission or mission.id ~= missionId then return { success = false, message = 'Opgaven blev ikke fundet.' } end
     if os.time() < mission.readyAt then return { success = false, message = 'Pakken er ikke klar endnu.' } end
 
     local identifier = getCharacterIdentifier(xPlayer)
@@ -308,7 +308,7 @@ lib.callback.register('sb_gangbuy:server:collectMission', function(source, missi
     local progress = getProgress(identifier)
     return {
         success = true,
-        message = ('Mission fuldført: +%s XP og $%s.'):format(mission.xp, mission.money),
+        message = ('Opgave klaret: +%s XP og $%s.'):format(mission.xp, mission.money),
         level = progress.level,
         xp = progress.xp,
         nextLevelXp = getNextLevel(progress.level)

@@ -23,44 +23,44 @@ function renderProfile() {
     const previous = p.level > 1 ? 0 : 0;
     const percent = next ? Math.min(100, Math.round((p.xp / next) * 100)) : 100;
     profile.innerHTML = `
-        <div class="profile-card"><span>Identitet</span><strong>${escapeHtml(p.name)} · ${escapeHtml(p.gang)}</strong></div>
-        <div class="profile-card"><span>Banderang</span><strong>${escapeHtml(p.gradeLabel)} · Grade ${p.grade}</strong></div>
-        <div class="profile-card"><span>Progression</span><strong>Level ${p.level} · ${money(p.xp)} XP</strong><div class="progress"><i style="width:${percent}%"></i></div></div>`;
+        <div class="profile-card"><span>Spiller</span><strong>${escapeHtml(p.name)} · ${escapeHtml(p.gang)}</strong></div>
+        <div class="profile-card"><span>Rang</span><strong>${escapeHtml(p.gradeLabel)} · Grade ${p.grade}</strong></div>
+        <div class="profile-card"><span>Erfaring</span><strong>Level ${p.level} · ${money(p.xp)} XP</strong><div class="progress"><i style="width:${percent}%"></i></div></div>`;
 }
 
 function card(item, kind) {
     const isProduct = kind === 'product';
-    const buttonText = item.unlocked ? (isProduct ? 'Bestil varen' : 'Start mission') : `Kræver level ${item.requiredLevel} / grade ${item.requiredGrade}`;
+    const buttonText = item.unlocked ? (isProduct ? 'Bestil' : 'Tag opgaven') : `Level ${item.requiredLevel} · Grade ${item.requiredGrade}`;
     return `<article class="card ${item.unlocked ? '' : 'locked'}">
         <div class="card-icon"><i class="${escapeHtml(item.icon || 'fa-solid fa-box')}"></i></div>
         <h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.description)}</p>
         <div class="meta"><span>Level ${item.requiredLevel}</span><span>Grade ${item.requiredGrade}</span>${isProduct ? `<span>${item.deliveryMin}-${item.deliveryMax} min.</span>` : `<span>+${money(item.xp)} XP</span>`}</div>
-        <div class="price">${isProduct ? `$${money(item.price)}` : `$${money(item.money)} belønning`}</div>
+        <div class="price">${isProduct ? `$${money(item.price)}` : `$${money(item.money)}`}</div>
         <button class="primary action" data-kind="${kind}" data-id="${escapeHtml(item.id)}" ${item.unlocked ? '' : 'disabled'}>${buttonText}</button>
     </article>`;
 }
 
 function renderOverview() {
     const p = state.player;
-    const orderText = state.activeOrder ? (state.activeOrder.status === 'ready' ? 'Klar til afhentning' : `Klar om ${clock(remaining(state.activeOrder.readyAt))}`) : 'Ingen aktiv';
-    const missionText = state.activeMission ? (state.activeMission.status === 'ready' ? 'GPS modtaget' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen aktiv';
+    const orderText = state.activeOrder ? (state.activeOrder.status === 'ready' ? 'Klar til afhentning' : `Klar om ${clock(remaining(state.activeOrder.readyAt))}`) : 'Ingen';
+    const missionText = state.activeMission ? (state.activeMission.status === 'ready' ? 'GPS klar' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen';
     content.innerHTML = `<div class="hero-grid">
-        <div class="hero"><span class="eyebrow">DIN POSITION</span><h2>Bevis dit værd for forbindelsen</h2><p>Gennemfør opgaver for at optjene XP. Højere level og banderang låser op for bedre varer, større belønninger og mere værdifulde leveringer.</p></div>
-        <div class="stat-stack"><div class="stat"><span>Fuldførte missioner</span><strong>${p.completedMissions}</strong></div><div class="stat"><span>Næste level</span><strong>${p.nextLevelXp ? `${money(p.nextLevelXp - p.xp)} XP` : 'Maksimum'}</strong></div></div>
-    </div><div class="grid" style="margin-top:14px"><div class="card"><h3>Aktiv mission</h3><p>${missionText}</p><button class="secondary switch" data-tab="missions">Se missioner</button></div><div class="card"><h3>Aktiv levering</h3><p>${orderText}</p><button class="secondary switch" data-tab="delivery">Se levering</button></div><div class="card"><h3>Tilgængelige varer</h3><p>${state.products.filter(x=>x.unlocked).length} af ${state.products.length} varer er låst op.</p><button class="secondary switch" data-tab="shop">Åbn markedet</button></div></div>`;
+        <div class="hero"><span class="eyebrow">STATUS</span><h2>Arbejd dig op</h2><p>Tag opgaver, tjen XP og lås op for flere varer.</p></div>
+        <div class="stat-stack"><div class="stat"><span>Opgaver klaret</span><strong>${p.completedMissions}</strong></div><div class="stat"><span>Næste level</span><strong>${p.nextLevelXp ? `${money(p.nextLevelXp - p.xp)} XP` : 'Maksimum'}</strong></div></div>
+    </div><div class="grid" style="margin-top:14px"><div class="card"><h3>Aktiv opgave</h3><p>${missionText}</p><button class="secondary switch" data-tab="missions">Se opgaver</button></div><div class="card"><h3>Aktiv ordre</h3><p>${orderText}</p><button class="secondary switch" data-tab="delivery">Se ordre</button></div><div class="card"><h3>Varer åbnet</h3><p>${state.products.filter(x=>x.unlocked).length} af ${state.products.length} varer åbne.</p><button class="secondary switch" data-tab="shop">Se varer</button></div></div>`;
 }
 
 function renderMissions() {
-    content.innerHTML = `<div class="section-head"><div><h2>Missioner</h2><p>Gennemfør opgaver og opbyg dit ry.</p></div><span class="pill">Cooldown: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'ready' ? 'GPS-positionen er klar.' : `Kontakten gør pakken klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
+    content.innerHTML = `<div class="section-head"><div><h2>Opgaver</h2><p>Vælg en opgave fra kontakten.</p></div><span class="pill">Ny opgave: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'ready' ? 'GPS er klar.' : `Pakken bliver gjort klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
 }
 
 function renderShop() {
-    content.innerHTML = `<div class="section-head"><div><h2>Diskrete varer</h2><p>Betaling sker nu. GPS sendes, når leveringen er klar.</p></div><span class="pill">Én aktiv ordre ad gangen</span></div><div class="grid">${state.products.map(x=>card(x,'product')).join('')}</div>`;
+    content.innerHTML = `<div class="section-head"><div><h2>Varer</h2><p>Du betaler nu. GPS kommer, når ordren er klar.</p></div><span class="pill">Maks. én ordre</span></div><div class="grid">${state.products.map(x=>card(x,'product')).join('')}</div>`;
 }
 
 function renderDelivery() {
     const o = state.activeOrder;
-    content.innerHTML = `<div class="section-head"><div><h2>Din levering</h2><p>Leveringen forsvinder, hvis den ikke afhentes i tide.</p></div></div>${!o ? '<div class="empty">Du har ingen aktiv levering.</div>' : `<div class="delivery"><div><h3>${escapeHtml(o.label)} · ${o.amount}x</h3><p>${o.status === 'ready' ? 'Leveringen er klar. GPS-positionen er sendt.' : `Forventet klar om ${clock(remaining(o.readyAt))}`}</p></div>${o.status === 'ready' && o.coords ? '<button class="primary gps">Marker GPS</button>' : ''}</div>`}`;
+    content.innerHTML = `<div class="section-head"><div><h2>Din ordre</h2><p>Hent ordren, før tiden løber ud.</p></div></div>${!o ? '<div class="empty">Du har ingen aktiv ordre.</div>' : `<div class="delivery"><div><h3>${escapeHtml(o.label)} · ${o.amount}x</h3><p>${o.status === 'ready' ? 'Ordren er klar. GPS er sendt.' : `Klar om ${clock(remaining(o.readyAt))}`}</p></div>${o.status === 'ready' && o.coords ? '<button class="primary gps">Sæt GPS</button>' : ''}</div>`}`;
 }
 
 function render() {

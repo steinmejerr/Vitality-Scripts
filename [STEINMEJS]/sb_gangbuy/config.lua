@@ -15,7 +15,7 @@ Config.Npc = {
     model = `g_m_y_mexgoon_02`,
     coords = vector4(1240.63, -3176.04, 7.09, 271.58),
     scenario = 'WORLD_HUMAN_SMOKING',
-    targetLabel = 'Tal med forbindelsen',
+    targetLabel = 'Tal med kontakten',
     targetIcon = 'fa-solid fa-user-secret'
 }
 
@@ -44,7 +44,7 @@ Config.Levels = {
 Config.Products = {
     radio = {
         label = 'Krypteret radio',
-        description = 'En diskret radio til intern kommunikation.',
+        description = 'Radio til intern kommunikation.',
         item = 'radio',
         amount = 1,
         price = 2500,
@@ -55,7 +55,7 @@ Config.Products = {
     },
     rope = {
         label = 'Kraftigt reb',
-        description = 'Udstyr til opgaver, hvor almindeligt værktøj ikke rækker.',
+        description = 'Kraftigt reb til forskellige opgaver.',
         item = 'pl_rope',
         amount = 1,
         price = 4500,
@@ -66,7 +66,7 @@ Config.Products = {
     },
     drill = {
         label = 'Industriboremaskine',
-        description = 'Kraftigt udstyr leveret uden spørgsmål.',
+        description = 'Industriboremaskine.',
         item = 'pl_drill',
         amount = 1,
         price = 11000,
@@ -77,7 +77,7 @@ Config.Products = {
     },
     hackingdevice = {
         label = 'Hacking-enhed',
-        description = 'Specialudstyr til avancerede opgaver.',
+        description = 'Elektronisk udstyr til særlige opgaver.',
         item = 'pl_hackingdevice',
         amount = 1,
         price = 22000,
@@ -90,8 +90,8 @@ Config.Products = {
 
 Config.Missions = {
     first_contact = {
-        label = 'Første kontakt',
-        description = 'Hent en mindre pakke og bring forbindelsen ro i sindet.',
+        label = 'Hent pakken',
+        description = 'Hent pakken på den angivne lokation.',
         requiredLevel = 1,
         requiredGrade = 0,
         xp = 120,
@@ -100,8 +100,8 @@ Config.Missions = {
         icon = 'fa-solid fa-box'
     },
     dead_drop = {
-        label = 'Død postkasse',
-        description = 'Find en skjult forsendelse, før andre får øje på den.',
+        label = 'Skjult pakke',
+        description = 'Find og hent en skjult pakke.',
         requiredLevel = 3,
         requiredGrade = 1,
         xp = 240,
@@ -110,8 +110,8 @@ Config.Missions = {
         icon = 'fa-solid fa-location-dot'
     },
     sensitive_cargo = {
-        label = 'Følsom last',
-        description = 'Hent en værdifuld pakke fra en risikabel kontakt.',
+        label = 'Vigtig levering',
+        description = 'Hent pakken hos kontakten.',
         requiredLevel = 5,
         requiredGrade = 2,
         xp = 420,
@@ -140,6 +140,6 @@ Config.Blip = {
     colour = 2,
     scale = 0.82,
     routeColour = 2,
-    labelOrder = 'Afhent levering',
-    labelMission = 'Missionens afhentning'
+    labelOrder = 'Hent ordre',
+    labelMission = 'Hent pakke'
 }
