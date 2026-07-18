@@ -244,7 +244,7 @@ body, #root, .app-wrapper {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 7vh;
-  border: 1px solid rgba(125, 93, 255, 0.16);
+  border: 1px solid rgba(54, 227, 116, 0.18);
   border-radius: 12px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
   transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
@@ -256,8 +256,8 @@ body, #root, .app-wrapper {
   cursor: pointer;
   transform: translateY(-2px);
   background-color: var(--sb-slot-hover);
-  border-color: rgba(125, 93, 255, 0.55);
-  box-shadow: 0 12px 22px rgba(0,0,0,0.24), 0 0 0 1px rgba(125, 93, 255, 0.14);
+  border-color: rgba(54, 227, 116, 0.55);
+  box-shadow: 0 12px 22px rgba(0,0,0,0.24), 0 0 0 1px rgba(54, 227, 116, 0.14);
 }
 
 .inventory-slot-number {
@@ -396,9 +396,9 @@ body, #root, .app-wrapper {
 
 .inventory-control .inventory-control-button:hover {
   transform: translateY(-1px);
-  border-color: rgba(125, 93, 255, 0.36);
+  border-color: rgba(54, 227, 116, 0.36);
   background: rgba(18, 20, 28, 0.98);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(125,93,255,0.12);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22), 0 0 0 1px rgba(54,227,116,0.12);
 }
 
 .inventory-control .inventory-control-button:active {
@@ -429,7 +429,7 @@ body, #root, .app-wrapper {
 }
 
 .context-menu-item:hover {
-  background: rgba(125, 93, 255, 0.14);
+  background: rgba(54, 227, 116, 0.14);
 }
 
 .tooltip-wrapper {
