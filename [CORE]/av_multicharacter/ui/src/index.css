@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* background: url("https://files.fivemerr.com/images/a0eaec46-6fa1-40b4-921d-241ac2ed3080.png") no-repeat center center fixed;
+  background-size: cover; */
+  box-sizing: border-box;
+  background-color: transparent !important;
+  font-family: "SF Pro Display", sans-serif;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgba(120, 120, 120, 0.15);
+}

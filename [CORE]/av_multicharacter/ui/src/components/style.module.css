@@ -1,0 +1,46 @@
+.container {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle,
+      rgba(33, 36, 46, 0.05) 35%,
+      rgba(33, 36, 46, 0.95) 100%);
+}
+
+.panel {
+  margin-top: 2%;
+  margin-left: 2%;
+  height: auto;
+  max-height: 800px;
+  min-height: 200px;
+  padding: 25px;
+}
+
+.arrows {
+  position: absolute;
+  display: flex;
+  bottom: 0;
+  right: 0;
+  margin-bottom: 30px;
+  margin-right: 30px;
+}
+
+.arrowLeft,
+.arrowRight {
+  color: rgba(255, 255, 255, 0.25);
+  transition: color 0.3s ease-in-out, transform 0.1s ease-in-out;
+  user-select: none;
+}
+
+.arrowLeft:hover,
+.arrowRight:hover {
+  color: white;
+  cursor: pointer;
+}
+
+.arrowLeft:active,
+.arrowRight:active {
+  transform: scale(0.99);
+  opacity: 0.7;
+}

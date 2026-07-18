@@ -1,0 +1,51 @@
+.input {
+    background: radial-gradient(circle,
+      rgba(54, 59, 75, 0.1) 0%,
+      rgba(54, 59, 75, 0.25) 90%);
+    border: solid 1px rgba(255, 255, 255, 0.15);
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 1px;
+}
+
+.label {
+    color: white;
+    letter-spacing: 1px;
+}
+
+.dropdown {
+    background: radial-gradient(circle,
+      rgba(54, 59, 75, 0.5) 0%,
+      rgba(54, 59, 75, 0.75) 90%);
+    background-color: rgba(54, 59, 75,0.2);
+    border: solid 1px rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+}
+
+.option:hover {
+    background-color: rgba(99, 230, 190, 0.45) !important;
+    color: white;
+}
+
+.day {
+    color: white;
+}
+
+.day:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+.yearsListControl:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+.monthsListControl:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+.calendarHeaderControl:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+.day[data-selected] {
+    background-color: rgba(99, 230, 190, 0.5) !important;
+}

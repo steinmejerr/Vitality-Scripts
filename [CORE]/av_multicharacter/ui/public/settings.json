@@ -1,0 +1,14 @@
+{
+    "min_year": "1950",
+    "max_year": "2010",
+    "genders": [
+        {
+            "value": "0",
+            "label": "Male"
+        },
+        {
+            "value": "1",
+            "label": "Female"
+        }
+    ]
+}
