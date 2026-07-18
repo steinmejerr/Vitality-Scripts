@@ -99,7 +99,7 @@ export const Editor = () => {
                     <Text c="white" fw={600}>Create Entity</Text>
                         <Flex direction="column" mt="md">
                             <TextInput placeholder="Model Name" classNames={classes} value={model} onChange={(e)=> {setModel(e.target.value)}} size="xs"/>
-                            <Button size="xs" ml="auto" mt="sm" variant="light" color="cyan" onClick={()=>{handleSpawn()}}>Spawn</Button>
+                            <Button size="xs" ml="auto" mt="sm" variant="light" color="#36e374" onClick={()=>{handleSpawn()}}>Spawn</Button>
                         </Flex>
                         <Text c="white" fw={600} mt="xs">Current Entities</Text>
                         <ScrollArea 
@@ -113,7 +113,7 @@ export const Editor = () => {
                                 <Group key={index} p="sm" bg={index % 2 === 1 ? "transparent" : "rgba(0,0,0,0.15)"} style={{borderRadius: '6px'}} >
                                     <Text c="gray.3" fz="sm">{entity.model}</Text>
                                     <Group ml="auto" gap="xs">
-                                        <ActionIcon size="xs" c="cyan" variant="transparent" onClick={()=>{handleCopy(entity)}}>
+                                        <ActionIcon size="xs" c="#36e374" variant="transparent" onClick={()=>{handleCopy(entity)}}>
                                             <IconCopy style={{width: "14px", height: "14px"}} stroke={1.5}/>
                                         </ActionIcon>
                                         <ActionIcon size="xs" c="orange" variant="transparent" onClick={()=>{handleEdit(entity)}}>

@@ -35,7 +35,7 @@ export const DeletePanel = ({ setScreen, setTitle }: Properties) => {
                     if (!character) return;
                     handleCancel()
                 }}>{lang.delete_cancel_button}</Button>
-                <Button className={classes.select} autoContrast color="rgba(99, 230, 190, 0.55)" c="white" fw={500} lts={1} onClick={() => {
+                <Button className={classes.select} autoContrast color="#36e374" c="white" fw={500} lts={1} onClick={() => {
                     if (!character) return;
                     handleConfirm()
                 }} disabled={answer !== 4}>{lang.delete_button}</Button>

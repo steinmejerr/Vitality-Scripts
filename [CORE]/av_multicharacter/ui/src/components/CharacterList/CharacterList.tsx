@@ -89,7 +89,7 @@ export const CharacterList = ({ setScreen, setTitle }: Properties) => {
             <>
                 {current.isNew ? 
                     <>
-                        <Button className={classes.select} autoContrast color="rgba(99, 230, 190, 0.55)" c="white" fw={500} mt="sm" fullWidth lts={1} onClick={() => {
+                        <Button className={classes.select} autoContrast color="#36e374" c="white" fw={500} mt="sm" fullWidth lts={1} onClick={() => {
                             if (!current) return;
                             handleRegister()
                         }}>{lang.create_character_button}</Button>
@@ -102,7 +102,7 @@ export const CharacterList = ({ setScreen, setTitle }: Properties) => {
                                 handleDelete()
                             }}>{lang.delete_character_button}</Button>
                         }
-                        <Button className={classes.select} autoContrast color="rgba(99, 230, 190, 0.55)" c="white" fw={500} lts={1} onClick={() => {
+                        <Button className={classes.select} autoContrast color="#36e374" c="white" fw={500} lts={1} onClick={() => {
                             if (!current) return;
                             handlePlay()
                         }}>{lang.select_character_button}</Button>

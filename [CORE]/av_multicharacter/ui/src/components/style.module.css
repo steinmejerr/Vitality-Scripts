@@ -3,9 +3,7 @@
   display: flex;
   height: 100vh;
   width: 100%;
-  background: radial-gradient(circle,
-      rgba(33, 36, 46, 0.05) 35%,
-      rgba(33, 36, 46, 0.95) 100%);
+  background: radial-gradient(circle at 38% 45%, rgba(54, 227, 116, 0.03) 0%, rgba(8, 9, 10, 0.18) 42%, rgba(4, 5, 6, 0.92) 100%);
 }
 
 .panel {
@@ -15,6 +13,11 @@
   max-height: 800px;
   min-height: 200px;
   padding: 25px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 20, 21, 0.72), rgba(8, 9, 10, 0.84));
+  border: 1px solid rgba(54, 227, 116, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
 }
 
 .arrows {
@@ -28,14 +31,14 @@
 
 .arrowLeft,
 .arrowRight {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(54, 227, 116, 0.45);
   transition: color 0.3s ease-in-out, transform 0.1s ease-in-out;
   user-select: none;
 }
 
 .arrowLeft:hover,
 .arrowRight:hover {
-  color: white;
+  color: #36e374;
   cursor: pointer;
 }
 

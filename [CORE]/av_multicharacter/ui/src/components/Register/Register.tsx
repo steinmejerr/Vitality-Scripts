@@ -92,7 +92,7 @@ export const Register = ({setScreen, setTitle}:Properties) => {
     <Group justify="space-between" mt="sm" grow>
         <Button className={classes.delete} autoContrast color="rgba(240, 62, 62, 0.55)" c="white" fw={500} lts={1} onClick={() => {handleCancel()
         }} disabled={loading}>{lang.button_cancel}</Button>
-        <Button className={classes.select} autoContrast color="rgba(99, 230, 190, 0.55)" c="white" fw={500} lts={1} disabled={!canSave || loading} onClick={() => {handleSave()}}>{lang.button_continue}</Button>
+        <Button className={classes.select} autoContrast color="#36e374" c="white" fw={500} lts={1} disabled={!canSave || loading} onClick={() => {handleSave()}}>{lang.button_continue}</Button>
     </Group>
   </Flex>
 };

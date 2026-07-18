@@ -4,11 +4,11 @@
     "genders": [
         {
             "value": "0",
-            "label": "Mand"
+            "label": "Male"
         },
         {
             "value": "1",
-            "label": "Kvinde"
+            "label": "Female"
         }
     ]
 }
