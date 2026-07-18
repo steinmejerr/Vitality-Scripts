@@ -362,3 +362,31 @@
         right: 628px !important;
     }
 }
+
+/* Integrated right-side backdrop – no boxed black wrapper */
+.clothing-container,
+.tattoos-container {
+    background:
+        radial-gradient(circle at 92% 18%, rgba(54, 227, 116, 0.075), transparent 34%),
+        linear-gradient(90deg, rgba(8, 9, 11, 0) 0%, rgba(8, 9, 11, 0.52) 10%, rgba(8, 9, 11, 0.88) 30%, rgba(8, 9, 11, 0.96) 100%) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(3px) !important;
+}
+
+.clothing-container::after,
+.tattoos-container::after {
+    content: none !important;
+    display: none !important;
+}
+
+.clothing-navigation,
+.tattoos-navigation,
+.clothing-body,
+.tattoos-body,
+.clothing-footer,
+.tattoos-footer {
+    position: relative !important;
+    z-index: 1 !important;
+}
