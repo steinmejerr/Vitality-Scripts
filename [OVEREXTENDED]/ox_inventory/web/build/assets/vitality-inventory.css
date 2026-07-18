@@ -87,10 +87,25 @@ body, #root, .app-wrapper {
   pointer-events: none;
 }
 
+.inventory-wrapper > .inventory-grid-wrapper {
+  transform-style: preserve-3d;
+  transform: var(--sb-skew-left);
+  transform-origin: left center;
+}
+
+.inventory-wrapper > .inventory-grid-wrapper > * {
+  transform: translateZ(0);
+}
+
 .inventory-grid-wrapper.inventory-player,
 .inventory-grid-wrapper.inventory-container,
 .inventory-grid-wrapper.inventory-shop,
-.inventory-grid-wrapper.inventory-crafting {
+.inventory-grid-wrapper.inventory-crafting,
+.inventory-grid-wrapper.inventory-other,
+.inventory-grid-wrapper.inventory-drop,
+.inventory-grid-wrapper.inventory-trunk,
+.inventory-grid-wrapper.inventory-glovebox,
+.inventory-grid-wrapper.inventory-stash {
   transform-style: preserve-3d;
   transform: var(--sb-skew-left);
   transform-origin: left center;
@@ -99,7 +114,12 @@ body, #root, .app-wrapper {
 .inventory-grid-wrapper.inventory-player > *,
 .inventory-grid-wrapper.inventory-container > *,
 .inventory-grid-wrapper.inventory-shop > *,
-.inventory-grid-wrapper.inventory-crafting > * {
+.inventory-grid-wrapper.inventory-crafting > *,
+.inventory-grid-wrapper.inventory-other > *,
+.inventory-grid-wrapper.inventory-drop > *,
+.inventory-grid-wrapper.inventory-trunk > *,
+.inventory-grid-wrapper.inventory-glovebox > *,
+.inventory-grid-wrapper.inventory-stash > * {
   transform: translateZ(0);
 }
 
