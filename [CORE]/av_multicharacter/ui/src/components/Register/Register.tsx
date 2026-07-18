@@ -54,7 +54,7 @@ export const Register = ({setScreen, setTitle}:Properties) => {
     <TextInput label={lang.firstName} withAsterisk classNames={classes} onChange={(e)=>{handleChange("firstname", e.target.value)}} disabled={loading} maxLength={20}/>
     <TextInput label={lang.lastName} withAsterisk classNames={classes} onChange={(e)=>{handleChange("lastname", e.target.value)}} disabled={loading} maxLength={20}/>
     <TextInput label={lang.nationality} withAsterisk classNames={classes} onChange={(e)=>{handleChange("nationality", e.target.value)}} disabled={loading} maxLength={20}/>
-    <Select label={lang.gender} data={settings.genders} withAsterisk allowDeselect={false} classNames={classes} onFocus={()=>{}} onChange={(e)=>{if(!e) return; handleChange("sex", e)}} disabled={loading}/>
+    <Select label={lang.gender} data={settings.genders} withAsterisk allowDeselect={false} classNames={{ ...classes, dropdown: classes.genderDropdown }} onFocus={()=>{}} onChange={(e)=>{if(!e) return; handleChange("sex", e)}} disabled={loading}/>
     <DatePickerInput
       label={lang.birthdate}
       valueFormat="MM-DD-YYYY"
@@ -68,6 +68,7 @@ export const Register = ({setScreen, setTitle}:Properties) => {
         handleChange("birthdate", formatted)
       }}
       classNames={classes}
+      popoverProps={{ classNames: { dropdown: classes.birthdateDropdown } }}
       styles={{
         levelsGroup: {
           color: "white"

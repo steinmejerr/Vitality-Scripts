@@ -382,6 +382,11 @@
   resolved "https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.32.1.tgz"
   integrity sha512-WQFLZ9c42ECqEjwg/GHHsouij3pzLXkFdz0UxHa/0OM12LzvX7DzedlY0SIEly2v18YZLRhCRoHZDxbBSWoGYg==
 
+"@rollup/rollup-linux-x64-musl@4.32.1":
+  version "4.32.1"
+  resolved "https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.32.1.tgz"
+  integrity sha512-BLoiyHDOWoS3uccNSADMza6V6vCNiphi94tQlVIL5de+r6r/CCQuNnerf+1g2mnk2b6edp5dk0nhdZ7aEjOBsA==
+
 "@tabler/icons-react@^3.5.0":
   version "3.29.0"
   resolved "https://packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/npm/npm-public/@tabler/icons-react/-/icons-react-3.29.0.tgz"
