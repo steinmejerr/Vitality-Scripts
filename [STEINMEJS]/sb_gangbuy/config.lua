@@ -8,7 +8,7 @@ Config.InteractionDistance = 2.0
 Config.OrderPickupDuration = 6500
 Config.MissionPickupDuration = 5500
 Config.OrderExpireMinutes = 45
-Config.MissionCooldownMinutes = 10
+Config.MissionCooldownMinutes = 60
 Config.MaxActiveOrders = 1
 
 Config.Npc = {
