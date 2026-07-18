@@ -21,8 +21,7 @@
 .swipe-container {
     width: calc(100vw - 540px) !important;
 }
-
- .clothing-container,
+.clothing-container,
 .tattoos-container {
     width: 540px !important;
     height: calc(100vh - 40px) !important;
@@ -31,17 +30,20 @@
     color: var(--vitality-text) !important;
     background: transparent !important;
     border: none !important;
-    border-radius: 18px !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
     overflow: hidden !important;
 }
 
+
+
 .clothing-container::before,
 .tattoos-container::before {
-    display: none !important;
     content: none !important;
 }
+
+
 
 
 .clothing-navigation,
