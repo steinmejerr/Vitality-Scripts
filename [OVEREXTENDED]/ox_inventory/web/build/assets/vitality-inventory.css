@@ -36,11 +36,13 @@ body, #root, .app-wrapper {
 .app-wrapper {
   width: 100%;
   height: 100%;
-  backdrop-filter: blur(4px);
+  background: transparent !important;
+  backdrop-filter: none !important;
 }
 
 .inventory-wrapper {
   box-sizing: border-box;
+  background: transparent !important;
   justify-content: center;
   align-items: center;
   gap: 2vw;
@@ -511,4 +513,10 @@ body, #root, .app-wrapper {
   .inventory-grid-header-wrapper p:first-child {
     max-width: 50%;
   }
+}
+
+#root::before, #root::after, .app-wrapper::before, .app-wrapper::after {
+  content: none !important;
+  display: none !important;
+  background: transparent !important;
 }
