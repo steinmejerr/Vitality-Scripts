@@ -41,8 +41,8 @@
 
 
 .genderDropdown {
-    width: max-content !important;
-    min-width: 0 !important;
+    width: 360px !important;
+    min-width: 360px !important;
     max-width: none !important;
     background: transparent !important;
     border: none !important;
