@@ -132,6 +132,10 @@ Config.Pickup = {
     targetIcon = 'fa-solid fa-box-open'
 }
 
+Config.TrunkInteractionDistance = 2.4
+Config.TrunkStoreDuration = 3500
+Config.TrunkRemoveDuration = 3500
+
 Config.Blip = {
     sprite = 478,
     colour = 2,

@@ -321,7 +321,7 @@ lib.callback.register('sb_gangbuy:server:getMenuData', function(source)
         allowed=true, mode='player',
         player={name=xPlayer.getName(),gang=gang.label or xPlayer.job.label,gradeLabel=xPlayer.job.grade_label or tostring(grade),grade=grade,xp=progress.xp,level=progress.level,nextLevelXp=getNextLevel(progress.level),completedMissions=progress.completed_missions},
         products=serializeProducts(progress.level,grade),missions=serializeMissions(progress.level,grade),
-        activeMission=mission and {id=mission.id,label=mission.label,status=mission.status,readyAt=mission.readyAt,coords=mission.status=='ready' and mission.coords or nil} or nil,
+        activeMission=mission and {id=mission.id,label=mission.label,status=mission.status,readyAt=mission.readyAt,coords=mission.status=='ready' and mission.coords or nil,vehicleNetId=mission.vehicleNetId,vehiclePlate=mission.vehiclePlate} or nil,
         activeOrder=orderForClient(order),missionCooldown=math.max(0,(Player(source).state.sbGangbuyMissionCooldown or 0)-os.time())
     }
 end)
@@ -375,8 +375,64 @@ lib.callback.register('sb_gangbuy:server:collectMission', function(source, missi
     if mission.status ~= 'ready' then return {success=false,message='Pakken er ikke klar endnu.'} end
     if os.time()<mission.readyAt then return {success=false,message='Pakken er ikke klar endnu.'} end
 
+    mission.status = 'carrying'
+    mission.vehicleNetId = nil
+    mission.vehiclePlate = nil
+    return {success=true,stage='return',message='Du har pakken. Læg den i et bagagerum, før du tager den med tilbage.'}
+end)
+
+local function validateMissionVehicleDistance(source, netId)
+    local ped = GetPlayerPed(source)
+    if ped == 0 then return false end
+    local vehicle = NetworkGetEntityFromNetworkId(tonumber(netId) or 0)
+    if vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    return #(GetEntityCoords(ped) - GetEntityCoords(vehicle)) <= 8.0
+end
+
+lib.callback.register('sb_gangbuy:server:storeMissionPackage', function(source, missionId, vehicleNetId, vehiclePlate)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local allowed = getGangAccess(xPlayer)
+    local mission = activeMissions[source]
+
+    if not allowed or not mission or mission.id ~= missionId or mission.status ~= 'carrying' then
+        return { success = false, message = 'Du har ikke en pakke, der kan lægges i bagagerummet.' }
+    end
+
+    if not validateMissionVehicleDistance(source, vehicleNetId) then
+        return { success = false, message = 'Du skal stå ved bilen.' }
+    end
+
+    mission.status = 'in_trunk'
+    mission.vehicleNetId = tonumber(vehicleNetId)
+    mission.vehiclePlate = tostring(vehiclePlate or ''):gsub('^%s*(.-)%s*$', '%1')
+    return { success = true, message = 'Pakken ligger i bagagerummet.' }
+end)
+
+lib.callback.register('sb_gangbuy:server:removeMissionPackage', function(source, missionId, vehicleNetId, vehiclePlate)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local allowed = getGangAccess(xPlayer)
+    local mission = activeMissions[source]
+
+    if not allowed or not mission or mission.id ~= missionId or mission.status ~= 'in_trunk' then
+        return { success = false, message = 'Der ligger ikke en missionspakke i bagagerummet.' }
+    end
+
+    if not validateMissionVehicleDistance(source, vehicleNetId) then
+        return { success = false, message = 'Du skal stå ved bilen.' }
+    end
+
+    local normalizedPlate = tostring(vehiclePlate or ''):gsub('^%s*(.-)%s*$', '%1')
+    local sameVehicle = tonumber(vehicleNetId) == tonumber(mission.vehicleNetId)
+        or (normalizedPlate ~= '' and normalizedPlate == mission.vehiclePlate)
+
+    if not sameVehicle then
+        return { success = false, message = 'Pakken ligger ikke i dette køretøj.' }
+    end
+
     mission.status = 'returning'
-    return {success=true,stage='return',message='Du har pakken. Aflever den tilbage til kontakten.'}
+    mission.vehicleNetId = nil
+    mission.vehiclePlate = nil
+    return { success = true, message = 'Du har taget pakken ud. Aflever den hos kontakten.' }
 end)
 
 lib.callback.register('sb_gangbuy:server:completeMission', function(source, missionId)

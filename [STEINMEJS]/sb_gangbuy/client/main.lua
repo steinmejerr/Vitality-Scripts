@@ -4,6 +4,7 @@ local missionCarryObject
 local menuOpen = false
 local currentPickup
 local missionReturn
+local missionPackageState
 
 local function notify(description, type)
     lib.notify({ title = 'Kontakten', description = description, type = type or 'inform' })
@@ -46,14 +47,29 @@ local function startCarryingMissionPackage()
     SetModelAsNoLongerNeeded(model)
 end
 
-local function setMissionReturn(data)
-    missionReturn = data and { id = data.id, label = data.label } or nil
-    if missionReturn then
+local function setMissionPackageState(data)
+    missionPackageState = data and {
+        id = data.id,
+        label = data.label,
+        status = data.status,
+        vehicleNetId = data.vehicleNetId,
+        vehiclePlate = data.vehiclePlate
+    } or nil
+
+    missionReturn = missionPackageState and missionPackageState.status == 'returning' and {
+        id = missionPackageState.id,
+        label = missionPackageState.label
+    } or nil
+
+    if missionPackageState and (missionPackageState.status == 'carrying' or missionPackageState.status == 'returning') then
         startCarryingMissionPackage()
-        local c = Config.Npc.coords
-        SetNewWaypoint(c.x, c.y)
     else
         stopCarryingMissionPackage()
+    end
+
+    if missionPackageState and missionPackageState.status == 'returning' then
+        local c = Config.Npc.coords
+        SetNewWaypoint(c.x, c.y)
     end
 end
 
@@ -69,10 +85,13 @@ local function openMenu()
         return notify((data and data.message) or 'Du har ikke adgang.', 'error')
     end
 
-    if data.activeMission and data.activeMission.status == 'returning' and not missionReturn then
-        setMissionReturn(data.activeMission)
-    elseif not data.activeMission and missionReturn then
-        setMissionReturn(nil)
+    if data.activeMission and data.activeMission.status then
+        local currentStatus = missionPackageState and missionPackageState.status
+        if currentStatus ~= data.activeMission.status then
+            setMissionPackageState(data.activeMission)
+        end
+    elseif not data.activeMission and missionPackageState then
+        setMissionPackageState(nil)
     end
 
     menuOpen = true
@@ -145,7 +164,7 @@ local function createPickup(kind, payload)
                     notify(result.message, 'success')
                     clearPickup()
                     if kind == 'mission' and result.stage == 'return' then
-                        setMissionReturn({ id = payload.id, label = payload.label })
+                        setMissionPackageState({ id = payload.id, label = payload.label, status = 'carrying' })
                     end
                     SendNUIMessage({ action = 'refreshRequested' })
                 else
@@ -157,6 +176,137 @@ local function createPickup(kind, payload)
 
     SetNewWaypoint(coords.x, coords.y)
 end
+
+local function getVehiclePlate(vehicle)
+    return (GetVehicleNumberPlateText(vehicle) or ''):gsub('^%s*(.-)%s*$', '%1')
+end
+
+local function isAtVehicleTrunk(vehicle)
+    if not vehicle or vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    local ped = PlayerPedId()
+    local bootBone = GetEntityBoneIndexByName(vehicle, 'boot')
+    local trunkCoords = bootBone ~= -1 and GetWorldPositionOfEntityBone(vehicle, bootBone) or GetOffsetFromEntityInWorldCoords(vehicle, 0.0, -2.0, 0.0)
+    return #(GetEntityCoords(ped) - trunkCoords) <= (Config.TrunkInteractionDistance or 2.4)
+end
+
+exports.ox_target:addGlobalVehicle({
+    {
+        name = 'sb_gangbuy_store_mission_package',
+        icon = 'fa-solid fa-box',
+        label = 'Læg pakken i bagagerummet',
+        bones = { 'boot' },
+        distance = Config.TrunkInteractionDistance or 2.4,
+        canInteract = function(entity)
+            return missionPackageState ~= nil
+                and missionPackageState.status == 'carrying'
+                and not IsPedInAnyVehicle(PlayerPedId(), false)
+                and isAtVehicleTrunk(entity)
+        end,
+        onSelect = function(data)
+            local vehicle = data.entity
+            if not missionPackageState or missionPackageState.status ~= 'carrying' then return end
+            if GetVehicleDoorLockStatus(vehicle) > 1 then
+                return notify('Bagagerummet er låst.', 'error')
+            end
+
+            SetVehicleDoorOpen(vehicle, 5, false, false)
+            local completed = lib.progressCircle({
+                duration = Config.TrunkStoreDuration or 3500,
+                position = 'bottom',
+                label = 'Lægger pakken i bagagerummet...',
+                canCancel = true,
+                disable = { move = true, car = true, combat = true },
+                anim = { dict = 'anim@heists@box_carry@', clip = 'idle' }
+            })
+
+            if not completed then
+                SetVehicleDoorShut(vehicle, 5, false)
+                return
+            end
+
+            local netId = NetworkGetNetworkIdFromEntity(vehicle)
+            local result = lib.callback.await('sb_gangbuy:server:storeMissionPackage', false, missionPackageState.id, netId, getVehiclePlate(vehicle))
+            SetVehicleDoorShut(vehicle, 5, false)
+
+            if result and result.success then
+                setMissionPackageState({
+                    id = missionPackageState.id,
+                    label = missionPackageState.label,
+                    status = 'in_trunk',
+                    vehicleNetId = netId,
+                    vehiclePlate = getVehiclePlate(vehicle)
+                })
+                notify(result.message, 'success')
+            else
+                notify(result and result.message or 'Pakken kunne ikke lægges i bagagerummet.', 'error')
+            end
+        end
+    },
+    {
+        name = 'sb_gangbuy_remove_mission_package',
+        icon = 'fa-solid fa-box-open',
+        label = 'Tag pakken ud af bagagerummet',
+        bones = { 'boot' },
+        distance = Config.TrunkInteractionDistance or 2.4,
+        canInteract = function(entity)
+            if not missionPackageState or missionPackageState.status ~= 'in_trunk' then return false end
+            local netId = NetworkGetNetworkIdFromEntity(entity)
+            local plate = getVehiclePlate(entity)
+            return (missionPackageState.vehicleNetId and missionPackageState.vehicleNetId == netId)
+                or (missionPackageState.vehiclePlate and missionPackageState.vehiclePlate == plate)
+        end,
+        onSelect = function(data)
+            local vehicle = data.entity
+            if not missionPackageState or missionPackageState.status ~= 'in_trunk' then return end
+            if GetVehicleDoorLockStatus(vehicle) > 1 then
+                return notify('Bagagerummet er låst.', 'error')
+            end
+
+            SetVehicleDoorOpen(vehicle, 5, false, false)
+            local completed = lib.progressCircle({
+                duration = Config.TrunkRemoveDuration or 3500,
+                position = 'bottom',
+                label = 'Tager pakken ud...',
+                canCancel = true,
+                disable = { move = true, car = true, combat = true },
+                anim = { dict = 'anim@heists@box_carry@', clip = 'idle' }
+            })
+
+            if not completed then
+                SetVehicleDoorShut(vehicle, 5, false)
+                return
+            end
+
+            local result = lib.callback.await('sb_gangbuy:server:removeMissionPackage', false, missionPackageState.id, NetworkGetNetworkIdFromEntity(vehicle), getVehiclePlate(vehicle))
+            SetVehicleDoorShut(vehicle, 5, false)
+
+            if result and result.success then
+                setMissionPackageState({ id = missionPackageState.id, label = missionPackageState.label, status = 'returning' })
+                notify(result.message, 'success')
+            else
+                notify(result and result.message or 'Pakken kunne ikke tages ud.', 'error')
+            end
+        end
+    }
+})
+
+CreateThread(function()
+    while true do
+        if missionPackageState and (missionPackageState.status == 'carrying' or missionPackageState.status == 'returning') then
+            local ped = PlayerPedId()
+            if not IsEntityPlayingAnim(ped, 'anim@heists@box_carry@', 'idle', 3) then
+                RequestAnimDict('anim@heists@box_carry@')
+                while not HasAnimDictLoaded('anim@heists@box_carry@') do Wait(25) end
+                TaskPlayAnim(ped, 'anim@heists@box_carry@', 'idle', 8.0, -8.0, -1, 49, 0.0, false, false, false)
+            end
+            DisableControlAction(0, 23, true)
+            DisableControlAction(0, 75, true)
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
 
 CreateThread(function()
     if not loadModel(Config.Npc.model) then return end
@@ -200,7 +350,7 @@ CreateThread(function()
                 local result = lib.callback.await('sb_gangbuy:server:completeMission', false, missionReturn.id)
                 if result and result.success then
                     notify(result.message, 'success')
-                    setMissionReturn(nil)
+                    setMissionPackageState(nil)
                     SendNUIMessage({ action = 'refreshRequested' })
                 else
                     notify(result and result.message or 'Pakken kunne ikke afleveres.', 'error')
