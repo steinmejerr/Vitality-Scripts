@@ -33,13 +33,13 @@ body,
 
 .v-notify-stack {
   position: absolute;
-  width: min(390px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 28px));
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-.v-pos-top-right { top: 24px; right: 24px; }
+.v-pos-top-right { top: 158px; right: 18px; }
 .v-pos-top-left { top: 24px; left: 24px; }
 .v-pos-top { top: 24px; left: 50%; transform: translateX(-50%); }
 .v-pos-bottom-right { bottom: 18vh; right: 24px; flex-direction: column-reverse; }
@@ -52,14 +52,14 @@ body,
   --accent: var(--v-blue);
   position: relative;
   overflow: hidden;
-  padding: 14px 15px 14px 17px;
+  padding: 11px 12px 11px 14px;
   color: var(--v-text);
   background:
     linear-gradient(115deg, rgba(255,255,255,.025), transparent 35%),
     linear-gradient(180deg, var(--v-bg-soft), var(--v-bg));
   border: 1px solid var(--v-border);
-  border-radius: 8px;
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+  border-radius: 7px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
   opacity: 0;
   transform: translateX(24px) scale(.985);
   animation: vNotifyIn 240ms cubic-bezier(.2,.8,.2,1) forwards;
@@ -87,12 +87,12 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 9px;
 }
 
 .v-notify-kicker {
   color: var(--accent);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: .16em;
   text-transform: uppercase;
@@ -100,32 +100,32 @@ body,
 
 .v-notify-title {
   margin-top: 5px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   font-weight: 600;
 }
 
 .v-notify-time {
   flex: 0 0 auto;
-  min-width: 35px;
+  min-width: 31px;
   text-align: right;
   color: var(--v-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
 .v-notify-description {
   margin-top: 5px;
   color: var(--v-muted);
-  font-size: 12.5px;
+  font-size: 11.5px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .v-notify-progress {
   position: absolute;
-  left: 17px;
-  right: 15px;
+  left: 14px;
+  right: 12px;
   bottom: 0;
   height: 2px;
   overflow: hidden;

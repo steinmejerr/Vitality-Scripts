@@ -27,13 +27,60 @@
 
 local settings = require 'resource.settings'
 
+local notifySoundEnabled = GetResourceKvpInt('ox_lib:notifySound') ~= 0
+
+-- Sound is enabled by default until the player explicitly disables it.
+if GetResourceKvpString('ox_lib:notifySoundSet') == nil then
+    notifySoundEnabled = true
+    SetResourceKvpInt('ox_lib:notifySound', 1)
+    SetResourceKvp('ox_lib:notifySoundSet', '1')
+end
+
+local defaultNotifySound = {
+    name = 'SELECT',
+    set = 'HUD_FRONTEND_DEFAULT_SOUNDSET'
+}
+
+local function openNotifySettings()
+    lib.registerContext({
+        id = 'ox_lib_notify_settings',
+        title = 'Notifikationer',
+        options = {
+            {
+                title = 'Notify-lyd',
+                description = notifySoundEnabled and 'Lyden er slået til' or 'Lyden er slået fra',
+                icon = notifySoundEnabled and 'volume-high' or 'volume-xmark',
+                iconColor = notifySoundEnabled and '#36e374' or '#f05a5a',
+                onSelect = function()
+                    notifySoundEnabled = not notifySoundEnabled
+                    SetResourceKvpInt('ox_lib:notifySound', notifySoundEnabled and 1 or 0)
+
+                    lib.notify({
+                        title = 'Notify-lyd',
+                        description = notifySoundEnabled and 'Lyden er nu slået til' or 'Lyden er nu slået fra',
+                        type = notifySoundEnabled and 'success' or 'info',
+                        duration = 2500,
+                        sound = notifySoundEnabled and defaultNotifySound or nil
+                    })
+
+                    SetTimeout(100, openNotifySettings)
+                end
+            }
+        }
+    })
+
+    lib.showContext('ox_lib_notify_settings')
+end
+
+RegisterCommand('notify-settings', openNotifySettings, false)
+
 ---`client`
 ---@param data NotifyProps
 ---@diagnostic disable-next-line: duplicate-set-field
 function lib.notify(data)
-    local sound = settings.notification_audio and data.sound
+    local sound = notifySoundEnabled and (data.sound or defaultNotifySound)
     data.sound = nil
-    data.position = data.position or settings.notification_position
+    data.position = 'top-right'
 
     SendNUIMessage({
         action = 'vitalityNotify',
