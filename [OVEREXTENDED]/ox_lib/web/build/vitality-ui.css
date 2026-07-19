@@ -498,3 +498,18 @@ body,
 [data-mantine-color-scheme] p {
   margin: 0;
 }
+
+
+/* Remove the outer TextUI wrapper while keeping the actual TextUI card */
+html, body, #root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+#root > div,
+#root > div > div {
+  background-color: transparent;
+}
+
+/* FiveM CEF fix: backdrop-filter can render as a large black rectangle behind TextUI. */
+html, body, #root { background: transparent !important; }
