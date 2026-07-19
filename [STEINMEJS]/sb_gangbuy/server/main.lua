@@ -30,7 +30,14 @@ local function reloadRuntime()
     Runtime.gangs, Runtime.products, Runtime.missions = {}, {}, {}
 
     for _, row in ipairs(MySQL.query.await('SELECT job_name, label, minimum_grade FROM sb_gangbuy_gangs') or {}) do
-        Runtime.gangs[row.job_name] = { label = row.label, minimumGrade = tonumber(row.minimum_grade) or 0 }
+        local jobName = tostring(row.job_name or ''):lower():match('^%s*(.-)%s*$')
+        if jobName ~= '' then
+            Runtime.gangs[jobName] = {
+                jobName = jobName,
+                label = row.label,
+                minimumGrade = tonumber(row.minimum_grade) or 0
+            }
+        end
     end
 
     for _, row in ipairs(MySQL.query.await('SELECT * FROM sb_gangbuy_products') or {}) do
@@ -98,12 +105,47 @@ MySQL.ready(function()
     seedRuntimeTables()
 end)
 
+local function normalizeJobName(value)
+    return tostring(value or ''):lower():match('^%s*(.-)%s*$')
+end
+
 local function getGangAccess(xPlayer)
-    if not xPlayer or not xPlayer.job then return false end
-    local gang = Runtime.gangs[xPlayer.job.name]
-    if not gang then return false end
-    local grade = tonumber(xPlayer.job.grade) or 0
-    if grade < (gang.minimumGrade or 0) then return false end
+    if not xPlayer or not xPlayer.job then
+        return false, nil, 0, 'Kunne ikke hente dit ESX-job.'
+    end
+
+    local jobName = normalizeJobName(xPlayer.job.name)
+    local grade = tonumber(xPlayer.job.grade) or tonumber(xPlayer.job.grade_level) or 0
+    local gang = Runtime.gangs[jobName]
+
+    -- Slå direkte op i databasen som fallback. Det gør nye bander tilgængelige
+    -- med det samme, selv hvis runtime-cachen af en eller anden grund er forældet.
+    if not gang and jobName ~= '' then
+        local row = MySQL.single.await([[
+            SELECT job_name, label, minimum_grade
+            FROM sb_gangbuy_gangs
+            WHERE LOWER(TRIM(job_name)) = ?
+            LIMIT 1
+        ]], { jobName })
+
+        if row then
+            gang = {
+                jobName = normalizeJobName(row.job_name),
+                label = row.label,
+                minimumGrade = tonumber(row.minimum_grade) or 0
+            }
+            Runtime.gangs[jobName] = gang
+        end
+    end
+
+    if not gang then
+        return false, nil, grade, ('Jobbet "%s" er ikke tilføjet i Gangbuy Admin.'):format(jobName ~= '' and jobName or 'ukendt')
+    end
+
+    if grade < (gang.minimumGrade or 0) then
+        return false, gang, grade, ('Du skal mindst være grade %s. Din grade er %s.'):format(gang.minimumGrade or 0, grade)
+    end
+
     return true, gang, grade
 end
 
@@ -265,8 +307,13 @@ end, false)
 
 lib.callback.register('sb_gangbuy:server:getMenuData', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
-    local allowed, gang, grade = getGangAccess(xPlayer)
-    if not allowed then return { allowed=false } end
+    local allowed, gang, grade, reason = getGangAccess(xPlayer)
+    if not allowed then
+        return {
+            allowed = false,
+            message = reason or 'Du har ikke adgang.'
+        }
+    end
     local progress = getGangProgress(xPlayer.job.name)
     local mission, order = activeMissions[source], activeOrders[source]
     if order and order.status == 'waiting' and os.time() >= order.readyAt then order.status='ready'; TriggerClientEvent('sb_gangbuy:client:orderReady',source,orderForClient(order)) end

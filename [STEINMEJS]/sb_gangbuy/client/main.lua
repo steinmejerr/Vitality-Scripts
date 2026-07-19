@@ -14,13 +14,6 @@ local function loadModel(model)
     return true
 end
 
-local function hasLocalAccess()
-    local data = ESX.GetPlayerData()
-    if not data.job then return false end
-    local gang = Config.AllowedGangs[data.job.name]
-    return gang and (tonumber(data.job.grade) or 0) >= (gang.minimumGrade or 0)
-end
-
 local function closeMenu()
     menuOpen = false
     SetNuiFocus(false, false)
@@ -30,7 +23,7 @@ end
 local function openMenu()
     local data = lib.callback.await('sb_gangbuy:server:getMenuData', false)
     if not data or not data.allowed then
-        return notify('Din rang er for lav.', 'error')
+        return notify((data and data.message) or 'Du har ikke adgang.', 'error')
     end
 
     menuOpen = true
@@ -128,7 +121,6 @@ CreateThread(function()
         icon = Config.Npc.targetIcon,
         label = Config.Npc.targetLabel,
         distance = Config.InteractionDistance,
-        canInteract = function() return hasLocalAccess() end,
         onSelect = openMenu
     }})
 end)
@@ -180,7 +172,15 @@ RegisterNUICallback('setGps', function(data, cb)
 end)
 
 RegisterNetEvent('esx:setJob', function()
-    if menuOpen and not hasLocalAccess() then closeMenu() end
+    if not menuOpen then return end
+
+    CreateThread(function()
+        Wait(250)
+        local data = lib.callback.await('sb_gangbuy:server:getMenuData', false)
+        if not data or not data.allowed then
+            closeMenu()
+        end
+    end)
 end)
 
 AddEventHandler('onResourceStop', function(resource)
