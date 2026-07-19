@@ -52,13 +52,19 @@ local function setMissionPackageState(data)
         id = data.id,
         label = data.label,
         status = data.status,
+        type = data.type,
+        requiredItem = data.requiredItem,
+        requiredAmount = data.requiredAmount,
         vehicleNetId = data.vehicleNetId,
         vehiclePlate = data.vehiclePlate
     } or nil
 
-    missionReturn = missionPackageState and missionPackageState.status == 'returning' and {
+    missionReturn = missionPackageState and (missionPackageState.status == 'returning' or missionPackageState.status == 'item_delivery') and {
         id = missionPackageState.id,
-        label = missionPackageState.label
+        label = missionPackageState.label,
+        type = missionPackageState.type,
+        requiredItem = missionPackageState.requiredItem,
+        requiredAmount = missionPackageState.requiredAmount
     } or nil
 
     if missionPackageState and (missionPackageState.status == 'carrying' or missionPackageState.status == 'returning') then
@@ -329,7 +335,7 @@ CreateThread(function()
         {
             name = 'sb_gangbuy_return_mission',
             icon = 'fa-solid fa-box',
-            label = 'Aflever pakken',
+            label = 'Aflever opgave',
             distance = Config.InteractionDistance,
             canInteract = function()
                 return missionReturn ~= nil
@@ -340,7 +346,7 @@ CreateThread(function()
                 local completed = lib.progressCircle({
                     duration = Config.MissionReturnDuration or 4500,
                     position = 'bottom',
-                    label = 'Afleverer pakken...',
+                    label = missionReturn.type == 'items' and 'Afleverer varer...' or 'Afleverer pakken...',
                     canCancel = true,
                     disable = { move = true, car = true, combat = true },
                     anim = { dict = 'mp_common', clip = 'givetake1_a' }
@@ -353,7 +359,7 @@ CreateThread(function()
                     setMissionPackageState(nil)
                     SendNUIMessage({ action = 'refreshRequested' })
                 else
-                    notify(result and result.message or 'Pakken kunne ikke afleveres.', 'error')
+                    notify(result and result.message or 'Opgaven kunne ikke afleveres.', 'error')
                 end
             end
         }
@@ -394,6 +400,9 @@ end)
 
 RegisterNUICallback('startMission', function(data, cb)
     local result = lib.callback.await('sb_gangbuy:server:startMission', false, data.id)
+    if result and result.success and result.mission then
+        setMissionPackageState(result.mission)
+    end
     if result and result.message then notify(result.message, result.success and 'success' or 'error') end
     cb(result or { success = false })
 end)

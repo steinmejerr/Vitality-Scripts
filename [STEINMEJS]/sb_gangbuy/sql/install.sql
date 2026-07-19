@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS `sb_gangbuy_missions` (
     `required_grade` int NOT NULL DEFAULT 0,
     `xp_reward` int unsigned NOT NULL DEFAULT 0,
     `money_reward` int unsigned NOT NULL DEFAULT 0,
+    `mission_type` varchar(20) NOT NULL DEFAULT 'package',
+    `required_item` varchar(80) NOT NULL DEFAULT '',
+    `required_amount` int unsigned NOT NULL DEFAULT 1,
     `wait_min` int unsigned NOT NULL DEFAULT 10,
     `wait_max` int unsigned NOT NULL DEFAULT 10,
     `icon` varchar(100) NOT NULL DEFAULT 'fa-solid fa-box',
@@ -85,3 +88,10 @@ CREATE TABLE IF NOT EXISTS `sb_gangbuy_missions` (
     `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Kør disse linjer, hvis tabellen allerede findes fra en ældre version:
+ALTER TABLE `sb_gangbuy_missions`
+    ADD COLUMN IF NOT EXISTS `mission_type` varchar(20) NOT NULL DEFAULT 'package' AFTER `money_reward`,
+    ADD COLUMN IF NOT EXISTS `required_item` varchar(80) NOT NULL DEFAULT '' AFTER `mission_type`,
+    ADD COLUMN IF NOT EXISTS `required_amount` int unsigned NOT NULL DEFAULT 1 AFTER `required_item`;

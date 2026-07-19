@@ -89,6 +89,7 @@ Config.Missions = {
     first_contact = {
         label = 'Hent pakken',
         description = 'Hent pakken på den angivne lokation.',
+        type = 'package',
         requiredLevel = 1,
         requiredGrade = 0,
         xp = 120,
@@ -99,6 +100,7 @@ Config.Missions = {
     dead_drop = {
         label = 'Skjult pakke',
         description = 'Find og hent en skjult pakke.',
+        type = 'package',
         requiredLevel = 3,
         requiredGrade = 1,
         xp = 240,
@@ -109,12 +111,26 @@ Config.Missions = {
     sensitive_cargo = {
         label = 'Vigtig levering',
         description = 'Hent pakken hos kontakten.',
+        type = 'package',
         requiredLevel = 5,
         requiredGrade = 2,
         xp = 420,
         money = 5000,
         waitSeconds = { min = 45, max = 80 },
         icon = 'fa-solid fa-briefcase'
+    },
+    deliver_joints = {
+        label = 'Aflever 500 joints',
+        description = 'Kom tilbage med 500 joints.',
+        type = 'items',
+        requiredItem = 'joint',
+        requiredAmount = 500,
+        requiredLevel = 1,
+        requiredGrade = 0,
+        xp = 250,
+        money = 3000,
+        waitSeconds = { min = 0, max = 0 },
+        icon = 'fa-solid fa-boxes-stacked'
     }
 }
 

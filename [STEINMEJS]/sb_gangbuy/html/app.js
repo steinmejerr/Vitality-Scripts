@@ -43,7 +43,7 @@ function card(item, kind) {
     return `<article class="card ${item.unlocked ? '' : 'locked'}">
         <div class="card-icon"><i class="${escapeHtml(item.icon || 'fa-solid fa-box')}"></i></div>
         <h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.description)}</p>
-        <div class="meta"><span>Level ${item.requiredLevel}</span><span>Grade ${item.requiredGrade}</span>${isProduct ? `<span>${item.deliveryMin}-${item.deliveryMax} min.</span>` : `<span>+${money(item.xp)} XP</span>`}</div>
+        <div class="meta"><span>Level ${item.requiredLevel}</span><span>Grade ${item.requiredGrade}</span>${isProduct ? `<span>${item.deliveryMin}-${item.deliveryMax} min.</span>` : `<span>+${money(item.xp)} XP</span>${item.type === 'items' ? `<span>${money(item.requiredAmount)}x ${escapeHtml(item.requiredItem)}</span>` : ''}`}</div>
         ${isProduct ? `<div class="price black-money-price"><span>$${money(item.price)}</span><small><i class="fa-solid fa-sack-dollar"></i> Sorte penge</small></div>` : `<div class="price">$${money(item.money)}</div>`}
         <button class="primary action" data-kind="${kind}" data-id="${escapeHtml(item.id)}" ${item.unlocked ? '' : 'disabled'}>${buttonText}</button>
     </article>`;
@@ -52,7 +52,7 @@ function card(item, kind) {
 function renderOverview() {
     const p = state.player;
     const orderText = state.activeOrder ? (state.activeOrder.status === 'ready' ? 'Klar til afhentning' : `Klar om ${clock(remaining(state.activeOrder.readyAt))}`) : 'Ingen';
-    const missionText = state.activeMission ? (state.activeMission.status === 'returning' ? 'Aflever pakken hos kontakten' : state.activeMission.status === 'ready' ? 'GPS klar' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen';
+    const missionText = state.activeMission ? (state.activeMission.status === 'item_delivery' ? `Aflever ${money(state.activeMission.requiredAmount)}x ${escapeHtml(state.activeMission.requiredItem)}` : state.activeMission.status === 'returning' ? 'Aflever pakken hos kontakten' : state.activeMission.status === 'ready' ? 'GPS klar' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen';
     content.innerHTML = `<div class="hero-grid">
         <div class="hero"><span class="eyebrow">STATUS</span><h2>Arbejd dig op</h2><p>Tag opgaver, tjen XP og lås op for flere varer.</p></div>
         <div class="stat-stack"><div class="stat"><span>Opgaver klaret</span><strong>${p.completedMissions}</strong></div><div class="stat"><span>Næste level</span><strong>${p.nextLevelXp ? `${money(p.nextLevelXp - p.xp)} XP` : 'Maksimum'}</strong></div></div>
@@ -60,7 +60,7 @@ function renderOverview() {
 }
 
 function renderMissions() {
-    content.innerHTML = `<div class="section-head"><div><h2>Opgaver</h2><p>Vælg en opgave fra kontakten.</p></div><span class="pill">Ny opgave: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'returning' ? 'Du har hentet pakken. Aflever den tilbage hos kontakten.' : state.activeMission.status === 'ready' ? 'GPS er klar.' : `Pakken bliver gjort klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
+    content.innerHTML = `<div class="section-head"><div><h2>Opgaver</h2><p>Vælg en opgave fra kontakten.</p></div><span class="pill">Ny opgave: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'item_delivery' ? `Skaff ${money(state.activeMission.requiredAmount)}x ${escapeHtml(state.activeMission.requiredItem)} og aflever dem hos kontakten.` : state.activeMission.status === 'returning' ? 'Du har hentet pakken. Aflever den tilbage hos kontakten.' : state.activeMission.status === 'ready' ? 'GPS er klar.' : `Pakken bliver gjort klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
 }
 
 function renderShop() {
@@ -84,9 +84,10 @@ function adminList(kind, items) {
 function adminFields(kind, item = {}) {
     const field = (name,label,type='text',value='',min='') => `<label><span>${label}</span><input name="${name}" type="${type}" value="${escapeHtml(value)}" ${min !== '' ? `min="${min}"` : ''}></label>`;
     const area = (name,label,value='') => `<label class="wide"><span>${label}</span><textarea name="${name}">${escapeHtml(value)}</textarea></label>`;
+    const select = (name,label,value,options) => `<label><span>${label}</span><select name="${name}">${options.map(x => `<option value="${escapeHtml(x.value)}" ${x.value === value ? 'selected' : ''}>${escapeHtml(x.label)}</option>`).join('')}</select></label>`;
     if (kind === 'gang') return `${field('jobName','ESX-jobnavn','text',item.jobName||'')}${field('label','Navn','text',item.label||'')}${field('minimumGrade','Minimum grade','number',item.minimumGrade??0,0)}`;
     if (kind === 'product') return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${field('item','Item-navn','text',item.item||'')}${field('amount','Antal','number',item.amount??1,1)}${field('price','Pris i sorte penge','number',item.price??0,0)}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('deliveryMin','Min. leveringstid i minutter','number',item.deliveryMin??1,0)}${field('deliveryMax','Maks. leveringstid i minutter','number',item.deliveryMax??1,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
-    return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('xp','XP-belønning','number',item.xp??0,0)}${field('money','Penge-belønning','number',item.money??0,0)}${field('waitMin','Min. ventetid i sekunder','number',item.waitMin??10,0)}${field('waitMax','Maks. ventetid i sekunder','number',item.waitMax??10,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
+    return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${select('type','Missionstype',item.type||'package',[{value:'package',label:'Hent og aflever pakke'},{value:'items',label:'Aflever varer fra inventory'}])}${field('requiredItem','Krævet item-navn','text',item.requiredItem||'')}${field('requiredAmount','Krævet antal','number',item.requiredAmount??1,1)}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('xp','XP-belønning','number',item.xp??0,0)}${field('money','Penge-belønning','number',item.money??0,0)}${field('waitMin','Min. ventetid i sekunder','number',item.waitMin??10,0)}${field('waitMax','Maks. ventetid i sekunder','number',item.waitMax??10,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
 }
 
 function openAdminForm(kind, item) {

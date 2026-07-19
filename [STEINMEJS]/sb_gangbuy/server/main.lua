@@ -62,6 +62,9 @@ local function reloadRuntime()
             requiredGrade = tonumber(row.required_grade) or 0,
             xp = tonumber(row.xp_reward) or 0,
             money = tonumber(row.money_reward) or 0,
+            type = row.mission_type == 'items' and 'items' or 'package',
+            requiredItem = tostring(row.required_item or ''),
+            requiredAmount = math.max(1, tonumber(row.required_amount) or 1),
             waitSeconds = { min = tonumber(row.wait_min) or 10, max = tonumber(row.wait_max) or 10 },
             icon = row.icon
         }
@@ -85,9 +88,9 @@ local function seedRuntimeTables()
     if (MySQL.scalar.await('SELECT COUNT(*) FROM sb_gangbuy_missions') or 0) == 0 then
         for id, m in pairs(Config.Missions or {}) do
             MySQL.insert.await([[INSERT INTO sb_gangbuy_missions
-                (id,label,description,required_level,required_grade,xp_reward,money_reward,wait_min,wait_max,icon)
-                VALUES (?,?,?,?,?,?,?,?,?,?)]],
-                { id,m.label,m.description or '',m.requiredLevel or 1,m.requiredGrade or 0,m.xp or 0,m.money or 0,m.waitSeconds.min,m.waitSeconds.max,m.icon or 'fa-solid fa-box' })
+                (id,label,description,required_level,required_grade,xp_reward,money_reward,mission_type,required_item,required_amount,wait_min,wait_max,icon)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)]],
+                { id,m.label,m.description or '',m.requiredLevel or 1,m.requiredGrade or 0,m.xp or 0,m.money or 0,m.type == 'items' and 'items' or 'package',m.requiredItem or '',math.max(1,m.requiredAmount or 1),m.waitSeconds.min,m.waitSeconds.max,m.icon or 'fa-solid fa-box' })
         end
     end
     reloadRuntime()
@@ -101,6 +104,10 @@ MySQL.ready(function()
         `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
         PRIMARY KEY (`gang_job`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]])
+
+    MySQL.query.await("ALTER TABLE sb_gangbuy_missions ADD COLUMN IF NOT EXISTS mission_type varchar(20) NOT NULL DEFAULT 'package' AFTER money_reward")
+    MySQL.query.await("ALTER TABLE sb_gangbuy_missions ADD COLUMN IF NOT EXISTS required_item varchar(80) NOT NULL DEFAULT '' AFTER mission_type")
+    MySQL.query.await("ALTER TABLE sb_gangbuy_missions ADD COLUMN IF NOT EXISTS required_amount int unsigned NOT NULL DEFAULT 1 AFTER required_item")
 
     seedRuntimeTables()
 end)
@@ -192,7 +199,8 @@ local function serializeMissions(level, grade)
     for key, mission in pairs(Runtime.missions) do
         result[#result + 1] = {
             id=key,label=mission.label,description=mission.description,requiredLevel=mission.requiredLevel,
-            requiredGrade=mission.requiredGrade,xp=mission.xp,money=mission.money,waitMin=mission.waitSeconds.min,
+            requiredGrade=mission.requiredGrade,xp=mission.xp,money=mission.money,type=mission.type,
+            requiredItem=mission.requiredItem,requiredAmount=mission.requiredAmount,waitMin=mission.waitSeconds.min,
             waitMax=mission.waitSeconds.max,icon=mission.icon,
             unlocked=level >= mission.requiredLevel and grade >= mission.requiredGrade
         }
@@ -210,7 +218,7 @@ local function getAdminData()
     local gangs, products, missions = {}, {}, {}
     for job,g in pairs(Runtime.gangs) do gangs[#gangs+1] = { jobName=job,label=g.label,minimumGrade=g.minimumGrade } end
     for id,p in pairs(Runtime.products) do products[#products+1] = { id=id,label=p.label,description=p.description,item=p.item,amount=p.amount,price=p.price,requiredLevel=p.requiredLevel,requiredGrade=p.requiredGrade,deliveryMin=p.deliveryMinutes.min,deliveryMax=p.deliveryMinutes.max,icon=p.icon } end
-    for id,m in pairs(Runtime.missions) do missions[#missions+1] = { id=id,label=m.label,description=m.description,requiredLevel=m.requiredLevel,requiredGrade=m.requiredGrade,xp=m.xp,money=m.money,waitMin=m.waitSeconds.min,waitMax=m.waitSeconds.max,icon=m.icon } end
+    for id,m in pairs(Runtime.missions) do missions[#missions+1] = { id=id,label=m.label,description=m.description,requiredLevel=m.requiredLevel,requiredGrade=m.requiredGrade,xp=m.xp,money=m.money,type=m.type,requiredItem=m.requiredItem,requiredAmount=m.requiredAmount,waitMin=m.waitSeconds.min,waitMax=m.waitSeconds.max,icon=m.icon } end
     table.sort(gangs,function(a,b)return a.label<b.label end)
     table.sort(products,function(a,b)return a.label<b.label end)
     table.sort(missions,function(a,b)return a.label<b.label end)
@@ -252,9 +260,15 @@ lib.callback.register('sb_gangbuy:server:adminSave', function(source, payload)
         local wmin,wmax = math.max(0,tonumber(data.waitMin) or 0),math.max(0,tonumber(data.waitMax) or 0)
         if wmax < wmin then wmax=wmin end
         if originalId and originalId ~= id then MySQL.update.await('DELETE FROM sb_gangbuy_missions WHERE id = ?', { originalId }) end
-        MySQL.prepare.await([[INSERT INTO sb_gangbuy_missions (id,label,description,required_level,required_grade,xp_reward,money_reward,wait_min,wait_max,icon)
-            VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE label=VALUES(label),description=VALUES(description),required_level=VALUES(required_level),required_grade=VALUES(required_grade),xp_reward=VALUES(xp_reward),money_reward=VALUES(money_reward),wait_min=VALUES(wait_min),wait_max=VALUES(wait_max),icon=VALUES(icon)]],
-            { id,tostring(data.label),tostring(data.description or ''),math.max(1,tonumber(data.requiredLevel) or 1),math.max(0,tonumber(data.requiredGrade) or 0),math.max(0,tonumber(data.xp) or 0),math.max(0,tonumber(data.money) or 0),wmin,wmax,tostring(data.icon or 'fa-solid fa-box') })
+        local missionType = data.type == 'items' and 'items' or 'package'
+        local requiredItem = cleanId(data.requiredItem)
+        local requiredAmount = math.max(1, tonumber(data.requiredAmount) or 1)
+        if missionType == 'items' and requiredItem == '' then
+            return { success=false,message='Item-navn skal udfyldes til en varemission.' }
+        end
+        MySQL.prepare.await([[INSERT INTO sb_gangbuy_missions (id,label,description,required_level,required_grade,xp_reward,money_reward,mission_type,required_item,required_amount,wait_min,wait_max,icon)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE label=VALUES(label),description=VALUES(description),required_level=VALUES(required_level),required_grade=VALUES(required_grade),xp_reward=VALUES(xp_reward),money_reward=VALUES(money_reward),mission_type=VALUES(mission_type),required_item=VALUES(required_item),required_amount=VALUES(required_amount),wait_min=VALUES(wait_min),wait_max=VALUES(wait_max),icon=VALUES(icon)]],
+            { id,tostring(data.label),tostring(data.description or ''),math.max(1,tonumber(data.requiredLevel) or 1),math.max(0,tonumber(data.requiredGrade) or 0),math.max(0,tonumber(data.xp) or 0),math.max(0,tonumber(data.money) or 0),missionType,requiredItem,requiredAmount,wmin,wmax,tostring(data.icon or 'fa-solid fa-box') })
     else
         return { success=false,message='Ukendt type.' }
     end
@@ -321,7 +335,7 @@ lib.callback.register('sb_gangbuy:server:getMenuData', function(source)
         allowed=true, mode='player',
         player={name=xPlayer.getName(),gang=gang.label or xPlayer.job.label,gradeLabel=xPlayer.job.grade_label or tostring(grade),grade=grade,xp=progress.xp,level=progress.level,nextLevelXp=getNextLevel(progress.level),completedMissions=progress.completed_missions},
         products=serializeProducts(progress.level,grade),missions=serializeMissions(progress.level,grade),
-        activeMission=mission and {id=mission.id,label=mission.label,status=mission.status,readyAt=mission.readyAt,coords=mission.status=='ready' and mission.coords or nil,vehicleNetId=mission.vehicleNetId,vehiclePlate=mission.vehiclePlate} or nil,
+        activeMission=mission and {id=mission.id,label=mission.label,status=mission.status,type=mission.type,requiredItem=mission.requiredItem,requiredAmount=mission.requiredAmount,readyAt=mission.readyAt,coords=mission.status=='ready' and mission.coords or nil,vehicleNetId=mission.vehicleNetId,vehiclePlate=mission.vehiclePlate} or nil,
         activeOrder=orderForClient(order),missionCooldown=math.max(0,(Player(source).state.sbGangbuyMissionCooldown or 0)-os.time())
     }
 end)
@@ -352,9 +366,21 @@ lib.callback.register('sb_gangbuy:server:startMission', function(source, mission
     if cooldown>os.time() then return {success=false,message=('Du kan tage en ny opgave om %s minutter.'):format(math.ceil((cooldown-os.time())/60))} end
     local progress=getGangProgress(xPlayer.job.name)
     if progress.level<mission.requiredLevel or grade<mission.requiredGrade then return {success=false,message='Dit level eller din rang er for lav.'} end
+    if mission.type == 'items' then
+        activeMissions[source]={
+            id=missionId,label=mission.label,xp=mission.xp,money=mission.money,type='items',
+            requiredItem=mission.requiredItem,requiredAmount=mission.requiredAmount,status='item_delivery'
+        }
+        return {
+            success=true,
+            mission={id=missionId,label=mission.label,type='items',requiredItem=mission.requiredItem,requiredAmount=mission.requiredAmount,status='item_delivery'},
+            message=('Skaff %sx %s og aflever dem hos kontakten.'):format(mission.requiredAmount, mission.requiredItem)
+        }
+    end
+
     local wait=math.random(mission.waitSeconds.min,mission.waitSeconds.max); local coords=Config.DeliveryLocations[math.random(#Config.DeliveryLocations)]
-    activeMissions[source]={id=missionId,label=mission.label,xp=mission.xp,money=mission.money,status='waiting',readyAt=os.time()+wait,coords=coords}
-    return {success=true,mission={id=missionId,label=mission.label,status='waiting',readyAt=os.time()+wait},message='Pakken bliver gjort klar. Du får GPS, når den er klar.'}
+    activeMissions[source]={id=missionId,label=mission.label,xp=mission.xp,money=mission.money,type='package',status='waiting',readyAt=os.time()+wait,coords=coords}
+    return {success=true,mission={id=missionId,label=mission.label,type='package',status='waiting',readyAt=os.time()+wait},message='Pakken bliver gjort klar. Du får GPS, når den er klar.'}
 end)
 
 lib.callback.register('sb_gangbuy:server:collectOrder', function(source, orderId)
@@ -435,10 +461,29 @@ lib.callback.register('sb_gangbuy:server:removeMissionPackage', function(source,
     return { success = true, message = 'Du har taget pakken ud. Aflever den hos kontakten.' }
 end)
 
+local function getItemCount(source, xPlayer, item)
+    if Config.UseOxInventory then
+        return tonumber(exports.ox_inventory:Search(source, 'count', item)) or 0
+    end
+    local inventoryItem = xPlayer.getInventoryItem(item)
+    return inventoryItem and tonumber(inventoryItem.count) or 0
+end
+
+local function removeMissionItems(source, xPlayer, item, amount)
+    if Config.UseOxInventory then
+        return exports.ox_inventory:RemoveItem(source, item, amount) == true
+    end
+    local inventoryItem = xPlayer.getInventoryItem(item)
+    if not inventoryItem or (tonumber(inventoryItem.count) or 0) < amount then return false end
+    xPlayer.removeInventoryItem(item, amount)
+    return true
+end
+
 lib.callback.register('sb_gangbuy:server:completeMission', function(source, missionId)
     local xPlayer=ESX.GetPlayerFromId(source); local allowed=getGangAccess(xPlayer); local mission=activeMissions[source]
-    if not allowed or not mission or mission.id~=missionId or mission.status ~= 'returning' then
-        return {success=false,message='Du har ikke en pakke, der skal afleveres.'}
+    local validStatus = mission and (mission.status == 'returning' or mission.status == 'item_delivery')
+    if not allowed or not mission or mission.id~=missionId or not validStatus then
+        return {success=false,message='Du har ikke en opgave, der kan afleveres.'}
     end
 
     local ped = GetPlayerPed(source)
@@ -447,6 +492,16 @@ lib.callback.register('sb_gangbuy:server:completeMission', function(source, miss
     local npcCoords = vec3(Config.Npc.coords.x, Config.Npc.coords.y, Config.Npc.coords.z)
     if #(playerCoords - npcCoords) > 5.0 then
         return {success=false,message='Du skal være ved kontakten for at aflevere pakken.'}
+    end
+
+    if mission.type == 'items' then
+        local count = getItemCount(source, xPlayer, mission.requiredItem)
+        if count < mission.requiredAmount then
+            return {success=false,message=('Du mangler %sx %s. Du har %s.'):format(mission.requiredAmount - count, mission.requiredItem, count)}
+        end
+        if not removeMissionItems(source, xPlayer, mission.requiredItem, mission.requiredAmount) then
+            return {success=false,message='Varerne kunne ikke fjernes fra dit inventory.'}
+        end
     end
 
     local identifier=getCharacterIdentifier(xPlayer)
@@ -458,7 +513,8 @@ lib.callback.register('sb_gangbuy:server:completeMission', function(source, miss
     activeMissions[source]=nil
     Player(source).state:set('sbGangbuyMissionCooldown',os.time()+(Config.MissionCooldownMinutes*60),true)
     local progress=getGangProgress(xPlayer.job.name)
-    return {success=true,message=('Pakken er afleveret: +%s XP og $%s.'):format(mission.xp,mission.money),level=progress.level,xp=progress.xp,nextLevelXp=getNextLevel(progress.level)}
+    local deliveredText = mission.type == 'items' and ('%sx %s er afleveret'):format(mission.requiredAmount, mission.requiredItem) or 'Pakken er afleveret'
+    return {success=true,message=('%s: +%s XP og $%s.'):format(deliveredText,mission.xp,mission.money),level=progress.level,xp=progress.xp,nextLevelXp=getNextLevel(progress.level)}
 end)
 
 RegisterNetEvent('sb_gangbuy:server:checkReady', function()
