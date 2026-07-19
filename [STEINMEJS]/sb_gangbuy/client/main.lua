@@ -1,7 +1,9 @@
 local ESX = exports.es_extended:getSharedObject()
 local npc, pickupObject, pickupZone, pickupBlip
+local missionCarryObject
 local menuOpen = false
 local currentPickup
+local missionReturn
 
 local function notify(description, type)
     lib.notify({ title = 'Kontakten', description = description, type = type or 'inform' })
@@ -14,6 +16,47 @@ local function loadModel(model)
     return true
 end
 
+
+local function stopCarryingMissionPackage()
+    local ped = PlayerPedId()
+    if missionCarryObject and DoesEntityExist(missionCarryObject) then
+        DeleteEntity(missionCarryObject)
+    end
+    missionCarryObject = nil
+    ClearPedSecondaryTask(ped)
+end
+
+local function startCarryingMissionPackage()
+    stopCarryingMissionPackage()
+
+    local ped = PlayerPedId()
+    local model = Config.Pickup.prop
+    if not loadModel(model) then return end
+
+    missionCarryObject = CreateObject(model, 0.0, 0.0, 0.0, true, true, false)
+    AttachEntityToEntity(
+        missionCarryObject, ped, GetPedBoneIndex(ped, 57005),
+        0.25, 0.02, -0.02, -90.0, 0.0, 0.0,
+        true, true, false, true, 1, true
+    )
+
+    RequestAnimDict('anim@heists@box_carry@')
+    while not HasAnimDictLoaded('anim@heists@box_carry@') do Wait(25) end
+    TaskPlayAnim(ped, 'anim@heists@box_carry@', 'idle', 8.0, -8.0, -1, 49, 0.0, false, false, false)
+    SetModelAsNoLongerNeeded(model)
+end
+
+local function setMissionReturn(data)
+    missionReturn = data and { id = data.id, label = data.label } or nil
+    if missionReturn then
+        startCarryingMissionPackage()
+        local c = Config.Npc.coords
+        SetNewWaypoint(c.x, c.y)
+    else
+        stopCarryingMissionPackage()
+    end
+end
+
 local function closeMenu()
     menuOpen = false
     SetNuiFocus(false, false)
@@ -24,6 +67,12 @@ local function openMenu()
     local data = lib.callback.await('sb_gangbuy:server:getMenuData', false)
     if not data or not data.allowed then
         return notify((data and data.message) or 'Du har ikke adgang.', 'error')
+    end
+
+    if data.activeMission and data.activeMission.status == 'returning' and not missionReturn then
+        setMissionReturn(data.activeMission)
+    elseif not data.activeMission and missionReturn then
+        setMissionReturn(nil)
     end
 
     menuOpen = true
@@ -95,6 +144,9 @@ local function createPickup(kind, payload)
                 if result and result.success then
                     notify(result.message, 'success')
                     clearPickup()
+                    if kind == 'mission' and result.stage == 'return' then
+                        setMissionReturn({ id = payload.id, label = payload.label })
+                    end
                     SendNUIMessage({ action = 'refreshRequested' })
                 else
                     notify(result and result.message or 'Noget gik galt.', 'error')
@@ -116,13 +168,46 @@ CreateThread(function()
     if Config.Npc.scenario then TaskStartScenarioInPlace(npc, Config.Npc.scenario, 0, true) end
     SetModelAsNoLongerNeeded(Config.Npc.model)
 
-    exports.ox_target:addLocalEntity(npc, {{
-        name = 'sb_gangbuy_open',
-        icon = Config.Npc.targetIcon,
-        label = Config.Npc.targetLabel,
-        distance = Config.InteractionDistance,
-        onSelect = openMenu
-    }})
+    exports.ox_target:addLocalEntity(npc, {
+        {
+            name = 'sb_gangbuy_open',
+            icon = Config.Npc.targetIcon,
+            label = Config.Npc.targetLabel,
+            distance = Config.InteractionDistance,
+            onSelect = openMenu
+        },
+        {
+            name = 'sb_gangbuy_return_mission',
+            icon = 'fa-solid fa-box',
+            label = 'Aflever pakken',
+            distance = Config.InteractionDistance,
+            canInteract = function()
+                return missionReturn ~= nil
+            end,
+            onSelect = function()
+                if not missionReturn then return end
+
+                local completed = lib.progressCircle({
+                    duration = Config.MissionReturnDuration or 4500,
+                    position = 'bottom',
+                    label = 'Afleverer pakken...',
+                    canCancel = true,
+                    disable = { move = true, car = true, combat = true },
+                    anim = { dict = 'mp_common', clip = 'givetake1_a' }
+                })
+                if not completed then return end
+
+                local result = lib.callback.await('sb_gangbuy:server:completeMission', false, missionReturn.id)
+                if result and result.success then
+                    notify(result.message, 'success')
+                    setMissionReturn(nil)
+                    SendNUIMessage({ action = 'refreshRequested' })
+                else
+                    notify(result and result.message or 'Pakken kunne ikke afleveres.', 'error')
+                end
+            end
+        }
+    })
 end)
 
 CreateThread(function()
@@ -186,6 +271,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     clearPickup()
+    stopCarryingMissionPackage()
     if npc and DoesEntityExist(npc) then DeleteEntity(npc) end
     SetNuiFocus(false, false)
 end)

@@ -52,7 +52,7 @@ function card(item, kind) {
 function renderOverview() {
     const p = state.player;
     const orderText = state.activeOrder ? (state.activeOrder.status === 'ready' ? 'Klar til afhentning' : `Klar om ${clock(remaining(state.activeOrder.readyAt))}`) : 'Ingen';
-    const missionText = state.activeMission ? (state.activeMission.status === 'ready' ? 'GPS klar' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen';
+    const missionText = state.activeMission ? (state.activeMission.status === 'returning' ? 'Aflever pakken hos kontakten' : state.activeMission.status === 'ready' ? 'GPS klar' : `Klar om ${clock(remaining(state.activeMission.readyAt))}`) : 'Ingen';
     content.innerHTML = `<div class="hero-grid">
         <div class="hero"><span class="eyebrow">STATUS</span><h2>Arbejd dig op</h2><p>Tag opgaver, tjen XP og lås op for flere varer.</p></div>
         <div class="stat-stack"><div class="stat"><span>Opgaver klaret</span><strong>${p.completedMissions}</strong></div><div class="stat"><span>Næste level</span><strong>${p.nextLevelXp ? `${money(p.nextLevelXp - p.xp)} XP` : 'Maksimum'}</strong></div></div>
@@ -60,7 +60,7 @@ function renderOverview() {
 }
 
 function renderMissions() {
-    content.innerHTML = `<div class="section-head"><div><h2>Opgaver</h2><p>Vælg en opgave fra kontakten.</p></div><span class="pill">Ny opgave: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'ready' ? 'GPS er klar.' : `Pakken bliver gjort klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
+    content.innerHTML = `<div class="section-head"><div><h2>Opgaver</h2><p>Vælg en opgave fra kontakten.</p></div><span class="pill">Ny opgave: ${state.missionCooldown ? clock(state.missionCooldown) : 'Klar'}</span></div>${state.activeMission ? `<div class="delivery"><div><h3>${escapeHtml(state.activeMission.label)}</h3><p>${state.activeMission.status === 'returning' ? 'Du har hentet pakken. Aflever den tilbage hos kontakten.' : state.activeMission.status === 'ready' ? 'GPS er klar.' : `Pakken bliver gjort klar · ${clock(remaining(state.activeMission.readyAt))}`}</p></div></div>` : `<div class="grid">${state.missions.map(x=>card(x,'mission')).join('')}</div>`}`;
 }
 
 function renderShop() {

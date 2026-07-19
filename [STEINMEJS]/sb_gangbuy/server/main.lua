@@ -372,16 +372,37 @@ end)
 lib.callback.register('sb_gangbuy:server:collectMission', function(source, missionId)
     local xPlayer=ESX.GetPlayerFromId(source); local allowed=getGangAccess(xPlayer); local mission=activeMissions[source]
     if not allowed or not mission or mission.id~=missionId then return {success=false,message='Opgaven blev ikke fundet.'} end
+    if mission.status ~= 'ready' then return {success=false,message='Pakken er ikke klar endnu.'} end
     if os.time()<mission.readyAt then return {success=false,message='Pakken er ikke klar endnu.'} end
+
+    mission.status = 'returning'
+    return {success=true,stage='return',message='Du har pakken. Aflever den tilbage til kontakten.'}
+end)
+
+lib.callback.register('sb_gangbuy:server:completeMission', function(source, missionId)
+    local xPlayer=ESX.GetPlayerFromId(source); local allowed=getGangAccess(xPlayer); local mission=activeMissions[source]
+    if not allowed or not mission or mission.id~=missionId or mission.status ~= 'returning' then
+        return {success=false,message='Du har ikke en pakke, der skal afleveres.'}
+    end
+
+    local ped = GetPlayerPed(source)
+    if ped == 0 then return {success=false,message='Kunne ikke finde din spiller.'} end
+    local playerCoords = GetEntityCoords(ped)
+    local npcCoords = vec3(Config.Npc.coords.x, Config.Npc.coords.y, Config.Npc.coords.z)
+    if #(playerCoords - npcCoords) > 5.0 then
+        return {success=false,message='Du skal være ved kontakten for at aflevere pakken.'}
+    end
+
     local identifier=getCharacterIdentifier(xPlayer)
     MySQL.prepare.await([[INSERT INTO sb_gangbuy_gang_progress (gang_job, xp, completed_missions) VALUES (?, ?, 1)
         ON DUPLICATE KEY UPDATE xp = xp + VALUES(xp), completed_missions = completed_missions + 1, updated_at = NOW()]],
         {xPlayer.job.name, mission.xp})
     xPlayer.addAccountMoney(Config.PaymentAccount,mission.money,'Gangbuy mission')
     MySQL.insert.await('INSERT INTO sb_gangbuy_mission_history (identifier,gang_job,mission_id,xp_reward,money_reward) VALUES (?,?,?,?,?)',{identifier,xPlayer.job.name,mission.id,mission.xp,mission.money})
-    activeMissions[source]=nil; Player(source).state:set('sbGangbuyMissionCooldown',os.time()+(Config.MissionCooldownMinutes*60),true)
+    activeMissions[source]=nil
+    Player(source).state:set('sbGangbuyMissionCooldown',os.time()+(Config.MissionCooldownMinutes*60),true)
     local progress=getGangProgress(xPlayer.job.name)
-    return {success=true,message=('Opgave klaret: +%s XP og $%s.'):format(mission.xp,mission.money),level=progress.level,xp=progress.xp,nextLevelXp=getNextLevel(progress.level)}
+    return {success=true,message=('Pakken er afleveret: +%s XP og $%s.'):format(mission.xp,mission.money),level=progress.level,xp=progress.xp,nextLevelXp=getNextLevel(progress.level)}
 end)
 
 RegisterNetEvent('sb_gangbuy:server:checkReady', function()
