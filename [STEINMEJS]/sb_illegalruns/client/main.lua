@@ -8,6 +8,7 @@ local runVehicle
 local runVehicleTarget
 local carryingPackage = false
 local packageInVehicle = false
+local cargoObjects = {}
 
 local function notify(description, type)
     lib.notify({ title = 'Illegal Runs', description = description, type = type or 'inform' })
@@ -50,7 +51,65 @@ local function attachPackage()
     carryingPackage = true
 end
 
+
+local function removeCargoVisuals()
+    for i = #cargoObjects, 1, -1 do
+        local object = cargoObjects[i]
+        if object and DoesEntityExist(object) then
+            DeleteEntity(object)
+        end
+        cargoObjects[i] = nil
+    end
+end
+
+local function createCargoVisuals(vehicle)
+    removeCargoVisuals()
+    if not vehicle or vehicle == 0 or not DoesEntityExist(vehicle) then return end
+
+    lib.requestModel(Config.CargoVisuals.prop)
+
+    for i = 1, #Config.CargoVisuals.positions do
+        local position = Config.CargoVisuals.positions[i]
+        local object = CreateObject(Config.CargoVisuals.prop, 0.0, 0.0, 0.0, false, false, false)
+
+        if object and object ~= 0 then
+            SetEntityCollision(object, false, false)
+            AttachEntityToEntity(
+                object,
+                vehicle,
+                0,
+                position.x,
+                position.y,
+                position.z,
+                position.rx or 0.0,
+                position.ry or 0.0,
+                position.rz or 0.0,
+                false,
+                false,
+                false,
+                false,
+                2,
+                true
+            )
+            cargoObjects[#cargoObjects + 1] = object
+        end
+    end
+
+    SetModelAsNoLongerNeeded(Config.CargoVisuals.prop)
+end
+
 local function getTrunkCoords(vehicle)
+    -- Vans som Speedo bruger bagdøre i stedet for en almindelig 'boot'-bone.
+    -- Brug derfor først en af bagdørene og fald tilbage til køretøjets bagende.
+    local rearBones = { 'door_dside_r', 'door_pside_r', 'boot' }
+
+    for i = 1, #rearBones do
+        local boneIndex = GetEntityBoneIndexByName(vehicle, rearBones[i])
+        if boneIndex ~= -1 then
+            return GetWorldPositionOfEntityBone(vehicle, boneIndex)
+        end
+    end
+
     local minDim, _ = GetModelDimensions(GetEntityModel(vehicle))
     return GetOffsetFromEntityInWorldCoords(vehicle, 0.0, minDim.y - 0.35, 0.0)
 end
@@ -72,6 +131,7 @@ local function deleteRunVehicle()
     end
     runVehicle = nil
     packageInVehicle = false
+    removeCargoVisuals()
 end
 
 local function addVehicleTarget(vehicle)
@@ -82,8 +142,8 @@ local function addVehicleTarget(vehicle)
             name = 'sb_illegalruns_store_package',
             icon = 'fa-solid fa-box',
             label = 'Læg pakken i bagagerummet',
-            bones = { 'boot' },
-            distance = 2.5,
+            bones = { 'door_dside_r', 'door_pside_r', 'boot' },
+            distance = 3.0,
             canInteract = function(entity)
                 return entity == runVehicle and carryingPackage and not packageInVehicle
             end,
@@ -101,6 +161,7 @@ local function addVehicleTarget(vehicle)
 
                 removePackage()
                 packageInVehicle = true
+                createCargoVisuals(data.entity)
                 local run = Config.Runs[activeRun]
                 setRoute(run.delivery, 'Aflever pakken')
                 notify('Pakken er i bilen. Kør til afleveringsstedet.', 'success')
@@ -110,8 +171,8 @@ local function addVehicleTarget(vehicle)
             name = 'sb_illegalruns_take_package',
             icon = 'fa-solid fa-box-open',
             label = 'Tag pakken ud af bagagerummet',
-            bones = { 'boot' },
-            distance = 2.5,
+            bones = { 'door_dside_r', 'door_pside_r', 'boot' },
+            distance = 3.0,
             canInteract = function(entity)
                 return entity == runVehicle and packageInVehicle and not carryingPackage
             end,
@@ -128,6 +189,7 @@ local function addVehicleTarget(vehicle)
                 if not success then return notify('Pakken kunne ikke tages ud.', 'error') end
 
                 packageInVehicle = false
+                removeCargoVisuals()
                 attachPackage()
                 notify('Tag pakken med hen til afleveringsstedet.', 'success')
             end

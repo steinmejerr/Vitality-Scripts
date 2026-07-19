@@ -26,6 +26,33 @@ Config.RunVehicle = {
     deleteOnComplete = true
 }
 
+
+-- Visuelle kasser i varerummet. De bliver først oprettet, når pakken er lagt i vanen.
+-- Positionerne er lokale offsets inde i en standard Speedo.
+Config.CargoVisuals = {
+    prop = `xm3_prop_xm3_box_wood03a`,
+    positions = {
+        -- Nederste række
+        { x = -0.52, y = -1.45, z = 0.05, rz = 0.0 },
+        { x =  0.00, y = -1.45, z = 0.05, rz = 0.0 },
+        { x =  0.52, y = -1.45, z = 0.05, rz = 0.0 },
+        { x = -0.52, y = -0.82, z = 0.05, rz = 0.0 },
+        { x =  0.00, y = -0.82, z = 0.05, rz = 0.0 },
+        { x =  0.52, y = -0.82, z = 0.05, rz = 0.0 },
+        { x = -0.52, y = -0.19, z = 0.05, rz = 0.0 },
+        { x =  0.00, y = -0.19, z = 0.05, rz = 0.0 },
+        { x =  0.52, y = -0.19, z = 0.05, rz = 0.0 },
+
+        -- Øverste række
+        { x = -0.52, y = -1.25, z = 0.53, rz = 90.0 },
+        { x =  0.00, y = -1.25, z = 0.53, rz = 90.0 },
+        { x =  0.52, y = -1.25, z = 0.53, rz = 90.0 },
+        { x = -0.52, y = -0.55, z = 0.53, rz = 90.0 },
+        { x =  0.00, y = -0.55, z = 0.53, rz = 90.0 },
+        { x =  0.52, y = -0.55, z = 0.53, rz = 90.0 }
+    }
+}
+
 Config.Blip = {
     sprite = 478,
     colour = 2,
