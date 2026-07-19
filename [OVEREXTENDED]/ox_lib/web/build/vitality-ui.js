@@ -7,6 +7,10 @@
   progressRoot.id = 'vitality-progress-root';
   document.body.appendChild(progressRoot);
 
+  const settingsRoot = document.createElement('div');
+  settingsRoot.id = 'vitality-notify-settings-root';
+  document.body.appendChild(settingsRoot);
+
   const notifyStacks = new Map();
   const notifications = new Map();
   let activeProgress = null;
@@ -250,10 +254,103 @@
     entry.frame = requestAnimationFrame(tick);
   };
 
+  let notifySettingsSoundEnabled = true;
+
+  const postNui = (name, data = {}) => {
+    try {
+      return fetch(`https://${GetParentResourceName()}/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify(data)
+      });
+    } catch (_) {}
+  };
+
+  const closeNotifySettings = () => {
+    settingsRoot.classList.remove('v-open');
+    settingsRoot.innerHTML = '';
+  };
+
+  const renderNotifySettings = (soundEnabled) => {
+    notifySettingsSoundEnabled = soundEnabled === true;
+    settingsRoot.innerHTML = '';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'v-settings-backdrop';
+
+    const panel = document.createElement('div');
+    panel.className = 'v-settings-panel';
+
+    const eyebrow = document.createElement('div');
+    eyebrow.className = 'v-settings-eyebrow';
+    eyebrow.textContent = 'Indstillinger';
+
+    const title = document.createElement('div');
+    title.className = 'v-settings-title';
+    title.textContent = 'Notifikationer';
+
+    const subtitle = document.createElement('div');
+    subtitle.className = 'v-settings-subtitle';
+    subtitle.textContent = 'Vælg om notifikationer skal afspille en lyd.';
+
+    const row = document.createElement('div');
+    row.className = 'v-settings-row';
+
+    const text = document.createElement('div');
+    const rowTitle = document.createElement('div');
+    rowTitle.className = 'v-settings-row-title';
+    rowTitle.textContent = 'Notify-lyd';
+    const rowDescription = document.createElement('div');
+    rowDescription.className = 'v-settings-row-description';
+    rowDescription.textContent = 'Afspil en kort lyd, når en ny besked vises.';
+    text.append(rowTitle, rowDescription);
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = `v-settings-switch${notifySettingsSoundEnabled ? ' v-active' : ''}`;
+    toggle.setAttribute('aria-label', 'Slå notify-lyd til eller fra');
+    toggle.addEventListener('click', () => {
+      notifySettingsSoundEnabled = !notifySettingsSoundEnabled;
+      toggle.classList.toggle('v-active', notifySettingsSoundEnabled);
+    });
+
+    row.append(text, toggle);
+
+    const actions = document.createElement('div');
+    actions.className = 'v-settings-actions';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'v-settings-button';
+    cancel.textContent = 'Annuller';
+    cancel.addEventListener('click', () => postNui('vitalityNotifySettingsClose'));
+
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'v-settings-button v-primary';
+    save.textContent = 'Gem';
+    save.addEventListener('click', () => postNui('vitalityNotifySettingsSave', {
+      soundEnabled: notifySettingsSoundEnabled
+    }));
+
+    actions.append(cancel, save);
+    panel.append(eyebrow, title, subtitle, row, actions);
+    settingsRoot.append(backdrop, panel);
+    settingsRoot.classList.add('v-open');
+  };
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && settingsRoot.classList.contains('v-open')) {
+      postNui('vitalityNotifySettingsClose');
+    }
+  });
+
   window.addEventListener('message', (event) => {
     const message = event.data;
     if (message?.action === 'vitalityNotify') showNotification(message.data || {});
     if (message?.action === 'vitalityProgress') showProgress(message.data || {});
     if (message?.action === 'vitalityProgressCancel') removeProgress(false);
+    if (message?.action === 'vitalityNotifySettingsOpen') renderNotifySettings(message.soundEnabled);
+    if (message?.action === 'vitalityNotifySettingsClose') closeNotifySettings();
   });
 })();

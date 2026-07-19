@@ -25,9 +25,8 @@
 ---@field alignIcon? 'top' | 'center'
 ---@field sound? { bank?: string, set: string, name: string }
 
-local settings = require 'resource.settings'
-
 local notifySoundEnabled = GetResourceKvpInt('ox_lib:notifySound') ~= 0
+local settingsOpen = false
 
 -- Sound is enabled by default until the player explicitly disables it.
 if GetResourceKvpString('ox_lib:notifySoundSet') == nil then
@@ -41,38 +40,49 @@ local defaultNotifySound = {
     set = 'HUD_FRONTEND_DEFAULT_SOUNDSET'
 }
 
+local function closeNotifySettings()
+    if not settingsOpen then return end
+
+    settingsOpen = false
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'vitalityNotifySettingsClose' })
+end
+
 local function openNotifySettings()
-    lib.registerContext({
-        id = 'ox_lib_notify_settings',
-        title = 'Notifikationer',
-        options = {
-            {
-                title = 'Notify-lyd',
-                description = notifySoundEnabled and 'Lyden er slået til' or 'Lyden er slået fra',
-                icon = notifySoundEnabled and 'volume-high' or 'volume-xmark',
-                iconColor = notifySoundEnabled and '#36e374' or '#f05a5a',
-                onSelect = function()
-                    notifySoundEnabled = not notifySoundEnabled
-                    SetResourceKvpInt('ox_lib:notifySound', notifySoundEnabled and 1 or 0)
+    if settingsOpen then return end
 
-                    lib.notify({
-                        title = 'Notify-lyd',
-                        description = notifySoundEnabled and 'Lyden er nu slået til' or 'Lyden er nu slået fra',
-                        type = notifySoundEnabled and 'success' or 'info',
-                        duration = 2500,
-                        sound = notifySoundEnabled and defaultNotifySound or nil
-                    })
-
-                    SetTimeout(100, openNotifySettings)
-                end
-            }
-        }
+    settingsOpen = true
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'vitalityNotifySettingsOpen',
+        soundEnabled = notifySoundEnabled
     })
-
-    lib.showContext('ox_lib_notify_settings')
 end
 
 RegisterCommand('notify-settings', openNotifySettings, false)
+
+RegisterNUICallback('vitalityNotifySettingsSave', function(data, cb)
+    notifySoundEnabled = data and data.soundEnabled == true
+    SetResourceKvpInt('ox_lib:notifySound', notifySoundEnabled and 1 or 0)
+    SetResourceKvp('ox_lib:notifySoundSet', '1')
+
+    closeNotifySettings()
+
+    lib.notify({
+        title = 'Indstillinger gemt',
+        description = notifySoundEnabled and 'Notify-lyd er slået til.' or 'Notify-lyd er slået fra.',
+        type = 'success',
+        duration = 2500,
+        sound = notifySoundEnabled and defaultNotifySound or nil
+    })
+
+    cb({ success = true })
+end)
+
+RegisterNUICallback('vitalityNotifySettingsClose', function(_, cb)
+    closeNotifySettings()
+    cb({ success = true })
+end)
 
 ---`client`
 ---@param data NotifyProps
