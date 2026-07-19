@@ -208,9 +208,20 @@ RegisterNUICallback('adminSave', function(data, cb)
 end)
 
 RegisterNUICallback('adminDelete', function(data, cb)
-    local result = lib.callback.await('sb_gangbuy:server:adminDelete', false, data)
-    if result and result.message then notify(result.message, result.success and 'success' or 'error') end
-    cb(result or { success = false })
+    local ok, result = pcall(function()
+        return lib.callback.await('sb_gangbuy:server:adminDelete', false, data)
+    end)
+
+    if not ok then
+        result = { success = false, message = 'Banden kunne ikke slettes.' }
+        print(('[sb_gangbuy] adminDelete callback failed: %s'):format(tostring(result)))
+    end
+
+    if result and result.message then
+        notify(result.message, result.success and 'success' or 'error')
+    end
+
+    cb(result or { success = false, message = 'Der skete en ukendt fejl.' })
 end)
 
 RegisterNUICallback('adminRefresh', function(_, cb)

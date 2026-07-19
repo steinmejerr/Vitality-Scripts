@@ -221,14 +221,41 @@ lib.callback.register('sb_gangbuy:server:adminSave', function(source, payload)
 end)
 
 lib.callback.register('sb_gangbuy:server:adminDelete', function(source, payload)
-    if not isAdmin(source) then return { success=false,message='Du har ikke adgang.' } end
+    if not isAdmin(source) then
+        return { success = false, message = 'Du har ikke adgang.' }
+    end
+
+    payload = type(payload) == 'table' and payload or {}
+    local kind = tostring(payload.kind or '')
     local id = tostring(payload.id or '')
-    if payload.kind == 'gang' then MySQL.update.await('DELETE FROM sb_gangbuy_gangs WHERE job_name = ?', { id })
-    elseif payload.kind == 'product' then MySQL.update.await('DELETE FROM sb_gangbuy_products WHERE id = ?', { id })
-    elseif payload.kind == 'mission' then MySQL.update.await('DELETE FROM sb_gangbuy_missions WHERE id = ?', { id })
-    else return { success=false,message='Ukendt type.' } end
+
+    if id == '' then
+        return { success = false, message = 'Der mangler et ID.' }
+    end
+
+    local ok, affected = pcall(function()
+        if kind == 'gang' then
+            return MySQL.update.await('DELETE FROM sb_gangbuy_gangs WHERE job_name = ?', { id })
+        elseif kind == 'product' then
+            return MySQL.update.await('DELETE FROM sb_gangbuy_products WHERE id = ?', { id })
+        elseif kind == 'mission' then
+            return MySQL.update.await('DELETE FROM sb_gangbuy_missions WHERE id = ?', { id })
+        end
+
+        error('Ukendt type')
+    end)
+
+    if not ok then
+        print(('[sb_gangbuy] Kunne ikke slette %s "%s": %s'):format(kind, id, tostring(affected)))
+        return { success = false, message = 'Kunne ikke slette. Tjek serverkonsollen.' }
+    end
+
+    if tonumber(affected) == 0 then
+        return { success = false, message = 'Elementet findes ikke længere.' }
+    end
+
     reloadRuntime()
-    return { success=true,message='Slettet.',data=getAdminData() }
+    return { success = true, message = 'Slettet.', data = getAdminData() }
 end)
 
 RegisterCommand((Config.Admin and Config.Admin.command) or 'gangbuyadmin', function(source)

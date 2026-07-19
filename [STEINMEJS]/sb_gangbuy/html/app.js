@@ -123,6 +123,41 @@ function renderAdmin() {
     bindAdminActions();
 }
 
+
+function openConfirm(titleText, messageText) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        overlay.innerHTML = `
+            <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+                <div class="confirm-icon"><i class="fa-solid fa-trash"></i></div>
+                <h3 id="confirm-title">${escapeHtml(titleText)}</h3>
+                <p>${escapeHtml(messageText)}</p>
+                <div class="confirm-actions">
+                    <button class="secondary compact confirm-cancel">Annuller</button>
+                    <button class="danger compact confirm-delete">Slet</button>
+                </div>
+            </div>`;
+
+        const finish = value => {
+            document.removeEventListener('keydown', onKeyDown);
+            overlay.remove();
+            resolve(value);
+        };
+        const onKeyDown = event => {
+            if (event.key === 'Escape') finish(false);
+            if (event.key === 'Enter') finish(true);
+        };
+
+        overlay.querySelector('.confirm-cancel').onclick = () => finish(false);
+        overlay.querySelector('.confirm-delete').onclick = () => finish(true);
+        overlay.onclick = event => { if (event.target === overlay) finish(false); };
+        document.addEventListener('keydown', onKeyDown);
+        document.body.appendChild(overlay);
+        overlay.querySelector('.confirm-delete').focus();
+    });
+}
+
 function bindAdminActions() {
     document.querySelectorAll('.add-admin').forEach(b => b.onclick = () => openAdminForm(b.dataset.kind));
     document.querySelectorAll('.edit-admin').forEach(b => b.onclick = () => {
@@ -131,9 +166,19 @@ function bindAdminActions() {
         if (item) openAdminForm(b.dataset.kind,item);
     });
     document.querySelectorAll('.delete-admin').forEach(b => b.onclick = async () => {
-        if (!confirm('Er du sikker på, at du vil slette den?')) return;
-        const result = await post('adminDelete',{kind:b.dataset.kind,id:b.dataset.id});
-        if (result.success && result.data) { state=result.data; render(); }
+        const confirmed = await openConfirm('Slet element', 'Er du sikker på, at du vil slette den?');
+        if (!confirmed) return;
+
+        b.disabled = true;
+        try {
+            const result = await post('adminDelete', { kind: b.dataset.kind, id: b.dataset.id });
+            if (result && result.success && result.data) {
+                state = result.data;
+                render();
+            }
+        } finally {
+            if (document.body.contains(b)) b.disabled = false;
+        }
     });
 }
 
