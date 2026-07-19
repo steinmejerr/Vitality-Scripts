@@ -4,6 +4,10 @@ local packageObject
 local routeBlip
 local pickupZone
 local deliveryZone
+local runVehicle
+local runVehicleTarget
+local carryingPackage = false
+local packageInVehicle = false
 
 local function notify(description, type)
     lib.notify({ title = 'Illegal Runs', description = description, type = type or 'inform' })
@@ -35,12 +39,133 @@ end
 local function removePackage()
     if packageObject and DoesEntityExist(packageObject) then DeleteEntity(packageObject) end
     packageObject = nil
+    carryingPackage = false
 end
 
 local function attachPackage()
+    removePackage()
     lib.requestModel(Config.PackageProp)
     packageObject = CreateObject(Config.PackageProp, 0.0, 0.0, 0.0, true, true, false)
     AttachEntityToEntity(packageObject, cache.ped, GetPedBoneIndex(cache.ped, 57005), 0.12, 0.0, -0.18, 250.0, 120.0, 40.0, true, true, false, true, 1, true)
+    carryingPackage = true
+end
+
+local function getTrunkCoords(vehicle)
+    local minDim, _ = GetModelDimensions(GetEntityModel(vehicle))
+    return GetOffsetFromEntityInWorldCoords(vehicle, 0.0, minDim.y - 0.35, 0.0)
+end
+
+local function nearTrunk(vehicle, maxDistance)
+    if not vehicle or vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    return #(GetEntityCoords(cache.ped) - getTrunkCoords(vehicle)) <= (maxDistance or 3.0)
+end
+
+local function deleteRunVehicle()
+    if runVehicleTarget and runVehicle and DoesEntityExist(runVehicle) then
+        exports.ox_target:removeLocalEntity(runVehicle, runVehicleTarget)
+    end
+    runVehicleTarget = nil
+
+    if runVehicle and DoesEntityExist(runVehicle) then
+        SetEntityAsMissionEntity(runVehicle, true, true)
+        DeleteVehicle(runVehicle)
+    end
+    runVehicle = nil
+    packageInVehicle = false
+end
+
+local function addVehicleTarget(vehicle)
+    runVehicleTarget = { 'sb_illegalruns_store_package', 'sb_illegalruns_take_package' }
+
+    exports.ox_target:addLocalEntity(vehicle, {
+        {
+            name = 'sb_illegalruns_store_package',
+            icon = 'fa-solid fa-box',
+            label = 'Læg pakken i bagagerummet',
+            bones = { 'boot' },
+            distance = 2.5,
+            canInteract = function(entity)
+                return entity == runVehicle and carryingPackage and not packageInVehicle
+            end,
+            onSelect = function(data)
+                if not nearTrunk(data.entity, 3.0) then return notify('Gå tættere på bagagerummet.', 'error') end
+                if GetVehicleDoorLockStatus(data.entity) > 1 then return notify('Bilen er låst.', 'error') end
+
+                SetVehicleDoorOpen(data.entity, 5, false, false)
+                local done = lib.progressCircle({ duration = 3500, label = 'Lægger pakken ind...', canCancel = true, disable = { move = true, car = true, combat = true } })
+                if not done then SetVehicleDoorShut(data.entity, 5, false) return end
+
+                local success = lib.callback.await('sb_illegalruns:storePackage', false, activeRun, VehToNet(data.entity), GetVehicleNumberPlateText(data.entity))
+                SetVehicleDoorShut(data.entity, 5, false)
+                if not success then return notify('Pakken kunne ikke lægges i bilen.', 'error') end
+
+                removePackage()
+                packageInVehicle = true
+                local run = Config.Runs[activeRun]
+                setRoute(run.delivery, 'Aflever pakken')
+                notify('Pakken er i bilen. Kør til afleveringsstedet.', 'success')
+            end
+        },
+        {
+            name = 'sb_illegalruns_take_package',
+            icon = 'fa-solid fa-box-open',
+            label = 'Tag pakken ud af bagagerummet',
+            bones = { 'boot' },
+            distance = 2.5,
+            canInteract = function(entity)
+                return entity == runVehicle and packageInVehicle and not carryingPackage
+            end,
+            onSelect = function(data)
+                if not nearTrunk(data.entity, 3.0) then return notify('Gå tættere på bagagerummet.', 'error') end
+                if GetVehicleDoorLockStatus(data.entity) > 1 then return notify('Bilen er låst.', 'error') end
+
+                SetVehicleDoorOpen(data.entity, 5, false, false)
+                local done = lib.progressCircle({ duration = 3000, label = 'Tager pakken ud...', canCancel = true, disable = { move = true, car = true, combat = true } })
+                if not done then SetVehicleDoorShut(data.entity, 5, false) return end
+
+                local success = lib.callback.await('sb_illegalruns:takePackage', false, activeRun, VehToNet(data.entity), GetVehicleNumberPlateText(data.entity))
+                SetVehicleDoorShut(data.entity, 5, false)
+                if not success then return notify('Pakken kunne ikke tages ud.', 'error') end
+
+                packageInVehicle = false
+                attachPackage()
+                notify('Tag pakken med hen til afleveringsstedet.', 'success')
+            end
+        }
+    })
+end
+
+local function spawnRunVehicle(runId)
+    lib.requestModel(Config.RunVehicle.model)
+
+    local spawn = Config.RunVehicle.spawn
+    if IsAnyVehicleNearPoint(spawn.x, spawn.y, spawn.z, 3.0) then
+        return false, 'Der holder allerede et køretøj på pladsen.'
+    end
+
+    runVehicle = CreateVehicle(Config.RunVehicle.model, spawn.x, spawn.y, spawn.z, spawn.w, true, true)
+    if not runVehicle or runVehicle == 0 then return false, 'Køretøjet kunne ikke oprettes.' end
+
+    SetEntityAsMissionEntity(runVehicle, true, true)
+    SetVehicleOnGroundProperly(runVehicle)
+    SetVehicleEngineOn(runVehicle, false, true, false)
+    SetVehicleDoorsLocked(runVehicle, 1)
+
+    local plate = ('%s%04d'):format(Config.RunVehicle.platePrefix, math.random(0, 9999))
+    SetVehicleNumberPlateText(runVehicle, plate)
+    Entity(runVehicle).state:set('vehicleLock', { lock = 1, sound = false }, true)
+
+    local netId = VehToNet(runVehicle)
+    SetNetworkIdCanMigrate(netId, true)
+
+    local registered, message = lib.callback.await('sb_illegalruns:registerVehicle', false, runId, netId, plate)
+    if not registered then
+        deleteRunVehicle()
+        return false, message or 'Kunne ikke give dig nøgler til bilen.'
+    end
+
+    addVehicleTarget(runVehicle)
+    return true
 end
 
 local function startDelivery(runId)
@@ -62,8 +187,8 @@ local function startDelivery(runId)
                 exports.ox_target:removeZone(pickupZone)
                 pickupZone = nil
                 attachPackage()
-                setRoute(run.delivery, 'Aflever pakken')
-                notify('Pakken er hentet. Kør til afleveringsstedet.', 'success')
+                setRoute(GetEntityCoords(runVehicle), 'Læg pakken i bilen')
+                notify('Pakken er hentet. Læg den i vanens bagagerum.', 'success')
 
                 deliveryZone = exports.ox_target:addSphereZone({
                     coords = vec3(run.delivery.x, run.delivery.y, run.delivery.z),
@@ -72,15 +197,19 @@ local function startDelivery(runId)
                         name = 'sb_illegalruns_delivery',
                         icon = 'fa-solid fa-handshake',
                         label = 'Aflever pakken',
+                        canInteract = function()
+                            return carryingPackage and not packageInVehicle
+                        end,
                         onSelect = function()
                             if not lib.progressCircle({ duration = Config.DeliveryDuration, label = 'Afleverer pakken...', canCancel = true, disable = { move = true, car = true, combat = true } }) then return end
                             local completed, reward = lib.callback.await('sb_illegalruns:complete', false, runId)
-                            if not completed then return notify('Pakken kunne ikke afleveres.', 'error') end
+                            if not completed then return notify('Tag pakken ud af vanen, før du afleverer den.', 'error') end
 
                             removePackage()
                             clearZones()
                             removeBlip()
                             activeRun = nil
+                            if Config.RunVehicle.deleteOnComplete then deleteRunVehicle() end
                             notify(('Run gennemført. Du modtog %s kr. i sorte penge.'):format(lib.math.groupdigits(reward)), 'success')
                         end
                     }}
@@ -104,16 +233,23 @@ end)
 
 RegisterNUICallback('startRun', function(data, cb)
     local success, message = lib.callback.await('sb_illegalruns:startRun', false, data.id)
-    cb({ success = success, message = message })
-    if not success then return end
+    if not success then cb({ success = false, message = message }) return end
 
+    local spawned, spawnMessage = spawnRunVehicle(data.id)
+    if not spawned then
+        lib.callback.await('sb_illegalruns:cancelRun', false, data.id)
+        cb({ success = false, message = spawnMessage })
+        return
+    end
+
+    cb({ success = true })
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
     activeRun = data.id
     local run = Config.Runs[data.id]
     setRoute(run.pickup, 'Hent pakken')
     startDelivery(data.id)
-    notify('GPS er sat til afhentningsstedet.', 'success')
+    notify('Vanen står klar, og du har fået nøglerne. GPS er sat til pakken.', 'success')
 end)
 
 CreateThread(function()
@@ -133,11 +269,24 @@ CreateThread(function()
     }})
 end)
 
+CreateThread(function()
+    while true do
+        if carryingPackage then
+            DisableControlAction(0, 23, true)
+            DisableControlAction(0, 75, true)
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
+
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     SetNuiFocus(false, false)
     clearZones()
     removeBlip()
     removePackage()
+    deleteRunVehicle()
     if npc and DoesEntityExist(npc) then DeleteEntity(npc) end
 end)

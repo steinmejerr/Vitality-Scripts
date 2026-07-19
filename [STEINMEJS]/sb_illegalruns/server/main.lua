@@ -11,6 +11,10 @@ MySQL.ready(function()
     ]])
 end)
 
+local function normalizePlate(plate)
+    return (plate or ''):gsub('%s+', ''):upper()
+end
+
 local function getIdentifier(xPlayer)
     return xPlayer.getIdentifier()
 end
@@ -18,6 +22,12 @@ end
 local function getCooldown(identifier)
     local expiresAt = MySQL.scalar.await('SELECT expires_at FROM sb_illegalruns_cooldowns WHERE identifier = ?', { identifier }) or 0
     return math.max(0, tonumber(expiresAt) - os.time())
+end
+
+local function playerNearEntity(source, entity, distance)
+    local ped = GetPlayerPed(source)
+    if ped == 0 or entity == 0 or not DoesEntityExist(entity) then return false end
+    return #(GetEntityCoords(ped) - GetEntityCoords(entity)) <= distance
 end
 
 lib.callback.register('sb_illegalruns:getMenuData', function(source)
@@ -62,7 +72,43 @@ lib.callback.register('sb_illegalruns:startRun', function(source, runId)
         return false, ('Du kan tage et nyt run om %d minutter.'):format(math.ceil(remaining / 60))
     end
 
-    activeRuns[source] = { id = runId, stage = 'pickup' }
+    activeRuns[source] = { id = runId, stage = 'vehicle_pending' }
+    return true
+end)
+
+lib.callback.register('sb_illegalruns:cancelRun', function(source, runId)
+    local active = activeRuns[source]
+    if active and active.id == runId and active.stage == 'vehicle_pending' then
+        activeRuns[source] = nil
+        return true
+    end
+    return false
+end)
+
+lib.callback.register('sb_illegalruns:registerVehicle', function(source, runId, netId, plate)
+    local active = activeRuns[source]
+    if not active or active.id ~= runId or active.stage ~= 'vehicle_pending' then return false, 'Runnet er ikke aktivt.' end
+
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if vehicle == 0 then return false, 'Vanen kunne ikke registreres.' end
+
+    local cleanPlate = normalizePlate(plate)
+    if cleanPlate == '' then return false, 'Nummerpladen kunne ikke læses.' end
+
+    active.vehicleNetId = netId
+    active.plate = cleanPlate
+    active.stage = 'pickup'
+
+    local ok, err = pcall(function()
+        exports['Renewed-Vehiclekeys']:addKey(source, cleanPlate)
+    end)
+
+    if not ok then
+        print(('[sb_illegalruns] Kunne ikke give nøgler via Renewed-Vehiclekeys: %s'):format(err))
+        activeRuns[source] = nil
+        return false, 'Kunne ikke give dig nøgler til vanen.'
+    end
+
     return true
 end)
 
@@ -78,7 +124,31 @@ lib.callback.register('sb_illegalruns:pickup', function(source, runId)
     local target = vec3(run.pickup.x, run.pickup.y, run.pickup.z)
     if #(coords - target) > 5.0 then return false end
 
-    active.stage = 'delivery'
+    active.stage = 'carrying'
+    return true
+end)
+
+lib.callback.register('sb_illegalruns:storePackage', function(source, runId, netId, plate)
+    local active = activeRuns[source]
+    if not active or active.id ~= runId or active.stage ~= 'carrying' then return false end
+    if active.vehicleNetId ~= netId or active.plate ~= normalizePlate(plate) then return false end
+
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if not playerNearEntity(source, vehicle, 7.0) then return false end
+
+    active.stage = 'in_vehicle'
+    return true
+end)
+
+lib.callback.register('sb_illegalruns:takePackage', function(source, runId, netId, plate)
+    local active = activeRuns[source]
+    if not active or active.id ~= runId or active.stage ~= 'in_vehicle' then return false end
+    if active.vehicleNetId ~= netId or active.plate ~= normalizePlate(plate) then return false end
+
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if not playerNearEntity(source, vehicle, 7.0) then return false end
+
+    active.stage = 'carrying_delivery'
     return true
 end)
 
@@ -86,7 +156,7 @@ lib.callback.register('sb_illegalruns:complete', function(source, runId)
     local xPlayer = ESX.GetPlayerFromId(source)
     local active = activeRuns[source]
     local run = Config.Runs[runId]
-    if not xPlayer or not active or active.id ~= runId or active.stage ~= 'delivery' or not run then return false end
+    if not xPlayer or not active or active.id ~= runId or active.stage ~= 'carrying_delivery' or not run then return false end
 
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
@@ -102,6 +172,12 @@ lib.callback.register('sb_illegalruns:complete', function(source, runId)
         VALUES (?, ?)
         ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
     ]], { getIdentifier(xPlayer), expiresAt })
+
+    if active.plate then
+        pcall(function()
+            exports['Renewed-Vehiclekeys']:removeKey(source, active.plate)
+        end)
+    end
 
     activeRuns[source] = nil
     return true, reward
