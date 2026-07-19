@@ -151,8 +151,8 @@ local function spawnRunVehicle(runId)
     SetVehicleEngineOn(runVehicle, false, true, false)
     SetVehicleDoorsLocked(runVehicle, 1)
 
-    local plate = ('%s%04d'):format(Config.RunVehicle.platePrefix, math.random(0, 9999))
-    SetVehicleNumberPlateText(runVehicle, plate)
+    -- Behold køretøjets normale GTA-nummerplade.
+    local plate = GetVehicleNumberPlateText(runVehicle)
     Entity(runVehicle).state:set('vehicleLock', { lock = 1, sound = false }, true)
 
     local netId = VehToNet(runVehicle)
@@ -165,6 +165,11 @@ local function spawnRunVehicle(runId)
     end
 
     addVehicleTarget(runVehicle)
+
+    -- Placér spilleren direkte på førersædet, når bilen og nøglerne er klar.
+    SetPedIntoVehicle(cache.ped, runVehicle, -1)
+    SetVehicleEngineOn(runVehicle, true, true, false)
+
     return true
 end
 

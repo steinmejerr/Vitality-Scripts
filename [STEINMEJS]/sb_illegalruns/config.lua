@@ -23,7 +23,6 @@ Config.PackageProp = `prop_cs_cardbox_01`
 Config.RunVehicle = {
     model = `speedo`, -- Vanen der bruges til alle runs
     spawn = vector4(1204.49, -1266.77, 35.23, 190.15),
-    platePrefix = 'RUN',
     deleteOnComplete = true
 }
 
