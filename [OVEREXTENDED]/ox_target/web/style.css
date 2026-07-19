@@ -1,25 +1,35 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --color-default: #cfd2da;
-  --color-hover: white;
+  --accent: #2ce978;
+  --accent-soft: rgba(44, 233, 120, 0.18);
+  --accent-glow: rgba(44, 233, 120, 0.28);
+  --text: #edf4ef;
+  --text-soft: #bfc9c2;
+  --border: rgba(111, 130, 118, 0.34);
+  --panel: rgba(14, 18, 18, 0.82);
+  --panel-2: rgba(18, 24, 24, 0.72);
+  --panel-hover: rgba(24, 31, 29, 0.92);
+  --shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   visibility: hidden;
+  margin: 0;
+  overflow: hidden;
   user-select: none;
   white-space: nowrap;
-  margin: 0;
-  user-select: none;
-  overflow: hidden;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 p {
   margin: 0;
-}
-
-.material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 40;
 }
 
 #eye {
@@ -27,65 +37,154 @@ p {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 22pt;
-  fill: black;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(44, 233, 120, 0.12), transparent 58%),
+    linear-gradient(180deg, rgba(23, 29, 27, 0.96), rgba(12, 15, 15, 0.86));
+  border: 1px solid rgba(79, 93, 86, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.025) inset,
+    0 8px 24px rgba(0, 0, 0, 0.34),
+    0 0 30px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+#eye::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(44, 233, 120, 0.06) inset;
+}
+
+#eyeSvg {
+  width: 28px;
+  height: 28px;
+  fill: rgba(237, 244, 239, 0.8);
+  transition: fill 180ms ease, transform 180ms ease, filter 180ms ease;
 }
 
 .eye-hover {
-  fill: var(--color-default);
+  fill: var(--accent) !important;
+  transform: scale(1.04);
+  filter: drop-shadow(0 0 10px rgba(44, 233, 120, 0.28));
 }
 
 #options-wrapper {
   position: absolute;
-  top: calc(48.4%);
-  left: calc(50% + 18pt);
+  top: 50%;
+  left: calc(50% + 42px);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 250px;
 }
 
 .option-container {
-  color: var(--color-default);
+  position: relative;
   display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
   align-items: center;
-  font-family: "Nunito";
-  background: linear-gradient(
-    90deg,
-    rgba(20, 20, 20, 0.7) 0%,
-    rgba(20, 20, 20, 0.6) 66%,
-    rgba(47, 48, 53, 0) 100%
-  );
-  font-size: 11pt;
-  line-height: 22pt;
-  vertical-align: middle;
-  margin: 2pt;
-  transition: 300ms;
-  transform-origin: left top;
-  scale: 1;
-  height: 22pt;
-  width: 150pt;
-  top: 0;
+  gap: 10px;
+  min-height: 50px;
+  min-width: 250px;
+  padding: 10px 14px 10px 13px;
+  color: var(--text-soft);
+  background:
+    linear-gradient(135deg, rgba(22, 27, 27, 0.94), rgba(14, 18, 18, 0.88)),
+    linear-gradient(180deg, rgba(44, 233, 120, 0.05), transparent 65%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    var(--shadow);
+  overflow: hidden;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+  animation: optionFadeIn 160ms ease;
+}
+
+.option-container::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(44, 233, 120, 0.65);
+  box-shadow: 0 0 12px rgba(44, 233, 120, 0.18);
+}
+
+.option-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(44, 233, 120, 0.05), transparent 42%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
 }
 
 .option-container:hover {
-  background: linear-gradient(
-    90deg,
-    rgba(30, 30, 30, 0.7) 0%,
-    rgba(30, 30, 30, 0.6) 66%,
-    rgba(57, 58, 63, 0) 100%
-  );
-  transform-origin: left top;
-  color: var(--color-hover);
-  margin-left: 4pt;
+  transform: translateX(6px) scale(1.01);
+  border-color: rgba(44, 233, 120, 0.42);
+  color: var(--text);
+  background:
+    linear-gradient(135deg, rgba(26, 32, 31, 0.97), rgba(16, 20, 20, 0.92)),
+    linear-gradient(180deg, rgba(44, 233, 120, 0.09), transparent 65%);
+  box-shadow:
+    0 0 0 1px rgba(44, 233, 120, 0.08) inset,
+    0 16px 36px rgba(0, 0, 0, 0.4),
+    0 0 18px rgba(44, 233, 120, 0.08);
+}
+
+.option-container:hover::after {
+  opacity: 1;
 }
 
 .option-icon {
-  font-size: 12pt;
-  line-height: 22pt;
-  width: 14pt;
-  margin: 5pt;
-  color: var(--color-default);
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--accent);
+  background: linear-gradient(180deg, rgba(44, 233, 120, 0.18), rgba(44, 233, 120, 0.08));
+  border: 1px solid rgba(44, 233, 120, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  margin: 0;
 }
 
 .option-label {
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes optionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
