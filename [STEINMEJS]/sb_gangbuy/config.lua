@@ -2,8 +2,7 @@ Config = {}
 
 Config.Debug = false
 Config.UseOxInventory = true
-Config.PaymentAccount = 'black_money' -- money, bank eller black_money
--- XP og level gemmes fælles for hele banden via ESX-jobnavnet.
+Config.PaymentAccount = 'black_money'
 Config.InteractionDistance = 2.0
 Config.OrderPickupDuration = 6500
 Config.MissionPickupDuration = 5500
@@ -19,8 +18,6 @@ Config.Npc = {
     targetIcon = 'fa-solid fa-user-secret'
 }
 
--- Tilføj jeres faktiske bandejobs her.
--- minimumGrade styrer adgang til NPC'en. Hvert produkt/mission kan kræve en højere grade.
 Config.AllowedGangs = {
     ambulance = { label = 'Test Bande', minimumGrade = 0 },
     unemployed = { label = 'Test Bande 2', minimumGrade = 0 }
@@ -39,8 +36,6 @@ Config.Levels = {
     [10] = { xp = 7200 }
 }
 
--- Varerne er eksempler, som allerede findes i den medsendte database.
--- Skift item-navne, priser, levels og grades frit.
 Config.Products = {
     radio = {
         label = 'Krypteret radio',

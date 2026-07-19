@@ -44,7 +44,7 @@ function card(item, kind) {
         <div class="card-icon"><i class="${escapeHtml(item.icon || 'fa-solid fa-box')}"></i></div>
         <h3>${escapeHtml(item.label)}</h3><p>${escapeHtml(item.description)}</p>
         <div class="meta"><span>Level ${item.requiredLevel}</span><span>Grade ${item.requiredGrade}</span>${isProduct ? `<span>${item.deliveryMin}-${item.deliveryMax} min.</span>` : `<span>+${money(item.xp)} XP</span>`}</div>
-        <div class="price">${isProduct ? `$${money(item.price)}` : `$${money(item.money)}`}</div>
+        ${isProduct ? `<div class="price black-money-price"><span>$${money(item.price)}</span><small><i class="fa-solid fa-sack-dollar"></i> Sorte penge</small></div>` : `<div class="price">$${money(item.money)}</div>`}
         <button class="primary action" data-kind="${kind}" data-id="${escapeHtml(item.id)}" ${item.unlocked ? '' : 'disabled'}>${buttonText}</button>
     </article>`;
 }
@@ -64,7 +64,7 @@ function renderMissions() {
 }
 
 function renderShop() {
-    content.innerHTML = `<div class="section-head"><div><h2>Varer</h2><p>Du betaler nu. GPS kommer, når ordren er klar.</p></div><span class="pill">Maks. én ordre</span></div><div class="grid">${state.products.map(x=>card(x,'product')).join('')}</div>`;
+    content.innerHTML = `<div class="section-head"><div><h2>Varer</h2><p>Alle varer betales med sorte penge. GPS kommer, når ordren er klar.</p></div><span class="pill black-money-pill"><i class="fa-solid fa-sack-dollar"></i> Sorte penge</span></div><div class="grid">${state.products.map(x=>card(x,'product')).join('')}</div>`;
 }
 
 function renderDelivery() {
@@ -85,7 +85,7 @@ function adminFields(kind, item = {}) {
     const field = (name,label,type='text',value='',min='') => `<label><span>${label}</span><input name="${name}" type="${type}" value="${escapeHtml(value)}" ${min !== '' ? `min="${min}"` : ''}></label>`;
     const area = (name,label,value='') => `<label class="wide"><span>${label}</span><textarea name="${name}">${escapeHtml(value)}</textarea></label>`;
     if (kind === 'gang') return `${field('jobName','ESX-jobnavn','text',item.jobName||'')}${field('label','Navn','text',item.label||'')}${field('minimumGrade','Minimum grade','number',item.minimumGrade??0,0)}`;
-    if (kind === 'product') return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${field('item','Item-navn','text',item.item||'')}${field('amount','Antal','number',item.amount??1,1)}${field('price','Pris','number',item.price??0,0)}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('deliveryMin','Min. leveringstid i minutter','number',item.deliveryMin??1,0)}${field('deliveryMax','Maks. leveringstid i minutter','number',item.deliveryMax??1,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
+    if (kind === 'product') return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${field('item','Item-navn','text',item.item||'')}${field('amount','Antal','number',item.amount??1,1)}${field('price','Pris i sorte penge','number',item.price??0,0)}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('deliveryMin','Min. leveringstid i minutter','number',item.deliveryMin??1,0)}${field('deliveryMax','Maks. leveringstid i minutter','number',item.deliveryMax??1,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
     return `${field('id','ID','text',item.id||'')}${field('label','Navn','text',item.label||'')}${area('description','Beskrivelse',item.description||'')}${field('requiredLevel','Krævet level','number',item.requiredLevel??1,1)}${field('requiredGrade','Krævet grade','number',item.requiredGrade??0,0)}${field('xp','XP-belønning','number',item.xp??0,0)}${field('money','Penge-belønning','number',item.money??0,0)}${field('waitMin','Min. ventetid i sekunder','number',item.waitMin??10,0)}${field('waitMax','Maks. ventetid i sekunder','number',item.waitMax??10,0)}${field('icon','Font Awesome ikon','text',item.icon||'fa-solid fa-box')}`;
 }
 
@@ -218,7 +218,7 @@ async function refresh() {
 window.addEventListener('message', e => {
     const msg=e.data;
     if (msg.action === 'open') {
-        mode='player'; state=msg.data; activeTab='overview'; eyebrow.textContent='HANDEL'; title.textContent='Kontakten'; subtitle.textContent='Køb varer og tag arbejde for kontakten.';
+        mode='player'; state=msg.data; activeTab='overview'; eyebrow.textContent='HANDEL'; title.textContent='Kontakten'; subtitle.textContent='Køb varer med sorte penge og tag arbejde for kontakten.';
         app.classList.remove('hidden'); render(); clearInterval(timer); timer=setInterval(render,1000);
     }
     if (msg.action === 'openAdmin') {

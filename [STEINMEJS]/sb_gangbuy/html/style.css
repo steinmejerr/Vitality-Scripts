@@ -67,6 +67,9 @@ nav { display: flex; gap: 8px; padding: 13px 28px; border-bottom: 1px solid var(
 .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
 .meta span { padding: 5px 7px; border: 1px solid var(--line); border-radius: 5px; color: #c5ceca; font-size: 10px; }
 .price { margin-top: 15px; font-size: 19px; font-weight: 650; }
+.black-money-price { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.black-money-price small { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid rgba(57,215,125,.22); border-radius: 6px; color: #bfe9d0; background: rgba(57,215,125,.075); font-size: 10px; font-weight: 650; white-space: nowrap; }
+.black-money-pill { display: inline-flex; align-items: center; gap: 7px; color: #c7f2d8; border-color: rgba(57,215,125,.25); background: rgba(57,215,125,.075); }
 
 .primary, .secondary { width: 100%; margin-top: 14px; padding: 11px 13px; border-radius: 7px; font-weight: 560; }
 .primary { border: 1px solid rgba(57,215,125,.55); color: #fff; background: #2dbf70; }
