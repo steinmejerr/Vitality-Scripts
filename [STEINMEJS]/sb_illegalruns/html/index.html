@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Illegal Runs</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+    <main id="app" class="app hidden">
+        <header>
+            <div><span class="eyebrow">ILLEGAL RUNS</span><h1>Vælg et run</h1><p>Hent pakken, kør den frem og få din betaling.</p></div>
+            <button id="close" class="icon-button"><i class="fa-solid fa-xmark"></i></button>
+        </header>
+        <section class="status" id="status"></section>
+        <section class="content">
+            <div class="section-head"><div><h2>Tilgængelige runs</h2><p>Du kan kun have ét aktivt run ad gangen.</p></div><span class="pill" id="cooldownLabel"></span></div>
+            <div class="grid" id="runs"></div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
