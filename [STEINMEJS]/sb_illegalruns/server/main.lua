@@ -158,6 +158,24 @@ lib.callback.register('sb_illegalruns:storePackage', function(source, runId, net
     return true
 end)
 
+lib.callback.register('sb_illegalruns:unloadCargo', function(source, runId, netId, plate)
+    local active = activeRuns[source]
+    if not active or active.id ~= runId or active.stage ~= 'in_vehicle' then return false end
+    if active.vehicleNetId ~= netId or active.plate ~= normalizePlate(plate) then return false end
+
+    local run = Config.Runs[runId]
+    local ped = GetPlayerPed(source)
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if not run or ped == 0 or vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    if GetPedInVehicleSeat(vehicle, -1) ~= ped then return false end
+
+    local deliveryCoords = vec3(run.delivery.x, run.delivery.y, run.delivery.z)
+    if #(GetEntityCoords(vehicle) - deliveryCoords) > (Config.DeliveryZone.radius + 2.0) then return false end
+
+    active.stage = 'return_vehicle'
+    return true
+end)
+
 lib.callback.register('sb_illegalruns:takePackage', function(source, runId, netId, plate)
     local active = activeRuns[source]
     if not active or active.id ~= runId or active.stage ~= 'in_vehicle' then return false end
@@ -180,6 +198,44 @@ lib.callback.register('sb_illegalruns:complete', function(source, runId)
     local coords = GetEntityCoords(ped)
     local target = vec3(run.delivery.x, run.delivery.y, run.delivery.z)
     if #(coords - target) > 5.0 then return false end
+
+    local reward = math.random(run.reward.min, run.reward.max)
+    xPlayer.addAccountMoney(Config.PaymentAccount, reward, ('Illegal run: %s'):format(run.label))
+
+    local expiresAt = os.time() + (Config.CooldownMinutes * 60)
+    MySQL.query.await([[
+        INSERT INTO sb_illegalruns_cooldowns (identifier, expires_at)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
+    ]], { getIdentifier(xPlayer), expiresAt })
+
+    if active.plate then
+        pcall(function()
+            exports['Renewed-Vehiclekeys']:removeKey(source, active.plate)
+        end)
+    end
+
+    activeRuns[source] = nil
+    return true, reward
+end)
+
+lib.callback.register('sb_illegalruns:completeReturn', function(source, runId, netId, plate)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local active = activeRuns[source]
+    local run = Config.Runs[runId]
+    if not xPlayer or not active or active.id ~= runId or active.stage ~= 'return_vehicle' or not run then
+        return false
+    end
+
+    if active.vehicleNetId ~= netId or active.plate ~= normalizePlate(plate) then return false end
+
+    local ped = GetPlayerPed(source)
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if ped == 0 or vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+    if GetPedInVehicleSeat(vehicle, -1) ~= ped then return false end
+
+    local returnCoords = Config.VehicleReturn.coords
+    if #(GetEntityCoords(vehicle) - returnCoords) > (Config.VehicleReturn.radius + 2.0) then return false end
 
     local reward = math.random(run.reward.min, run.reward.max)
     xPlayer.addAccountMoney(Config.PaymentAccount, reward, ('Illegal run: %s'):format(run.label))

@@ -11,6 +11,8 @@ local runVehicle
 local runVehicleTarget
 local carryingPackage = false
 local packageInVehicle = false
+local cargoUnloaded = false
+local textUiVisible = false
 local cargoObjects = {}
 
 local function notify(description, type)
@@ -49,6 +51,7 @@ local function clearZones()
     end
     pickupVehicle = nil
     if deliveryZone then exports.ox_target:removeZone(deliveryZone) deliveryZone = nil end
+    if textUiVisible then lib.hideTextUI() textUiVisible = false end
 end
 
 local function removePackage()
@@ -143,6 +146,7 @@ local function deleteRunVehicle()
     end
     runVehicle = nil
     packageInVehicle = false
+    cargoUnloaded = false
     removeCargoVisuals()
 end
 
@@ -236,7 +240,7 @@ local function spawnRunVehicle(runId)
         return false, message or 'Kunne ikke give dig nøgler til bilen.'
     end
 
-    addVehicleTarget(runVehicle)
+    -- Bisonen bruger ikke target til aflæsning. Aflæsning sker i afleveringsområdet med E.
 
     -- Placér spilleren direkte på førersædet, når bilen og nøglerne er klar.
     SetPedIntoVehicle(cache.ped, runVehicle, -1)
@@ -246,33 +250,7 @@ local function spawnRunVehicle(runId)
 end
 
 local function createDeliveryZone(runId)
-    local run = Config.Runs[runId]
-    if not run then return end
-
-    deliveryZone = exports.ox_target:addSphereZone({
-        coords = vec3(run.delivery.x, run.delivery.y, run.delivery.z),
-        radius = 1.6,
-        options = {{
-            name = 'sb_illegalruns_delivery',
-            icon = 'fa-solid fa-handshake',
-            label = 'Aflever pakken',
-            canInteract = function()
-                return carryingPackage and not packageInVehicle
-            end,
-            onSelect = function()
-                if not lib.progressCircle({ duration = Config.DeliveryDuration, label = 'Afleverer pakken...', canCancel = true, disable = { move = true, car = true, combat = true } }) then return end
-                local completed, reward = lib.callback.await('sb_illegalruns:complete', false, runId)
-                if not completed then return notify('Tag pakken af ladet, før du afleverer den.', 'error') end
-
-                removePackage()
-                clearZones()
-                removeBlip()
-                activeRun = nil
-                if Config.RunVehicle.deleteOnComplete then deleteRunVehicle() end
-                notify(('Run gennemført. Du modtog %s kr. i sorte penge.'):format(lib.math.groupdigits(reward)), 'success')
-            end
-        }}
-    })
+    -- Afleveringen håndteres af E-områderne i tråden længere nede.
 end
 
 local function startDelivery(runId)
@@ -350,13 +328,149 @@ local function startDelivery(runId)
             pickupObject = nil
 
             packageInVehicle = true
+            cargoUnloaded = false
             createCargoVisuals(runVehicle)
-            setRoute(run.delivery, 'Aflever pakken')
-            createDeliveryZone(runId)
-            notify('Kassen er på ladet. Kør til afleveringsstedet.', 'success')
+            setRoute(run.delivery, 'Læs kassen af')
+            notify('Kassen er på ladet. Kør ind i afleveringsområdet og tryk E.', 'success')
         end
     }})
 end
+
+local function setTextUi(text)
+    if textUiVisible then return end
+    lib.showTextUI(text)
+    textUiVisible = true
+end
+
+local function hideTextUi()
+    if not textUiVisible then return end
+    lib.hideTextUI()
+    textUiVisible = false
+end
+
+CreateThread(function()
+    while true do
+        local sleep = 750
+        local showPrompt = false
+
+        if activeRun and runVehicle and DoesEntityExist(runVehicle) then
+            local run = Config.Runs[activeRun]
+            local pedCoords = GetEntityCoords(cache.ped)
+            local vehicleCoords = GetEntityCoords(runVehicle)
+            local isDriver = GetPedInVehicleSeat(runVehicle, -1) == cache.ped
+
+            if packageInVehicle and not cargoUnloaded and run then
+                local deliveryCoords = vec3(run.delivery.x, run.delivery.y, run.delivery.z)
+                local distance = #(vehicleCoords - deliveryCoords)
+
+                if distance <= Config.DeliveryZone.markerDistance then
+                    sleep = 0
+                    DrawMarker(
+                        Config.DeliveryZone.marker.type,
+                        deliveryCoords.x, deliveryCoords.y, deliveryCoords.z - 1.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        Config.DeliveryZone.marker.scale.x,
+                        Config.DeliveryZone.marker.scale.y,
+                        Config.DeliveryZone.marker.scale.z,
+                        255, 255, 255, 120, false, false, 2, false, nil, nil, false
+                    )
+                end
+
+                if distance <= Config.DeliveryZone.radius and isDriver then
+                    showPrompt = true
+                    setTextUi('[E] Læs kassen af')
+
+                    if IsControlJustReleased(0, 38) then
+                        hideTextUi()
+                        local done = lib.progressCircle({
+                            duration = Config.DeliveryDuration,
+                            label = 'Læsser kassen af...',
+                            canCancel = true,
+                            disable = { move = true, car = true, combat = true }
+                        })
+
+                        if done then
+                            local success = lib.callback.await(
+                                'sb_illegalruns:unloadCargo',
+                                false,
+                                activeRun,
+                                VehToNet(runVehicle),
+                                GetVehicleNumberPlateText(runVehicle)
+                            )
+
+                            if success then
+                                packageInVehicle = false
+                                cargoUnloaded = true
+                                removeCargoVisuals()
+                                setRoute(Config.VehicleReturn.coords, 'Aflever Bisonen')
+                                notify('Kassen er læsset af. Kør Bisonen tilbage til runs.', 'success')
+                            else
+                                notify('Kassen kunne ikke læsses af.', 'error')
+                            end
+                        end
+                    end
+                end
+            elseif cargoUnloaded then
+                local returnCoords = Config.VehicleReturn.coords
+                local distance = #(vehicleCoords - returnCoords)
+
+                if distance <= Config.VehicleReturn.markerDistance then
+                    sleep = 0
+                    DrawMarker(
+                        Config.VehicleReturn.marker.type,
+                        returnCoords.x, returnCoords.y, returnCoords.z - 1.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        Config.VehicleReturn.marker.scale.x,
+                        Config.VehicleReturn.marker.scale.y,
+                        Config.VehicleReturn.marker.scale.z,
+                        255, 255, 255, 120, false, false, 2, false, nil, nil, false
+                    )
+                end
+
+                if distance <= Config.VehicleReturn.radius and isDriver then
+                    showPrompt = true
+                    setTextUi('[E] Aflever Bisonen')
+
+                    if IsControlJustReleased(0, 38) then
+                        hideTextUi()
+                        local done = lib.progressCircle({
+                            duration = Config.ReturnDuration,
+                            label = 'Afleverer Bisonen...',
+                            canCancel = true,
+                            disable = { move = true, car = true, combat = true }
+                        })
+
+                        if done then
+                            local completed, reward = lib.callback.await(
+                                'sb_illegalruns:completeReturn',
+                                false,
+                                activeRun,
+                                VehToNet(runVehicle),
+                                GetVehicleNumberPlateText(runVehicle)
+                            )
+
+                            if completed then
+                                TaskLeaveVehicle(cache.ped, runVehicle, 0)
+                                Wait(900)
+                                clearZones()
+                                removeBlip()
+                                removePackage()
+                                activeRun = nil
+                                deleteRunVehicle()
+                                notify(('Run gennemført. Du modtog %s kr. i sorte penge.'):format(lib.math.groupdigits(reward)), 'success')
+                            else
+                                notify('Bisonen kunne ikke afleveres.', 'error')
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        if not showPrompt then hideTextUi() end
+        Wait(sleep)
+    end
+end)
 
 local function openMenu()
     local data = lib.callback.await('sb_illegalruns:getMenuData', false)

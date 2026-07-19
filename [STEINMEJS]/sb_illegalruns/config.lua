@@ -8,6 +8,22 @@ Config.InteractionDistance = 2.0
 Config.PickupDuration = 5000
 Config.PickupVehicleDistance = 8.0 -- Hvor tæt Bisonen skal være på kassen
 Config.DeliveryDuration = 5000
+Config.ReturnDuration = 4000
+
+-- Afleveringsområdet: Kør ind i området og tryk E for at læsse kassen af.
+Config.DeliveryZone = {
+    radius = 5.0,
+    markerDistance = 35.0,
+    marker = { type = 1, scale = vec3(5.0, 5.0, 0.35) }
+}
+
+-- Bisonen afleveres tilbage ved run-NPC'en efter kassen er læsset af.
+Config.VehicleReturn = {
+    coords = vector3(1204.49, -1266.77, 35.23),
+    radius = 5.0,
+    markerDistance = 35.0,
+    marker = { type = 1, scale = vec3(5.0, 5.0, 0.35) }
+}
 Config.PaymentAccount = 'black_money'
 Config.OneActiveRun = true
 
@@ -60,7 +76,7 @@ Config.Runs = {
         icon = 'fa-solid fa-flask',
         reward = { min = 7000, max = 10500 },
         pickup = vector4(1004.63, -2528.71, 28.30, 173.48),
-        delivery = vector4(1390.42, 3604.34, 38.94, 198.0)
+        delivery = vector4(1415.28, 3616.73, 34.91, 35.21)
     },
     weed = {
         label = 'Weed run',
