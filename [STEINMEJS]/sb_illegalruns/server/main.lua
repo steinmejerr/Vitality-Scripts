@@ -90,7 +90,7 @@ lib.callback.register('sb_illegalruns:registerVehicle', function(source, runId, 
     if not active or active.id ~= runId or active.stage ~= 'vehicle_pending' then return false, 'Runnet er ikke aktivt.' end
 
     local vehicle = NetworkGetEntityFromNetworkId(netId)
-    if vehicle == 0 then return false, 'Vanen kunne ikke registreres.' end
+    if vehicle == 0 then return false, 'Bisonen kunne ikke registreres.' end
 
     local cleanPlate = normalizePlate(plate)
     if cleanPlate == '' then return false, 'Nummerpladen kunne ikke læses.' end
@@ -106,9 +106,27 @@ lib.callback.register('sb_illegalruns:registerVehicle', function(source, runId, 
     if not ok then
         print(('[sb_illegalruns] Kunne ikke give nøgler via Renewed-Vehiclekeys: %s'):format(err))
         activeRuns[source] = nil
-        return false, 'Kunne ikke give dig nøgler til vanen.'
+        return false, 'Kunne ikke give dig nøgler til Bisonen.'
     end
 
+    return true
+end)
+
+lib.callback.register('sb_illegalruns:loadPickupIntoVehicle', function(source, runId, netId, plate)
+    local active = activeRuns[source]
+    if not active or active.id ~= runId or active.stage ~= 'pickup' then return false end
+    if active.vehicleNetId ~= netId or active.plate ~= normalizePlate(plate) then return false end
+
+    local run = Config.Runs[runId]
+    local ped = GetPlayerPed(source)
+    local vehicle = NetworkGetEntityFromNetworkId(netId)
+    if not run or ped == 0 or vehicle == 0 or not DoesEntityExist(vehicle) then return false end
+
+    local pickupCoords = vec3(run.pickup.x, run.pickup.y, run.pickup.z)
+    if #(GetEntityCoords(ped) - pickupCoords) > 5.0 then return false end
+    if #(GetEntityCoords(vehicle) - pickupCoords) > (Config.PickupVehicleDistance + 3.0) then return false end
+
+    active.stage = 'in_vehicle'
     return true
 end)
 

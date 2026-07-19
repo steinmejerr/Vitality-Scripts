@@ -6,6 +6,7 @@ Config.Debug = false
 Config.CooldownMinutes = 1
 Config.InteractionDistance = 2.0
 Config.PickupDuration = 5000
+Config.PickupVehicleDistance = 8.0 -- Hvor tæt Bisonen skal være på kassen
 Config.DeliveryDuration = 5000
 Config.PaymentAccount = 'black_money'
 Config.OneActiveRun = true
@@ -20,37 +21,20 @@ Config.Npc = {
 
 Config.PackageProp = `prop_cs_cardbox_01`
 
+
+
+-- Bisonen er det eneste køretøj i runnet. Spilleren spawner i den og kører til kassen.
 Config.RunVehicle = {
-    model = `speedo`, -- Vanen der bruges til alle runs
+    model = `bison`,
     spawn = vector4(1204.49, -1266.77, 35.23, 190.15),
     deleteOnComplete = true
 }
 
-
--- Visuelle kasser i varerummet. De bliver først oprettet, når pakken er lagt i vanen.
--- Positionerne er lokale offsets inde i en standard Speedo.
+-- Kassen der står ved afhentningsstedet og senere vises på Bisonens lad.
 Config.CargoVisuals = {
     prop = `xm3_prop_xm3_box_wood03a`,
-    positions = {
-        -- Nederste række
-        { x = -0.52, y = -1.45, z = 0.05, rz = 0.0 },
-        { x =  0.00, y = -1.45, z = 0.05, rz = 0.0 },
-        { x =  0.52, y = -1.45, z = 0.05, rz = 0.0 },
-        { x = -0.52, y = -0.82, z = 0.05, rz = 0.0 },
-        { x =  0.00, y = -0.82, z = 0.05, rz = 0.0 },
-        { x =  0.52, y = -0.82, z = 0.05, rz = 0.0 },
-        { x = -0.52, y = -0.19, z = 0.05, rz = 0.0 },
-        { x =  0.00, y = -0.19, z = 0.05, rz = 0.0 },
-        { x =  0.52, y = -0.19, z = 0.05, rz = 0.0 },
-
-        -- Øverste række
-        { x = -0.52, y = -1.25, z = 0.53, rz = 90.0 },
-        { x =  0.00, y = -1.25, z = 0.53, rz = 90.0 },
-        { x =  0.52, y = -1.25, z = 0.53, rz = 90.0 },
-        { x = -0.52, y = -0.55, z = 0.53, rz = 90.0 },
-        { x =  0.00, y = -0.55, z = 0.53, rz = 90.0 },
-        { x =  0.52, y = -0.55, z = 0.53, rz = 90.0 }
-    }
+    -- Lokalt offset på Bisonens lad. Justér her, hvis kassen skal flyttes.
+    position = { x = 0.0, y = -1.35, z = 0.48, rx = 0.0, ry = 0.0, rz = 0.0 }
 }
 
 Config.Blip = {

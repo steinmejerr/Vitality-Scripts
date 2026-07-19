@@ -3,6 +3,9 @@ local activeRun
 local packageObject
 local routeBlip
 local pickupZone
+local pickupObject
+local pickupObjectTarget
+local pickupVehicle
 local deliveryZone
 local runVehicle
 local runVehicleTarget
@@ -34,6 +37,17 @@ end
 
 local function clearZones()
     if pickupZone then exports.ox_target:removeZone(pickupZone) pickupZone = nil end
+    if pickupObjectTarget and pickupObject and DoesEntityExist(pickupObject) then
+        exports.ox_target:removeLocalEntity(pickupObject, pickupObjectTarget)
+    end
+    pickupObjectTarget = nil
+    if pickupObject and DoesEntityExist(pickupObject) then DeleteEntity(pickupObject) end
+    pickupObject = nil
+    if pickupVehicle and DoesEntityExist(pickupVehicle) then
+        SetEntityAsMissionEntity(pickupVehicle, true, true)
+        DeleteVehicle(pickupVehicle)
+    end
+    pickupVehicle = nil
     if deliveryZone then exports.ox_target:removeZone(deliveryZone) deliveryZone = nil end
 end
 
@@ -68,31 +82,29 @@ local function createCargoVisuals(vehicle)
 
     lib.requestModel(Config.CargoVisuals.prop)
 
-    for i = 1, #Config.CargoVisuals.positions do
-        local position = Config.CargoVisuals.positions[i]
-        local object = CreateObject(Config.CargoVisuals.prop, 0.0, 0.0, 0.0, false, false, false)
+    local position = Config.CargoVisuals.position
+    local object = CreateObject(Config.CargoVisuals.prop, 0.0, 0.0, 0.0, false, false, false)
 
-        if object and object ~= 0 then
-            SetEntityCollision(object, false, false)
-            AttachEntityToEntity(
-                object,
-                vehicle,
-                0,
-                position.x,
-                position.y,
-                position.z,
-                position.rx or 0.0,
-                position.ry or 0.0,
-                position.rz or 0.0,
-                false,
-                false,
-                false,
-                false,
-                2,
-                true
-            )
-            cargoObjects[#cargoObjects + 1] = object
-        end
+    if object and object ~= 0 then
+        SetEntityCollision(object, false, false)
+        AttachEntityToEntity(
+            object,
+            vehicle,
+            0,
+            position.x,
+            position.y,
+            position.z,
+            position.rx or 0.0,
+            position.ry or 0.0,
+            position.rz or 0.0,
+            false,
+            false,
+            false,
+            false,
+            2,
+            true
+        )
+        cargoObjects[1] = object
     end
 
     SetModelAsNoLongerNeeded(Config.CargoVisuals.prop)
@@ -141,8 +153,7 @@ local function addVehicleTarget(vehicle)
         {
             name = 'sb_illegalruns_store_package',
             icon = 'fa-solid fa-box',
-            label = 'Læg pakken i bagagerummet',
-            bones = { 'door_dside_r', 'door_pside_r', 'boot' },
+            label = 'Læg pakken på ladet',
             distance = 3.0,
             canInteract = function(entity)
                 return entity == runVehicle and carryingPackage and not packageInVehicle
@@ -152,7 +163,7 @@ local function addVehicleTarget(vehicle)
                 if GetVehicleDoorLockStatus(data.entity) > 1 then return notify('Bilen er låst.', 'error') end
 
                 SetVehicleDoorOpen(data.entity, 5, false, false)
-                local done = lib.progressCircle({ duration = 3500, label = 'Lægger pakken ind...', canCancel = true, disable = { move = true, car = true, combat = true } })
+                local done = lib.progressCircle({ duration = 3500, label = 'Lægger pakken på ladet...', canCancel = true, disable = { move = true, car = true, combat = true } })
                 if not done then SetVehicleDoorShut(data.entity, 5, false) return end
 
                 local success = lib.callback.await('sb_illegalruns:storePackage', false, activeRun, VehToNet(data.entity), GetVehicleNumberPlateText(data.entity))
@@ -164,14 +175,13 @@ local function addVehicleTarget(vehicle)
                 createCargoVisuals(data.entity)
                 local run = Config.Runs[activeRun]
                 setRoute(run.delivery, 'Aflever pakken')
-                notify('Pakken er i bilen. Kør til afleveringsstedet.', 'success')
+                notify('Pakken er på ladet. Kør til afleveringsstedet.', 'success')
             end
         },
         {
             name = 'sb_illegalruns_take_package',
             icon = 'fa-solid fa-box-open',
-            label = 'Tag pakken ud af bagagerummet',
-            bones = { 'door_dside_r', 'door_pside_r', 'boot' },
+            label = 'Tag pakken af ladet',
             distance = 3.0,
             canInteract = function(entity)
                 return entity == runVehicle and packageInVehicle and not carryingPackage
@@ -235,55 +245,117 @@ local function spawnRunVehicle(runId)
     return true
 end
 
+local function createDeliveryZone(runId)
+    local run = Config.Runs[runId]
+    if not run then return end
+
+    deliveryZone = exports.ox_target:addSphereZone({
+        coords = vec3(run.delivery.x, run.delivery.y, run.delivery.z),
+        radius = 1.6,
+        options = {{
+            name = 'sb_illegalruns_delivery',
+            icon = 'fa-solid fa-handshake',
+            label = 'Aflever pakken',
+            canInteract = function()
+                return carryingPackage and not packageInVehicle
+            end,
+            onSelect = function()
+                if not lib.progressCircle({ duration = Config.DeliveryDuration, label = 'Afleverer pakken...', canCancel = true, disable = { move = true, car = true, combat = true } }) then return end
+                local completed, reward = lib.callback.await('sb_illegalruns:complete', false, runId)
+                if not completed then return notify('Tag pakken af ladet, før du afleverer den.', 'error') end
+
+                removePackage()
+                clearZones()
+                removeBlip()
+                activeRun = nil
+                if Config.RunVehicle.deleteOnComplete then deleteRunVehicle() end
+                notify(('Run gennemført. Du modtog %s kr. i sorte penge.'):format(lib.math.groupdigits(reward)), 'success')
+            end
+        }}
+    })
+end
+
 local function startDelivery(runId)
     local run = Config.Runs[runId]
     if not run then return end
 
-    pickupZone = exports.ox_target:addSphereZone({
-        coords = vec3(run.pickup.x, run.pickup.y, run.pickup.z),
-        radius = 1.5,
-        options = {{
-            name = 'sb_illegalruns_pickup',
-            icon = 'fa-solid fa-box-open',
-            label = 'Hent pakken',
-            onSelect = function()
-                if not lib.progressCircle({ duration = Config.PickupDuration, label = 'Henter pakken...', canCancel = true, disable = { move = true, car = true, combat = true } }) then return end
-                local success = lib.callback.await('sb_illegalruns:pickup', false, runId)
-                if not success then return notify('Pakken kunne ikke hentes.', 'error') end
+    lib.requestModel(Config.CargoVisuals.prop)
 
-                exports.ox_target:removeZone(pickupZone)
-                pickupZone = nil
-                attachPackage()
-                setRoute(GetEntityCoords(runVehicle), 'Læg pakken i bilen')
-                notify('Pakken er hentet. Læg den i vanens bagagerum.', 'success')
+    -- Kassen står ved afhentningsstedet. Spilleren skal køre Bisonen hen til den.
+    pickupObject = CreateObject(
+        Config.CargoVisuals.prop,
+        run.pickup.x,
+        run.pickup.y,
+        run.pickup.z,
+        true,
+        true,
+        false
+    )
 
-                deliveryZone = exports.ox_target:addSphereZone({
-                    coords = vec3(run.delivery.x, run.delivery.y, run.delivery.z),
-                    radius = 1.6,
-                    options = {{
-                        name = 'sb_illegalruns_delivery',
-                        icon = 'fa-solid fa-handshake',
-                        label = 'Aflever pakken',
-                        canInteract = function()
-                            return carryingPackage and not packageInVehicle
-                        end,
-                        onSelect = function()
-                            if not lib.progressCircle({ duration = Config.DeliveryDuration, label = 'Afleverer pakken...', canCancel = true, disable = { move = true, car = true, combat = true } }) then return end
-                            local completed, reward = lib.callback.await('sb_illegalruns:complete', false, runId)
-                            if not completed then return notify('Tag pakken ud af vanen, før du afleverer den.', 'error') end
+    if not pickupObject or pickupObject == 0 then
+        return notify('Kassen kunne ikke oprettes.', 'error')
+    end
 
-                            removePackage()
-                            clearZones()
-                            removeBlip()
-                            activeRun = nil
-                            if Config.RunVehicle.deleteOnComplete then deleteRunVehicle() end
-                            notify(('Run gennemført. Du modtog %s kr. i sorte penge.'):format(lib.math.groupdigits(reward)), 'success')
-                        end
-                    }}
-                })
+    SetEntityAsMissionEntity(pickupObject, true, true)
+    SetEntityHeading(pickupObject, run.pickup.w or 0.0)
+    PlaceObjectOnGroundProperly(pickupObject)
+    FreezeEntityPosition(pickupObject, true)
+    SetModelAsNoLongerNeeded(Config.CargoVisuals.prop)
+
+    pickupObjectTarget = 'sb_illegalruns_load_crate'
+    exports.ox_target:addLocalEntity(pickupObject, {{
+        name = pickupObjectTarget,
+        icon = 'fa-solid fa-truck-ramp-box',
+        label = 'Læs på Bisonen',
+        distance = 2.5,
+        canInteract = function()
+            if not runVehicle or not DoesEntityExist(runVehicle) or packageInVehicle then return false end
+            return #(GetEntityCoords(runVehicle) - GetEntityCoords(pickupObject)) <= Config.PickupVehicleDistance
+        end,
+        onSelect = function()
+            if not runVehicle or not DoesEntityExist(runVehicle) then
+                return notify('Bisonen er ikke i nærheden.', 'error')
             end
-        }}
-    })
+
+            if not pickupObject or not DoesEntityExist(pickupObject) then
+                return notify('Kassen mangler.', 'error')
+            end
+
+            if #(GetEntityCoords(runVehicle) - GetEntityCoords(pickupObject)) > Config.PickupVehicleDistance then
+                return notify('Kør Bisonen tættere på kassen.', 'error')
+            end
+
+            local done = lib.progressCircle({
+                duration = Config.PickupDuration,
+                label = 'Lægger kassen på ladet...',
+                canCancel = true,
+                disable = { move = true, car = true, combat = true }
+            })
+            if not done then return end
+
+            local success = lib.callback.await(
+                'sb_illegalruns:loadPickupIntoVehicle',
+                false,
+                runId,
+                VehToNet(runVehicle),
+                GetVehicleNumberPlateText(runVehicle)
+            )
+            if not success then return notify('Kassen kunne ikke læsses på Bisonen.', 'error') end
+
+            if pickupObjectTarget and pickupObject and DoesEntityExist(pickupObject) then
+                exports.ox_target:removeLocalEntity(pickupObject, pickupObjectTarget)
+            end
+            pickupObjectTarget = nil
+            if pickupObject and DoesEntityExist(pickupObject) then DeleteEntity(pickupObject) end
+            pickupObject = nil
+
+            packageInVehicle = true
+            createCargoVisuals(runVehicle)
+            setRoute(run.delivery, 'Aflever pakken')
+            createDeliveryZone(runId)
+            notify('Kassen er på ladet. Kør til afleveringsstedet.', 'success')
+        end
+    }})
 end
 
 local function openMenu()
@@ -314,9 +386,9 @@ RegisterNUICallback('startRun', function(data, cb)
     SendNUIMessage({ action = 'close' })
     activeRun = data.id
     local run = Config.Runs[data.id]
-    setRoute(run.pickup, 'Hent pakken')
+    setRoute(run.pickup, 'Hent kassen')
     startDelivery(data.id)
-    notify('Vanen står klar, og du har fået nøglerne. GPS er sat til pakken.', 'success')
+    notify('Bisonen står klar. Kør hen til kassen og læs den på ladet.', 'success')
 end)
 
 CreateThread(function()
