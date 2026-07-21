@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <title>SB Money Laundering</title>
+</head>
+<body>
+  <main id="app" class="hidden">
+    <section class="panel">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">KONTANT UDBETALING</p>
+          <h1>Hvidvask</h1>
+          <p>Aflever sorte penge og få resten udbetalt kontant.</p>
+        </div>
+        <button id="close" class="icon-button" aria-label="Luk">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </header>
+
+      <section class="content">
+        <div class="balance-card">
+          <div class="balance-icon"><i class="fa-solid fa-coins"></i></div>
+          <div>
+            <span>Sorte penge</span>
+            <strong id="black-money">0 kr.</strong>
+          </div>
+        </div>
+
+        <div class="transaction-card">
+          <div class="section-heading">
+            <div>
+              <span class="badge">HANDEL</span>
+              <h2>Vælg beløb</h2>
+            </div>
+            <div class="fee-badge"><i class="fa-solid fa-percent"></i><span id="fee-label">40% gebyr</span></div>
+          </div>
+
+          <div class="amount-input-wrap">
+            <span>Beløb</span>
+            <div class="amount-input">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <input id="amount" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span>kr.</span>
+            </div>
+          </div>
+
+          <div class="quick-buttons">
+            <button data-percent="25">25%</button>
+            <button data-percent="50">50%</button>
+            <button data-percent="75">75%</button>
+            <button data-percent="100">Alt</button>
+          </div>
+
+          <div class="summary">
+            <div><span>Du afleverer</span><strong id="summary-amount">0 kr.</strong></div>
+            <div><span>Kontaktens andel</span><strong id="summary-fee" class="danger">0 kr.</strong></div>
+            <div class="summary-payout"><span>Du modtager kontant</span><strong id="summary-payout">0 kr.</strong></div>
+          </div>
+
+          <p id="error" class="error hidden"></p>
+          <button id="launder" class="primary"><i class="fa-solid fa-money-bill-transfer"></i>Gennemfør handel</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+Config = {}
+
+Config.Debug = false
+
+Config.FeePercent = 40
+
+Config.MinimumAmount = 500
+Config.MaximumAmount = 250000
+
+Config.TransactionCooldownSeconds = 3
+Config.SessionDurationSeconds = 60
+
+Config.TargetDistance = 2.0
+
+-- Alle almindelige NPC'er, der går rundt på mappet, kan bruges.
+-- Sæt onlyWalkingPeds til true, hvis NPC'en skal være til fods og ikke sidde i et køretøj.
+Config.AmbientNPCs = {
+    onlyWalkingPeds = true,
+    requireHuman = true,
+    requireAlive = true,
+
+    -- Job-/service-NPC'er som ikke skal kunne bruges.
+    blockedModels = {
+        `s_m_y_cop_01`,
+        `s_f_y_cop_01`,
+        `s_m_y_sheriff_01`,
+        `s_f_y_sheriff_01`,
+        `s_m_y_hwaycop_01`,
+        `s_m_m_paramedic_01`,
+        `s_m_m_doctor_01`,
+        `s_m_y_fireman_01`
+    }
+}
