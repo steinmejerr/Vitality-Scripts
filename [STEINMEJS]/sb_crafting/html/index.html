@@ -64,8 +64,17 @@
         <div id="preview-stage" class="preview-stage">
           <div class="preview-glow"></div>
           <div class="preview-floor"></div>
-          <div id="preview-object" class="preview-object preview-object-image-only">
-            <img id="preview-image" class="preview-main-image" alt="" />
+          <div id="preview-object" class="preview-object preview-object-3d">
+            <div class="preview-depth-stack" aria-hidden="true">
+              <img class="preview-depth-layer depth-1" alt="" />
+              <img class="preview-depth-layer depth-2" alt="" />
+              <img class="preview-depth-layer depth-3" alt="" />
+              <img class="preview-depth-layer depth-4" alt="" />
+              <img class="preview-depth-layer depth-5" alt="" />
+              <img class="preview-depth-layer depth-6" alt="" />
+            </div>
+            <img id="preview-image" class="preview-main-image preview-front" alt="" />
+            <img id="preview-back-image" class="preview-main-image preview-back" alt="" />
             <i id="preview-fallback" class="fa-solid fa-hammer preview-main-fallback"></i>
           </div>
         </div>

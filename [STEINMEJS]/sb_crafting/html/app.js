@@ -1,6 +1,6 @@
 const app=document.getElementById('app'),shopView=document.getElementById('shop-view'),craftView=document.getElementById('craft-view'),modal=document.getElementById('modal'),placementHelp=document.getElementById('placement-help');
 const previewStage=document.getElementById('preview-stage'),previewObject=document.getElementById('preview-object');
-const previewImage=document.getElementById('preview-image'),previewFallback=document.getElementById('preview-fallback');
+const previewImage=document.getElementById('preview-image'),previewBackImage=document.getElementById('preview-back-image'),previewFallback=document.getElementById('preview-fallback'),previewDepthLayers=[...document.querySelectorAll('.preview-depth-layer')];
 const modalItemImage=document.getElementById('modal-item-image'),modalItemFallback=document.getElementById('modal-item-fallback');
 
 let state={recipes:[],categories:{},inventory:{},category:'all',search:'',selected:null,amount:1};
@@ -20,14 +20,14 @@ function renderRecipes(){const el=document.getElementById('recipes');const q=sta
 
 function updatePreviewTransform(){previewObject.style.transform=`translate(-50%,-50%) rotateX(${previewRotation.x}deg) rotateY(${previewRotation.y}deg)`}
 function resetPreviewRotation(){previewRotation={x:-18,y:28};updatePreviewTransform()}
-function updatePreview(recipe){if(!recipe) return;const icon=recipe.icon||'fa-solid fa-hammer';setItemImage(previewImage,previewFallback,recipe.output.item,icon);setItemImage(modalItemImage,modalItemFallback,recipe.output.item,icon)}
+function updatePreview(recipe){if(!recipe) return;const icon=recipe.icon||'fa-solid fa-hammer';const src=itemImage(recipe.output.item);setItemImage(previewImage,previewFallback,recipe.output.item,icon);previewBackImage.src=src;previewBackImage.onerror=()=>previewBackImage.classList.add('hidden');previewBackImage.onload=()=>previewBackImage.classList.remove('hidden');previewDepthLayers.forEach(layer=>{layer.src=src;layer.onerror=()=>layer.classList.add('hidden');layer.onload=()=>layer.classList.remove('hidden')});setItemImage(modalItemImage,modalItemFallback,recipe.output.item,icon)}
 
 function openRecipe(id){state.selected=state.recipes.find(r=>r.id===id);state.amount=1;if(!state.selected)return;document.getElementById('modal-title').textContent=state.selected.label;document.getElementById('modal-description').textContent=state.selected.description;updatePreview(state.selected);resetPreviewRotation();renderModal();modal.classList.remove('hidden')}
 
 function renderModal(){document.getElementById('amount').textContent=state.amount;document.getElementById('ingredients').innerHTML=state.selected.ingredients.map(i=>{const need=i.count*state.amount,have=state.inventory[i.item]||0;return `<div class="ingredient ${have>=need?'enough':'missing'}"><div class="ingredient-info"><img class="ingredient-image" src="${itemImage(i.item)}" alt="" onerror="this.style.display='none'"><span>${i.label||i.item}<br><small>Du har ${have}</small></span></div><strong>${need}x</strong></div>`}).join('')}
 
 function startPreviewDrag(e){previewDragging=true;previewPointerId=e.pointerId;previewStage.setPointerCapture(e.pointerId);previewStart={x:e.clientX,y:e.clientY,rotX:previewRotation.x,rotY:previewRotation.y};}
-function movePreviewDrag(e){if(!previewDragging||e.pointerId!==previewPointerId) return;const deltaX=e.clientX-previewStart.x;const deltaY=e.clientY-previewStart.y;previewRotation.y=previewStart.rotY+(deltaX*0.45);previewRotation.x=Math.max(-50,Math.min(35,previewStart.rotX-(deltaY*0.35)));updatePreviewTransform()}
+function movePreviewDrag(e){if(!previewDragging||e.pointerId!==previewPointerId) return;const deltaX=e.clientX-previewStart.x;const deltaY=e.clientY-previewStart.y;previewRotation.y=previewStart.rotY+(deltaX*0.45);previewRotation.x=previewStart.rotX-(deltaY*0.35);updatePreviewTransform()}
 function endPreviewDrag(e){if(e.pointerId!==previewPointerId) return;previewDragging=false;previewPointerId=null;try{previewStage.releasePointerCapture(e.pointerId)}catch(err){}}
 
 previewStage.addEventListener('pointerdown',startPreviewDrag);
