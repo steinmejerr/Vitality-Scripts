@@ -5,7 +5,8 @@ author 'Peak Scripts | KostaZ'
 description 'Fishing script with a custom minigame, upgradable rods, bait and tackle systems, fishing nets, tournaments & more.'
 version '1.2.2'
 lua54 'yes'
-use_experimental_fxv2_oal 'yes'
+-- Disabled: experimental OAL can break the fishing-net placement raycast/thread
+-- use_experimental_fxv2_oal 'yes'
 this_is_a_map 'yes'
 
 ox_lib 'locale'

@@ -254,7 +254,7 @@
             "catch_fish": "for at fange fisken",
             "left_arrow": "←",
             "right_arrow": "→",
-            "time_remaining": "%d sek.",
+            "time_remaining": "%ds",
             "caught_it": "Du fangede den!",
             "time_expired": "Tiden udløb!",
             "it_got_away": "Den slap væk!",
