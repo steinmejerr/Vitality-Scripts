@@ -61,6 +61,11 @@ window.addEventListener('message', event => {
     app.classList.remove('hidden');
   }
 
+  if (action === 'hideForTrade') {
+    app.classList.add('hidden');
+    setError('');
+  }
+
   if (action === 'transactionSuccess') {
     state.blackMoney = data.remainingBlackMoney;
     document.getElementById('black-money').textContent = `${data.remainingBlackMoneyFormatted} kr.`;
@@ -105,10 +110,12 @@ launderButton.addEventListener('click', async () => {
   }
 
   launderButton.disabled = true;
+  app.classList.add('hidden');
+  setError('');
   const result = await post('launder', { amount }).catch(() => ({ success: false, message: 'Handlen kunne ikke gennemføres.' }));
   launderButton.disabled = false;
 
-  if (!result.success) setError(result.message || 'Handlen kunne ikke gennemføres.');
+  if (!result.success) console.warn(result.message || 'Handlen kunne ikke gennemføres.');
 });
 
 document.addEventListener('keyup', event => {

@@ -2,7 +2,7 @@ Config = {}
 
 Config.Debug = false
 
-Config.FeePercent = 40
+Config.FeePercent = 25
 
 Config.MinimumAmount = 500
 Config.MaximumAmount = 250000
@@ -31,4 +31,13 @@ Config.AmbientNPCs = {
         `s_m_m_doctor_01`,
         `s_m_y_fireman_01`
     }
+}
+
+
+Config.TradeAnimation = {
+    dict = 'mp_common',
+    clip = 'givetake1_a',
+    duration = 1450,
+    pauseBetween = 180,
+    cashProp = `prop_anim_cash_pile_01`
 }
