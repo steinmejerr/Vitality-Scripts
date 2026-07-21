@@ -1,10 +1,7 @@
 const app=document.getElementById('app'),shopView=document.getElementById('shop-view'),craftView=document.getElementById('craft-view'),modal=document.getElementById('modal'),placementHelp=document.getElementById('placement-help');
 const previewStage=document.getElementById('preview-stage'),previewObject=document.getElementById('preview-object');
-const previewFrontImage=document.getElementById('preview-front-image'),previewBackImage=document.getElementById('preview-back-image');
-const previewFrontFallback=document.getElementById('preview-front-fallback'),previewBackFallback=document.getElementById('preview-back-fallback');
+const previewImage=document.getElementById('preview-image'),previewFallback=document.getElementById('preview-fallback');
 const modalItemImage=document.getElementById('modal-item-image'),modalItemFallback=document.getElementById('modal-item-fallback');
-const previewFrontLabel=document.getElementById('preview-front-label'),previewOutput=document.getElementById('preview-output');
-const previewCategory=document.getElementById('preview-category'),previewTopLabel=document.getElementById('preview-top-label');
 
 let state={recipes:[],categories:{},inventory:{},category:'all',search:'',selected:null,amount:1};
 let previewRotation={x:-18,y:28},previewDragging=false,previewPointerId=null,previewStart={x:0,y:0,rotX:0,rotY:0};
@@ -23,7 +20,7 @@ function renderRecipes(){const el=document.getElementById('recipes');const q=sta
 
 function updatePreviewTransform(){previewObject.style.transform=`translate(-50%,-50%) rotateX(${previewRotation.x}deg) rotateY(${previewRotation.y}deg)`}
 function resetPreviewRotation(){previewRotation={x:-18,y:28};updatePreviewTransform()}
-function updatePreview(recipe){if(!recipe) return;const icon=recipe.icon||'fa-solid fa-hammer';const category=state.categories[recipe.category]?.label||'Crafting';setItemImage(previewFrontImage,previewFrontFallback,recipe.output.item,icon);setItemImage(previewBackImage,previewBackFallback,recipe.output.item,icon);setItemImage(modalItemImage,modalItemFallback,recipe.output.item,icon);previewFrontLabel.textContent=recipe.label;previewOutput.textContent=`${recipe.output.count}x`;previewCategory.textContent=category;previewTopLabel.textContent=recipe.label}
+function updatePreview(recipe){if(!recipe) return;const icon=recipe.icon||'fa-solid fa-hammer';setItemImage(previewImage,previewFallback,recipe.output.item,icon);setItemImage(modalItemImage,modalItemFallback,recipe.output.item,icon)}
 
 function openRecipe(id){state.selected=state.recipes.find(r=>r.id===id);state.amount=1;if(!state.selected)return;document.getElementById('modal-title').textContent=state.selected.label;document.getElementById('modal-description').textContent=state.selected.description;updatePreview(state.selected);resetPreviewRotation();renderModal();modal.classList.remove('hidden')}
 
