@@ -51,7 +51,7 @@
   <div id="modal" class="modal hidden">
     <div class="modal-card">
       <button id="modal-close" class="icon-button modal-close"><i class="fa-solid fa-xmark"></i></button>
-      <div class="modal-icon" id="modal-icon"><i class="fa-solid fa-hammer"></i></div>
+      <div class="modal-icon" id="modal-icon"><img id="modal-item-image" class="item-image" alt="" /><i id="modal-item-fallback" class="fa-solid fa-hammer"></i></div>
       <span class="badge">CRAFTING</span>
       <h2 id="modal-title"></h2>
       <p id="modal-description"></p>
@@ -67,13 +67,15 @@
           <div id="preview-object" class="preview-object">
             <div class="preview-face face-front">
               <div class="preview-face-inner">
-                <i id="preview-front-icon" class="fa-solid fa-hammer"></i>
+                <img id="preview-front-image" class="preview-item-image" alt="" />
+                <i id="preview-front-fallback" class="fa-solid fa-hammer"></i>
                 <strong id="preview-front-label">Item</strong>
               </div>
             </div>
             <div class="preview-face face-back">
               <div class="preview-face-inner dimmed">
-                <i id="preview-back-icon" class="fa-solid fa-hammer"></i>
+                <img id="preview-back-image" class="preview-item-image" alt="" />
+                <i id="preview-back-fallback" class="fa-solid fa-hammer"></i>
               </div>
             </div>
             <div class="preview-face face-right">
