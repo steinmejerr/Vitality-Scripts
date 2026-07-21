@@ -3,7 +3,7 @@ return {
 
     npc = {
         model = 'a_m_y_beach_02',
-        coords = vec4(-1686.53, -1072.74, 12.15, 52.03),
+        coords = vec4(-1601.17, 5197.12, 3.36, 296.35),
         scenario = 'WORLD_HUMAN_CLIPBOARD',
         
         blip = {
