@@ -57,8 +57,8 @@ Config.Recipes = {
         duration = 8000,
         output = { item = 'lockpick', count = 1 },
         ingredients = {
-            { item = 'metalscrap', label = 'Metalskrot', count = 4 },
-            { item = 'plastic', label = 'Plastik', count = 2 }
+            { item = 'burger', label = 'Burger', count = 4 },
+            { item = 'water', label = 'Water', count = 2 }
         }
     },
     {
