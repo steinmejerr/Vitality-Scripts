@@ -9,6 +9,7 @@ Config.MaximumAmount = 250000
 
 Config.TransactionCooldownSeconds = 3
 Config.SessionDurationSeconds = 60
+Config.SessionMaxMoveDistance = 5.0 -- Hvor langt spilleren må gå under handlen
 
 Config.TargetDistance = 2.0
 

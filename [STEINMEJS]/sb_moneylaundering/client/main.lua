@@ -41,12 +41,9 @@ end
 local function openLaundering(entity)
     if uiOpen or not canUsePed(entity) then return end
 
-    local coords = GetEntityCoords(entity)
-    local netId = NetworkGetEntityIsNetworked(entity) and NetworkGetNetworkIdFromEntity(entity) or 0
-    local data = lib.callback.await('sb_moneylaundering:getData', false, {
-        netId = netId,
-        coords = { x = coords.x, y = coords.y, z = coords.z }
-    })
+    -- The selected ambient ped is validated locally. Many map peds are not
+    -- networked, so the server cannot reliably resolve their entity/network id.
+    local data = lib.callback.await('sb_moneylaundering:getData', false)
 
     if not data then
         return notify('Personen vil ikke handle lige nu.', 'error')

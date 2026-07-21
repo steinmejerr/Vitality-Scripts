@@ -30,45 +30,20 @@ local function getPlayerCoords(source)
     return GetEntityCoords(ped)
 end
 
-local function validateNpcRequest(source, request)
-    if type(request) ~= 'table' or type(request.coords) ~= 'table' then return nil end
-
-    local playerCoords = getPlayerCoords(source)
-    if not playerCoords then return nil end
-
-    local coords = vector3(
-        tonumber(request.coords.x) or 0.0,
-        tonumber(request.coords.y) or 0.0,
-        tonumber(request.coords.z) or 0.0
-    )
-
-    if #(playerCoords - coords) > (Config.TargetDistance + 2.0) then return nil end
-
-    local netId = tonumber(request.netId) or 0
-    if netId > 0 then
-        local entity = NetworkGetEntityFromNetworkId(netId)
-        if entity == 0 or not DoesEntityExist(entity) or GetEntityType(entity) ~= 1 then return nil end
-        if IsPedAPlayer(entity) or IsEntityDead(entity) then return nil end
-
-        local entityCoords = GetEntityCoords(entity)
-        if #(entityCoords - coords) > 3.0 then return nil end
-        coords = entityCoords
-    end
-
-    return coords
-end
-
-lib.callback.register('sb_moneylaundering:getData', function(source, request)
+lib.callback.register('sb_moneylaundering:getData', function(source)
     local xPlayer = ESX.GetPlayerFromId(source)
     if not xPlayer then return nil end
 
-    local npcCoords = validateNpcRequest(source, request)
-    if not npcCoords then return nil end
+    -- Ambient GTA peds are commonly client-local and do not have a server-side
+    -- entity. Anchor the session to the player's current position instead.
+    -- The client still validates the selected ped and keeps checking distance.
+    local sessionCoords = getPlayerCoords(source)
+    if not sessionCoords then return nil end
 
     local token = randomToken()
     sessions[source] = {
         token = token,
-        coords = npcCoords,
+        coords = sessionCoords,
         expires = os.time() + Config.SessionDurationSeconds
     }
 
@@ -99,7 +74,7 @@ lib.callback.register('sb_moneylaundering:launder', function(source, token, amou
     end
 
     local playerCoords = getPlayerCoords(source)
-    if not playerCoords or #(playerCoords - session.coords) > (Config.TargetDistance + 3.0) then
+    if not playerCoords or #(playerCoords - session.coords) > Config.SessionMaxMoveDistance then
         sessions[source] = nil
         return { success = false, close = true, message = 'Du står for langt væk fra personen.' }
     end
