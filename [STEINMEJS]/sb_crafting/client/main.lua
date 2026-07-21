@@ -142,10 +142,7 @@ RegisterNetEvent('sb_crafting:startPlacement', function()
     SetEntityCollision(preview, false, false)
     FreezeEntityPosition(preview, true)
 
-    lib.showTextUI('[E] Placér  •  [←/→] Drej  •  [↑/↓] Højde  •  [BACKSPACE] Annuller', {
-        position = 'bottom-center',
-        icon = 'hammer'
-    })
+    SendNUIMessage({ action = 'showPlacementHelp' })
 
     while placing do
         Wait(0)
@@ -173,12 +170,12 @@ RegisterNetEvent('sb_crafting:startPlacement', function()
         elseif IsControlJustPressed(0, Config.Placement.controls.confirm) then
             local finalCoords = GetEntityCoords(preview)
             placing = false
-            lib.hideTextUI()
+            SendNUIMessage({ action = 'hidePlacementHelp' })
             DeleteEntity(preview)
             TriggerServerEvent('sb_crafting:placeStation', { x = finalCoords.x, y = finalCoords.y, z = finalCoords.z }, heading)
         elseif IsControlJustPressed(0, Config.Placement.controls.cancel) then
             placing = false
-            lib.hideTextUI()
+            SendNUIMessage({ action = 'hidePlacementHelp' })
             DeleteEntity(preview)
             notify('Placeringen blev annulleret.', 'error')
         end
@@ -231,7 +228,7 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     closeUi()
-    if placing then lib.hideTextUI() end
+    if placing then SendNUIMessage({ action = 'hidePlacementHelp' }) end
     if shopPed and DoesEntityExist(shopPed) then DeleteEntity(shopPed) end
     for id in pairs(spawnedStations) do deleteStationObject(id) end
 end)
