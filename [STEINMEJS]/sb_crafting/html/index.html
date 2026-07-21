@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <title>SB Crafting</title>
+</head>
+<body>
+  <main id="app" class="hidden">
+    <section class="panel">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">VITALITY CRAFTING</p>
+          <h1 id="title">Crafting Station</h1>
+          <p id="subtitle">Lav udstyr af dine materialer.</p>
+        </div>
+        <button class="icon-button" id="close"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+
+      <div id="shop-view" class="view hidden">
+        <div class="shop-card">
+          <div class="product-icon"><i class="fa-solid fa-hammer"></i></div>
+          <div class="product-copy">
+            <span class="badge">PLACERBAR</span>
+            <h2>Crafting Station</h2>
+            <p>Placér den hvor du vil. Alle kan bruge stationen, men kun ejeren kan tage den op igen.</p>
+          </div>
+          <div class="buy-area">
+            <span>Pris</span>
+            <strong id="shop-price">0 kr.</strong>
+            <button class="primary" id="buy-station"><i class="fa-solid fa-cart-shopping"></i>Køb station</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="craft-view" class="view hidden">
+        <aside id="categories" class="categories"></aside>
+        <section class="content">
+          <div class="section-heading">
+            <div><span class="badge">OPSKRIFTER</span><h2 id="category-title">Alle opskrifter</h2></div>
+            <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search" placeholder="Søg efter opskrift..." /></div>
+          </div>
+          <div id="recipes" class="recipe-grid"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <button id="modal-close" class="icon-button modal-close"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-icon" id="modal-icon"><i class="fa-solid fa-hammer"></i></div>
+      <span class="badge">CRAFTING</span>
+      <h2 id="modal-title"></h2>
+      <p id="modal-description"></p>
+      <h3>Ingredienser</h3>
+      <div id="ingredients" class="ingredients"></div>
+      <div class="amount-row">
+        <span>Antal</span>
+        <div class="stepper"><button id="minus">−</button><strong id="amount">1</strong><button id="plus">+</button></div>
+      </div>
+      <button class="primary full" id="craft-button"><i class="fa-solid fa-hammer"></i>Start crafting</button>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
