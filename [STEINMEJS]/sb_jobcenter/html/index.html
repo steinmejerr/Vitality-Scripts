@@ -33,17 +33,27 @@
           <div class="map-card">
             <div class="map-header">
               <div><span class="small-label">LOKATION</span><h2 id="map-title">Vælg et job</h2></div>
-              <button id="waypoint" class="secondary hidden"><i class="fa-solid fa-location-arrow"></i>Sæt GPS</button>
+              <div class="map-actions hidden" id="map-actions">
+                <button id="waypoint" class="secondary"><i class="fa-solid fa-location-arrow"></i>Sæt GPS</button>
+              </div>
             </div>
-            <div class="city-map">
-              <img src="gta_map.png" alt="GTA V map" class="city-map-image">
-              <div class="map-vignette"></div>
-              <div class="map-grid"></div>
-              <div class="map-label map-label-paleto">Paleto Bay</div>
-              <div class="map-label map-label-sandy">Sandy Shores</div>
-              <div class="map-label map-label-city">Los Santos</div>
-              <div class="map-label map-label-port">Port of LS</div>
-              <div id="markers"></div>
+            <div id="interactive-map" class="city-map" aria-label="Interaktivt GTA V-kort">
+              <div id="map-canvas" class="map-canvas">
+                <img src="gta_map.png" alt="GTA V map" class="city-map-image" draggable="false">
+                <div class="map-vignette"></div>
+                <div class="map-grid"></div>
+                <div class="map-label map-label-paleto">Paleto Bay</div>
+                <div class="map-label map-label-sandy">Sandy Shores</div>
+                <div class="map-label map-label-city">Los Santos</div>
+                <div class="map-label map-label-port">Port of LS</div>
+                <div id="markers"></div>
+              </div>
+              <div class="map-controls">
+                <button id="map-zoom-in" class="map-control" title="Zoom ind"><i class="fa-solid fa-plus"></i></button>
+                <button id="map-zoom-out" class="map-control" title="Zoom ud"><i class="fa-solid fa-minus"></i></button>
+                <button id="map-reset" class="map-control" title="Nulstil kort"><i class="fa-solid fa-crosshairs"></i></button>
+              </div>
+              <div class="map-help"><i class="fa-solid fa-computer-mouse"></i> Træk for at flytte · Scroll for at zoome ind og ud</div>
             </div>
           </div>
 

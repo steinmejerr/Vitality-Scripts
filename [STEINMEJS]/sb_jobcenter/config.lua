@@ -1,5 +1,29 @@
 Config = {}
 
+
+-- Kortkalibrering til html/gta_map.png.
+-- Jobmarkører beregnes automatisk fra job.location, så du ikke længere skal gætte map.x/map.y.
+-- Procenterne beskriver, hvor selve GTA-verdenen ligger på billedet.
+Config.MapCalibration = {
+    world = {
+        minX = -4000.0,
+        maxX = 4500.0,
+        minY = -4000.0,
+        maxY = 8000.0
+    },
+    image = {
+        left = 17.85,
+        right = 82.15,
+        top = 5.75,
+        bottom = 94.25
+    }
+}
+
+Config.MapCommands = {
+    coordinates = 'jobmapcoords', -- Stå på lokationen og brug /jobmapcoords
+    preview = 'jobmappreview'     -- /jobmappreview [job-id]
+}
+
 Config.JobCenter = {
     ped = {
         model = `a_f_y_business_02`,
@@ -33,7 +57,6 @@ Config.Jobs = {
         color = '#f4c542',
         salary = 'Varierer efter ture',
         location = vector3(895.18, -179.34, 74.70),
-        map = { x = 68, y = 47 },
         requirements = {
             'Gyldigt kørekort',
             'God kundeservice'
@@ -50,7 +73,6 @@ Config.Jobs = {
         color = '#f29f4b',
         salary = 'Betaling pr. levering',
         location = vector3(1208.14, -3115.30, 5.54),
-        map = { x = 74, y = 77 },
         requirements = {
             'Stabil kørsel',
             'Kan arbejde selvstændigt'
@@ -67,7 +89,6 @@ Config.Jobs = {
         color = '#59d67c',
         salary = 'Fast betaling pr. rute',
         location = vector3(-321.72, -1545.78, 31.02),
-        map = { x = 43, y = 66 },
         requirements = {
             'Ingen erfaring nødvendig',
             'Kan arbejde i hold'
@@ -84,7 +105,6 @@ Config.Jobs = {
         color = '#55a8ff',
         salary = 'Betaling pr. gennemført rute',
         location = vector3(454.63, -600.70, 28.58),
-        map = { x = 59, y = 54 },
         requirements = {
             'Gyldigt kørekort',
             'Ansvarlig kørsel'
@@ -101,7 +121,6 @@ Config.Jobs = {
         color = '#caa777',
         salary = 'Betaling efter udvinding',
         location = vector3(2954.38, 2787.97, 41.49),
-        map = { x = 83, y = 28 },
         requirements = {
             'Fysisk arbejde',
             'Sikkerhedsbevidst'
@@ -118,7 +137,6 @@ Config.Jobs = {
         color = '#4ecde6',
         salary = 'Afhænger af fangsten',
         location = vector3(-3426.79, 967.28, 8.35),
-        map = { x = 15, y = 38 },
         requirements = {
             'Ingen erfaring nødvendig',
             'Tålmodighed'

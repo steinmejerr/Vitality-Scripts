@@ -2,6 +2,24 @@ local ESX = exports['es_extended']:getSharedObject()
 local jobCenterPed
 local uiOpen = false
 
+local function clamp(value, minimum, maximum)
+    return math.max(minimum, math.min(maximum, value))
+end
+
+local function worldToMap(coords)
+    local calibration = Config.MapCalibration
+    local world = calibration.world
+    local image = calibration.image
+
+    local normalizedX = (coords.x - world.minX) / (world.maxX - world.minX)
+    local normalizedY = (world.maxY - coords.y) / (world.maxY - world.minY)
+
+    return {
+        x = clamp(image.left + normalizedX * (image.right - image.left), 0.0, 100.0),
+        y = clamp(image.top + normalizedY * (image.bottom - image.top), 0.0, 100.0)
+    }
+end
+
 local function notify(description, type)
     lib.notify({
         title = 'Jobcenter',
@@ -16,6 +34,7 @@ local function closeUI()
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
 end
+
 
 local function buildJobs()
     local jobs = {}
@@ -32,7 +51,7 @@ local function buildJobs()
             icon = job.icon,
             color = job.color,
             salary = job.salary,
-            map = job.map,
+            map = job.mapOverride or worldToMap(job.location),
             requirements = job.requirements
         }
     end
@@ -96,6 +115,7 @@ RegisterNUICallback('selectJob', function(data, cb)
     cb(1)
 end)
 
+
 RegisterNUICallback('setWaypoint', function(data, cb)
     for i = 1, #Config.Jobs do
         local job = Config.Jobs[i]
@@ -138,6 +158,46 @@ CreateThread(function()
         Wait(uiOpen and 0 or 500)
     end
 end)
+
+
+RegisterCommand(Config.MapCommands.coordinates, function()
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local map = worldToMap(coords)
+    local snippet = ("location = vector3(%.2f, %.2f, %.2f),"):format(coords.x, coords.y, coords.z)
+
+    lib.setClipboard(snippet)
+    notify(("Lokationen er kopieret. Kortposition: X %.2f%% / Y %.2f%%"):format(map.x, map.y), 'success')
+    print(('[sb_jobcenter] %s -- automatisk kortposition: { x = %.2f, y = %.2f }'):format(snippet, map.x, map.y))
+end, false)
+
+RegisterCommand(Config.MapCommands.preview, function(_, args)
+    local requestedId = args[1]
+
+    if requestedId then
+        local exists = false
+        for i = 1, #Config.Jobs do
+            if Config.Jobs[i].id == requestedId then
+                exists = true
+                break
+            end
+        end
+
+        if not exists then
+            notify(('Job-ID "%s" findes ikke.'):format(requestedId), 'error')
+            return
+        end
+    end
+
+    if not uiOpen then
+        openUI()
+    end
+
+    if requestedId then
+        Wait(100)
+        SendNUIMessage({ action = 'previewJob', id = requestedId })
+    end
+end, false)
 
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
