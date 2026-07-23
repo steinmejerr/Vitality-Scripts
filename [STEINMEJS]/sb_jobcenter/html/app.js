@@ -22,6 +22,7 @@ function renderMarkers(){
     marker.addEventListener('pointerdown',e=>e.stopPropagation());
     marker.addEventListener('click',e=>{e.stopPropagation();selectJob(marker.dataset.id,true)});
   });
+  updateMarkerScale();
 }
 
 function renderJobs(){
@@ -66,9 +67,16 @@ function updateMapMinScale(){
   if(mapState.scale < mapState.minScale) mapState.scale = mapState.minScale;
 }
 
+function updateMarkerScale(){
+  // Markørerne bliver gradvist mindre på skærmen, jo længere der zoomes ind.
+  const markerScale=Math.pow(mapState.scale,-1.35);
+  markersEl.style.setProperty('--marker-scale',markerScale.toFixed(4));
+}
+
 function applyMapTransform(animated=false){
   mapCanvas.classList.toggle('animated',animated);
   mapCanvas.style.transform=`translate(calc(-50% + ${mapState.x}px),calc(-50% + ${mapState.y}px)) scale(${mapState.scale})`;
+  updateMarkerScale();
   if(animated)setTimeout(()=>mapCanvas.classList.remove('animated'),280);
 }
 
