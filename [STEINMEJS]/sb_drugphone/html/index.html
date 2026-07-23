@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Drug Phone</title>
+</head>
+<body>
+  <main id="phone" class="phone hidden">
+    <div class="phone-shell">
+      <div class="speaker"></div>
+      <header>
+        <div>
+          <span class="eyebrow">ENCRYPTED NETWORK</span>
+          <h1>Drug Phone</h1>
+        </div>
+        <button id="close" class="icon-button"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+
+      <section id="home-view" class="view">
+        <div class="status-card">
+          <div class="status-icon"><i class="fa-solid fa-signal"></i></div>
+          <div>
+            <span id="status-label">Offline</span>
+            <p id="status-text">Vælg et produkt for at begynde at modtage beskeder.</p>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <div><span>PRODUKTER</span><h2>Hvad sælger du?</h2></div>
+          <button id="stop" class="stop-button hidden"><i class="fa-solid fa-power-off"></i>Stop</button>
+        </div>
+        <div id="products" class="products"></div>
+      </section>
+
+      <section id="chat-view" class="view hidden">
+        <button id="back" class="back-button"><i class="fa-solid fa-chevron-left"></i>Tilbage</button>
+        <div class="contact">
+          <div class="avatar"><i class="fa-solid fa-user-secret"></i></div>
+          <div><h2>Ukendt køber</h2><span>krypteret samtale</span></div>
+        </div>
+        <div id="messages" class="messages"></div>
+        <div id="offer-summary" class="offer-summary"></div>
+        <div id="actions" class="actions">
+          <button id="reject" class="secondary">Nej tak</button>
+          <button id="accept" class="primary">Ja da, g!</button>
+        </div>
+      </section>
+
+      <footer><i class="fa-solid fa-lock"></i> End-to-end encrypted</footer>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
