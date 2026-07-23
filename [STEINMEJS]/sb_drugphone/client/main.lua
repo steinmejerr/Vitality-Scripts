@@ -6,6 +6,10 @@ local customerPed = nil
 local customerBlip = nil
 local offerToken = 0
 local activeDealId = nil
+local offerScheduled = false
+local phoneProp = nil
+local startPhoneAnimation
+local stopPhoneAnimation
 
 local function notify(description, type)
     lib.notify({
@@ -25,6 +29,11 @@ local function setPhoneFocus(state)
     SetNuiFocus(state, state)
     SetNuiFocusKeepInput(false)
     SendNUIMessage({ action = state and 'open' or 'close' })
+    if state then
+        startPhoneAnimation()
+    else
+        stopPhoneAnimation()
+    end
 end
 
 local function getProductPayload()
@@ -96,6 +105,7 @@ local function stopDealing(message)
     selectedProduct = nil
     currentOffer = nil
     offerToken = offerToken + 1
+    offerScheduled = false
     cleanupCustomer(false)
     syncPhone()
     if message then notify(message, 'inform') end
@@ -110,6 +120,49 @@ local function loadModel(model)
         if GetGameTimer() > timeout then return false end
     end
     return true
+end
+
+local function loadAnimDict(dict)
+    RequestAnimDict(dict)
+    local timeout = GetGameTimer() + 5000
+    while not HasAnimDictLoaded(dict) do
+        Wait(25)
+        if GetGameTimer() > timeout then return false end
+    end
+    return true
+end
+
+startPhoneAnimation = function()
+    local ped = PlayerPedId()
+    if phoneProp and DoesEntityExist(phoneProp) then DeleteEntity(phoneProp) end
+    phoneProp = nil
+
+    local model = `prop_phone_ing`
+    if not loadModel(model) then return end
+    if not loadAnimDict('cellphone@') then
+        SetModelAsNoLongerNeeded(model)
+        return
+    end
+
+    phoneProp = CreateObject(model, 1.0, 1.0, 1.0, false, false, false)
+    AttachEntityToEntity(phoneProp, ped, GetPedBoneIndex(ped, 28422), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+    TaskPlayAnim(ped, 'cellphone@', 'cellphone_text_read_base', 3.0, -1.0, -1, 49, 0.0, false, false, false)
+    SetModelAsNoLongerNeeded(model)
+end
+
+stopPhoneAnimation = function()
+    local ped = PlayerPedId()
+    StopAnimTask(ped, 'cellphone@', 'cellphone_text_read_base', 2.0)
+    if phoneProp and DoesEntityExist(phoneProp) then
+        DetachEntity(phoneProp, true, true)
+        DeleteEntity(phoneProp)
+    end
+    phoneProp = nil
+end
+
+local function playMessageSound()
+    PlaySoundFrontend(-1, 'Text_Arrive_Tone', 'Phone_SoundSet_Default', true)
+    SendNUIMessage({ action = 'messageSound' })
 end
 
 local function performDeal()
@@ -202,6 +255,7 @@ local function spawnCustomer(location, dealId)
 end
 
 local function createOffer(productId, token)
+    offerScheduled = false
     local product = Config.Products[productId]
     if not product or not dealing or token ~= offerToken or currentOffer then return end
 
@@ -221,7 +275,7 @@ local function createOffer(productId, token)
     }
 
     syncPhone()
-    PlaySoundFrontend(-1, 'Text_Arrive_Tone', 'Phone_SoundSet_Default', true)
+    playMessageSound()
     notify(('Ny besked: %sx %s'):format(amount, product.label), 'inform')
 
     CreateThread(function()
@@ -235,7 +289,8 @@ local function createOffer(productId, token)
 end
 
 local function scheduleNextOffer()
-    if not dealing or not selectedProduct or currentOffer or customerPed then return end
+    if offerScheduled or not dealing or not selectedProduct or currentOffer or customerPed then return end
+    offerScheduled = true
     offerToken = offerToken + 1
     local token = offerToken
     local delay = math.random(Config.NextOfferDelay.min, Config.NextOfferDelay.max) * 1000
@@ -259,6 +314,7 @@ RegisterNUICallback('startDealing', function(data, cb)
     dealing = true
     selectedProduct = data.productId
     currentOffer = nil
+    offerScheduled = false
     cleanupCustomer(false)
     syncPhone()
     scheduleNextOffer()
@@ -273,6 +329,7 @@ end)
 
 RegisterNUICallback('rejectOffer', function(_, cb)
     currentOffer = nil
+    offerScheduled = false
     syncPhone()
     scheduleNextOffer()
     cb({ ok = true })
@@ -313,6 +370,7 @@ RegisterNetEvent('sb_drugphone:client:dealResult', function(success, message)
     if success then
         notify(message, 'success')
         currentOffer = nil
+        offerScheduled = false
         cleanupCustomer(false)
         syncPhone()
         scheduleNextOffer()
@@ -324,6 +382,7 @@ end)
 RegisterNetEvent('sb_drugphone:client:dealCancelled', function(message)
     notify(message or 'Handlen blev annulleret.', 'error')
     currentOffer = nil
+    offerScheduled = false
     cleanupCustomer(false)
     syncPhone()
     scheduleNextOffer()
@@ -342,5 +401,6 @@ end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     SetNuiFocus(false, false)
+    stopPhoneAnimation()
     cleanupCustomer(true)
 end)

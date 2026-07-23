@@ -10,6 +10,24 @@ const summaryEl=document.getElementById('offer-summary');
 const actionsEl=document.getElementById('actions');
 let state={products:[],dealing:false,selectedProduct:null,offer:null};
 
+function playMessageTone(){
+  try{
+    const AudioCtx=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AudioCtx();
+    const gain=ctx.createGain();
+    const osc=ctx.createOscillator();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(880,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660,ctx.currentTime+0.16);
+    gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.16,ctx.currentTime+0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.28);
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.start();osc.stop(ctx.currentTime+0.3);
+    setTimeout(()=>ctx.close(),450);
+  }catch(e){}
+}
+
 const post=(name,data={})=>fetch(`https://${GetParentResourceName()}/${name}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()).catch(()=>({}));
 const money=n=>new Intl.NumberFormat('da-DK').format(n)+' kr.';
 const iconMap={cannabis:'fa-solid fa-cannabis',snowflake:'fa-solid fa-snowflake',flask:'fa-solid fa-flask'};
@@ -40,6 +58,7 @@ window.addEventListener('message',e=>{
   if(action==='open') phone.classList.remove('hidden');
   if(action==='close') phone.classList.add('hidden');
   if(action==='sync'){state=data;render()}
+  if(action==='messageSound') playMessageTone();
 });
 
 document.getElementById('close').onclick=()=>post('close');
