@@ -4,6 +4,7 @@ local activeSession = nil
 local activePed = nil
 local tradeInProgress = false
 local blockedModels = {}
+local protectedTradePeds = {}
 
 for i = 1, #(Config.AmbientNPCs.blockedModels or {}) do
     blockedModels[Config.AmbientNPCs.blockedModels[i]] = true
@@ -63,49 +64,172 @@ local function attachCashProp(ped)
     return prop
 end
 
+
+local function protectTradePed(ped)
+    if not ped or not DoesEntityExist(ped) then return false end
+
+    -- Ambient peds styres normalt af GTA's population manager og kan derfor
+    -- blive fjernet få sekunder efter, at deres normale opgave er blevet afbrudt.
+    -- Mission entity holder ped'en i live, mens spilleren stadig er i området.
+    SetEntityAsMissionEntity(ped, true, true)
+    protectedTradePeds[ped] = true
+    return true
+end
+
+local function releaseProtectedPedWhenFarAway(ped)
+    CreateThread(function()
+        local startedAt = GetGameTimer()
+        local minimumProtectionTime = 30000
+        local maximumProtectionTime = 180000
+        local releaseDistance = 80.0
+
+        while protectedTradePeds[ped] and DoesEntityExist(ped) do
+            Wait(2000)
+
+            local elapsed = GetGameTimer() - startedAt
+            local playerPed = PlayerPedId()
+            local distance = #(GetEntityCoords(playerPed) - GetEntityCoords(ped))
+
+            if (elapsed >= minimumProtectionTime and distance >= releaseDistance)
+                or elapsed >= maximumProtectionTime then
+                protectedTradePeds[ped] = nil
+                SetEntityAsNoLongerNeeded(ped)
+                return
+            end
+        end
+
+        protectedTradePeds[ped] = nil
+    end)
+end
+
+local function releaseTradePed(ped)
+    if not ped or not DoesEntityExist(ped) then return end
+
+    local resume = Config.TradeAnimation.pedResume or {}
+    local delay = tonumber(resume.delay) or 650
+
+    Wait(delay)
+
+    if not DoesEntityExist(ped) then return end
+
+    FreezeEntityPosition(ped, false)
+    SetBlockingOfNonTemporaryEvents(ped, false)
+    SetPedCanRagdoll(ped, true)
+    ResetEntityAlpha(ped)
+    ClearPedTasks(ped)
+
+    if not IsPedInAnyVehicle(ped, false) and not IsEntityDead(ped) then
+        TaskWanderStandard(
+            ped,
+            tonumber(resume.wanderSpeed) or 10.0,
+            tonumber(resume.pauseChance) or 10
+        )
+        SetPedKeepTask(ped, true)
+    end
+
+    -- Ped'en forbliver beskyttet, mens spilleren stadig er i nærheden, så den
+    -- ikke forsvinder midt foran spilleren. Den frigives først langt væk.
+    releaseProtectedPedWhenFarAway(ped)
+end
+
 local function playTradeAnimation(ped)
     local playerPed = PlayerPedId()
     if not DoesEntityExist(ped) or IsEntityDead(ped) then return false end
+    protectTradePed(ped)
     if not loadAnimDict(Config.TradeAnimation.dict) then return false end
 
-    local originalHeading = GetEntityHeading(ped)
-    local wasFrozen = IsEntityPositionFrozen(ped)
+    local turnDuration = tonumber(Config.TradeAnimation.turnDuration) or 700
+    local animationDuration = tonumber(Config.TradeAnimation.duration) or 1450
+    local pauseBetween = tonumber(Config.TradeAnimation.pauseBetween) or 180
+    local totalDuration = turnDuration + (animationDuration * 2) + pauseBetween
+    local animationFinished = false
+    local animationSucceeded = true
 
-    ClearPedTasks(ped)
-    TaskTurnPedToFaceEntity(playerPed, ped, 700)
-    TaskTurnPedToFaceEntity(ped, playerPed, 700)
-    Wait(700)
+    CreateThread(function()
+        if not DoesEntityExist(ped) or IsEntityDead(ped) then
+            animationSucceeded = false
+            animationFinished = true
+            return
+        end
 
-    FreezeEntityPosition(ped, true)
-    SetBlockingOfNonTemporaryEvents(ped, true)
+        ClearPedTasks(ped)
+        TaskTurnPedToFaceEntity(playerPed, ped, turnDuration)
+        TaskTurnPedToFaceEntity(ped, playerPed, turnDuration)
+        Wait(turnDuration)
 
-    -- Først giver spilleren de sorte penge til NPC'en.
-    local playerCash = attachCashProp(playerPed)
-    TaskPlayAnim(playerPed, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, Config.TradeAnimation.duration, 48, 0.0, false, false, false)
-    TaskPlayAnim(ped, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, Config.TradeAnimation.duration, 48, 0.0, false, false, false)
-    Wait(Config.TradeAnimation.duration)
+        if not DoesEntityExist(ped) then
+            animationSucceeded = false
+            animationFinished = true
+            return
+        end
 
-    if playerCash and DoesEntityExist(playerCash) then DeleteEntity(playerCash) end
-    ClearPedTasks(playerPed)
-    ClearPedTasks(ped)
-    Wait(Config.TradeAnimation.pauseBetween)
+        FreezeEntityPosition(ped, true)
+        SetBlockingOfNonTemporaryEvents(ped, true)
 
-    -- Derefter giver NPC'en de rene kontanter tilbage.
-    local npcCash = attachCashProp(ped)
-    TaskPlayAnim(ped, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, Config.TradeAnimation.duration, 48, 0.0, false, false, false)
-    TaskPlayAnim(playerPed, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, Config.TradeAnimation.duration, 48, 0.0, false, false, false)
-    Wait(Config.TradeAnimation.duration)
+        -- Spilleren giver de sorte penge til NPC'en.
+        local playerCash = attachCashProp(playerPed)
+        TaskPlayAnim(playerPed, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, animationDuration, 48, 0.0, false, false, false)
+        TaskPlayAnim(ped, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, animationDuration, 48, 0.0, false, false, false)
+        Wait(animationDuration)
 
-    if npcCash and DoesEntityExist(npcCash) then DeleteEntity(npcCash) end
-    ClearPedTasks(playerPed)
-    ClearPedTasks(ped)
+        if playerCash and DoesEntityExist(playerCash) then DeleteEntity(playerCash) end
+        ClearPedTasks(playerPed)
+        if DoesEntityExist(ped) then ClearPedTasks(ped) end
+        Wait(pauseBetween)
 
-    if not wasFrozen then FreezeEntityPosition(ped, false) end
-    SetEntityHeading(ped, originalHeading)
-    SetBlockingOfNonTemporaryEvents(ped, false)
+        if not DoesEntityExist(ped) then
+            animationSucceeded = false
+            animationFinished = true
+            return
+        end
+
+        -- NPC'en giver de rene kontanter tilbage.
+        local npcCash = attachCashProp(ped)
+        TaskPlayAnim(ped, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, animationDuration, 48, 0.0, false, false, false)
+        TaskPlayAnim(playerPed, Config.TradeAnimation.dict, Config.TradeAnimation.clip, 8.0, -8.0, animationDuration, 48, 0.0, false, false, false)
+        Wait(animationDuration)
+
+        if npcCash and DoesEntityExist(npcCash) then DeleteEntity(npcCash) end
+        ClearPedTasks(playerPed)
+        if DoesEntityExist(ped) then ClearPedTasks(ped) end
+
+        animationFinished = true
+    end)
+
+    local progressCompleted = lib.progressBar({
+        duration = totalDuration,
+        label = Config.TradeAnimation.progressLabel or 'Gennemfører handel...',
+        useWhileDead = false,
+        canCancel = false,
+        disable = {
+            move = true,
+            car = true,
+            combat = true,
+            mouse = false
+        }
+    })
+
+    while not animationFinished do Wait(0) end
     RemoveAnimDict(Config.TradeAnimation.dict)
 
-    return true
+    if progressCompleted and animationSucceeded then
+        CreateThread(function()
+            releaseTradePed(ped)
+        end)
+        return true
+    end
+
+    if DoesEntityExist(ped) then
+        FreezeEntityPosition(ped, false)
+        SetBlockingOfNonTemporaryEvents(ped, false)
+        ResetEntityAlpha(ped)
+        ClearPedTasks(ped)
+        TaskWanderStandard(ped, 10.0, 10)
+        SetPedKeepTask(ped, true)
+        releaseProtectedPedWhenFarAway(ped)
+    end
+
+    return false
 end
 
 local function closeUi()
@@ -237,6 +361,26 @@ AddEventHandler('onResourceStop', function(resource)
 
     tradeInProgress = false
     ClearPedTasks(PlayerPedId())
+    if activePed and DoesEntityExist(activePed) then
+        FreezeEntityPosition(activePed, false)
+        SetBlockingOfNonTemporaryEvents(activePed, false)
+        ResetEntityAlpha(activePed)
+        ClearPedTasks(activePed)
+        TaskWanderStandard(activePed, 10.0, 10)
+        SetPedKeepTask(activePed, true)
+    end
+
+    for ped in pairs(protectedTradePeds) do
+        if DoesEntityExist(ped) then
+            FreezeEntityPosition(ped, false)
+            SetBlockingOfNonTemporaryEvents(ped, false)
+            ClearPedTasks(ped)
+            TaskWanderStandard(ped, 10.0, 10)
+            SetPedKeepTask(ped, true)
+            SetEntityAsNoLongerNeeded(ped)
+        end
+    end
+    protectedTradePeds = {}
     closeUi()
     exports.ox_target:removeGlobalPed('sb_moneylaundering_ambient_npc')
 end)

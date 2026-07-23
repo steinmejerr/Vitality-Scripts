@@ -37,7 +37,16 @@ Config.AmbientNPCs = {
 Config.TradeAnimation = {
     dict = 'mp_common',
     clip = 'givetake1_a',
+    turnDuration = 700,
     duration = 1450,
     pauseBetween = 180,
-    cashProp = `prop_anim_cash_pile_01`
+    cashProp = `prop_anim_cash_pile_01`,
+    progressLabel = 'Gennemfører handel...',
+
+    -- NPC'en bliver frigivet og går videre normalt efter handlen.
+    pedResume = {
+        delay = 650,
+        wanderSpeed = 10.0,
+        pauseChance = 10
+    }
 }
