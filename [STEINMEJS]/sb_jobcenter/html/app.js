@@ -6,7 +6,7 @@ const searchEl=document.getElementById('search');
 const mapViewport=document.getElementById('interactive-map');
 const mapCanvas=document.getElementById('map-canvas');
 let state={jobs:[],selected:null,category:'Alle',search:'',currentJob:'unemployed'};
-let mapState={scale:1,x:0,y:0,dragging:false,moved:false,pointerId:null,startX:0,startY:0,originX:0,originY:0,minScale:1,maxScale:4};
+let mapState={scale:1,x:0,y:0,dragging:false,moved:false,pointerId:null,startX:0,startY:0,originX:0,originY:0,minScale:1,maxScale:4.5};
 
 const post=(name,data={})=>fetch(`https://${GetParentResourceName()}/${name}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
 

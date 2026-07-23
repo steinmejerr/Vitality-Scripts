@@ -26,7 +26,8 @@ files {
     'html/index.html',
     'html/style.css',
     'html/app.js',
-    'html/gta_map.png'
+    'html/gta_map.png',
+    'html/gta_map_hd.png'
 }
 
 dependencies {
