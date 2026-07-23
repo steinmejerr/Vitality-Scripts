@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <title>SB Jobcenter</title>
+</head>
+<body>
+  <main id="app" class="hidden">
+    <section class="window">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">VITALITY JOBSERVICE</p>
+          <h1>Find dit næste job</h1>
+          <p class="subtitle">Vælg et arbejde og se arbejdspladsen direkte på kortet.</p>
+        </div>
+        <button id="close" class="icon-button"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+
+      <div class="layout">
+        <aside class="jobs-panel">
+          <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search" placeholder="Søg efter job..."></div>
+          <div id="categories" class="categories"></div>
+          <div id="jobs" class="jobs"></div>
+        </aside>
+
+        <section class="details-panel">
+          <div class="map-card">
+            <div class="map-header">
+              <div><span class="small-label">LOKATION</span><h2 id="map-title">Vælg et job</h2></div>
+              <button id="waypoint" class="secondary hidden"><i class="fa-solid fa-location-arrow"></i>Sæt GPS</button>
+            </div>
+            <div class="city-map">
+              <div class="water water-one"></div>
+              <div class="water water-two"></div>
+              <div class="road r1"></div><div class="road r2"></div><div class="road r3"></div><div class="road r4"></div><div class="road r5"></div><div class="road r6"></div>
+              <div class="district d1">PALETO</div><div class="district d2">SANDY</div><div class="district d3">LOS SANTOS</div><div class="district d4">PORT</div>
+              <div id="markers"></div>
+            </div>
+          </div>
+
+          <div id="empty-state" class="empty-state">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <h2>Vælg et job i menuen</h2>
+            <p>Her kan du læse mere om jobbet og se, hvor arbejdspladsen ligger.</p>
+          </div>
+
+          <div id="job-details" class="job-details hidden">
+            <div class="job-heading">
+              <div id="detail-icon" class="detail-icon"><i class="fa-solid fa-briefcase"></i></div>
+              <div><span id="detail-category" class="small-label"></span><h2 id="detail-title"></h2></div>
+            </div>
+            <p id="detail-description" class="detail-description"></p>
+            <div class="info-grid">
+              <div><span>Løn</span><strong id="detail-salary"></strong></div>
+              <div><span>Status</span><strong id="detail-status">Ledig stilling</strong></div>
+            </div>
+            <h3>Krav og forventninger</h3>
+            <div id="requirements" class="requirements"></div>
+            <button id="select-job" class="primary"><i class="fa-solid fa-check"></i>Vælg dette job</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
