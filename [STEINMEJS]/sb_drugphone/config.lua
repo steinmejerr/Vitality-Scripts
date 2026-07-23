@@ -7,7 +7,7 @@ Config.CustomerLifetime = 180000
 Config.MaxDealDistance = 5.0
 Config.NextOfferDelay = { min = 35, max = 75 } -- sekunder
 Config.OfferExpiry = 90 -- sekunder
-Config.DealCooldown = 5 -- sekunder mellem server-events
+Config.DealCooldown = 1 -- sekunder mellem server-events
 
 Config.Messages = {
     intro = {
@@ -48,7 +48,7 @@ Config.Products = {
     },
     coke = {
         label = 'Kokain',
-        item = 'coke_pooch',
+        item = 'burger',
         icon = 'snowflake',
         minAmount = 5,
         maxAmount = 50,
