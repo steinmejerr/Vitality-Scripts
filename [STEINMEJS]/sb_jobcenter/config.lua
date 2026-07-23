@@ -56,7 +56,7 @@ Config.Jobs = {
         icon = 'fa-solid fa-taxi',
         color = '#f4c542',
         salary = 'Varierer efter ture',
-        location = vector3(895.18, -179.34, 74.70),
+        location = vector3(-322.23, -1546.10, 31.02),
         requirements = {
             'Gyldigt kørekort',
             'God kundeservice'
@@ -136,7 +136,7 @@ Config.Jobs = {
         icon = 'fa-solid fa-fish',
         color = '#4ecde6',
         salary = 'Afhænger af fangsten',
-        location = vector3(-3426.79, 967.28, 8.35),
+        location = vector3(-1598.77, 5197.82, 4.38),
         requirements = {
             'Ingen erfaring nødvendig',
             'Tålmodighed'
