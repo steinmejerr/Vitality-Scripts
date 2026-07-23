@@ -48,7 +48,8 @@ local function rowToJob(row)
             x = tonumber(row.map_x),
             y = tonumber(row.map_y)
         } or nil,
-        requirements = decodeRequirements(row.requirements)
+        requirements = decodeRequirements(row.requirements),
+        sortOrder = tonumber(row.sort_order) or 0
     }
 end
 

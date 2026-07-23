@@ -49,15 +49,17 @@ local function findJob(id)
     end
 end
 
-local function openUI(calibrateId)
+local function openUI(calibrateId, adminMode)
     if uiOpen then return end
     refreshJobs()
     uiOpen = true
     adminCalibration = calibrateId ~= nil
     SetNuiFocus(true, true)
     SendNUIMessage({
-        action = 'open', jobs = currentJobs,
-        currentJob = ESX.PlayerData.job and ESX.PlayerData.job.name or 'unemployed'
+        action = 'open',
+        jobs = currentJobs,
+        currentJob = ESX.PlayerData.job and ESX.PlayerData.job.name or 'unemployed',
+        admin = adminMode == true
     })
     if calibrateId then
         Wait(150)
@@ -151,31 +153,24 @@ local function openJobActions(job)
     lib.showContext('sb_jobcenter_admin_job')
 end
 
-AddEventHandler('sb_jobcenter:openAdmin', function()
+local function openAdminUI(calibrateId)
     local allowed = lib.callback.await('sb_jobcenter:isAdmin', false)
-    if not allowed then notify('Du har ikke adgang til jobcenter-administrationen.', 'error') return end
-    refreshJobs()
-
-    local options = {
-        { title = 'Opret nyt job', description = 'Bruger din aktuelle position som standard', icon = 'plus', onSelect = function() saveJobDialog(nil) end }
-    }
-    for i = 1, #currentJobs do
-        local job = currentJobs[i]
-        options[#options + 1] = {
-            title = job.label,
-            description = ('%s · %s · Grade %s'):format(job.category, job.job, job.grade),
-            icon = job.icon,
-            iconColor = job.color,
-            arrow = true,
-            onSelect = function() openJobActions(job) end
-        }
+    if not allowed then
+        notify('Du har ikke adgang til jobcenter-administrationen.', 'error')
+        return
     end
 
-    lib.registerContext({ id = 'sb_jobcenter_admin', title = 'Jobcenter administration', options = options })
-    lib.showContext('sb_jobcenter_admin')
+    if uiOpen then closeUI() end
+    openUI(calibrateId, true)
+end
+
+AddEventHandler('sb_jobcenter:openAdmin', function(calibrateId)
+    openAdminUI(calibrateId)
 end)
 
-RegisterCommand('jobcenteradmin', function() TriggerEvent('sb_jobcenter:openAdmin') end, false)
+RegisterCommand('jobcenteradmin', function()
+    openAdminUI(nil)
+end, false)
 
 local function createPed()
     local data = Config.JobCenter.ped
@@ -207,6 +202,41 @@ RegisterNUICallback('setWaypoint', function(data, cb)
     if job then SetNewWaypoint(job.location.x, job.location.y); notify(('GPS sat til %s.'):format(job.label), 'success') end
     cb(1)
 end)
+RegisterNUICallback('adminGetCurrentPosition', function(_, cb)
+    local coords = GetEntityCoords(PlayerPedId())
+    cb({
+        success = true,
+        location = { x = coords.x, y = coords.y, z = coords.z },
+        map = worldToMap(coords)
+    })
+end)
+
+RegisterNUICallback('adminSaveJob', function(data, cb)
+    local response = lib.callback.await('sb_jobcenter:adminSaveJob', false, data)
+    if response and response.success then
+        refreshJobs()
+    end
+    cb(response or { success = false, message = 'Kunne ikke gemme jobbet.' })
+end)
+
+RegisterNUICallback('adminDeleteJob', function(data, cb)
+    local response = lib.callback.await('sb_jobcenter:adminDeleteJob', false, data and data.id)
+    if response and response.success then
+        refreshJobs()
+    end
+    cb(response or { success = false, message = 'Kunne ikke slette jobbet.' })
+end)
+
+RegisterNUICallback('adminStartCalibration', function(data, cb)
+    if not data or not data.id or data.id == '' then
+        cb({ success = false, message = 'Gem jobbet først, før markøren kan placeres.' })
+        return
+    end
+    adminCalibration = true
+    SendNUIMessage({ action = 'calibrateJob', id = data.id })
+    cb({ success = true })
+end)
+
 RegisterNUICallback('saveMapOverride', function(data, cb)
     if not adminCalibration then cb(0) return end
     local success = lib.callback.await('sb_jobcenter:adminSaveMap', false, data.id, data.x, data.y)

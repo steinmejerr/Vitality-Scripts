@@ -19,11 +19,18 @@
           <h1>Find dit næste job</h1>
           <p class="subtitle">Vælg et arbejde og se arbejdspladsen direkte på kortet.</p>
         </div>
-        <button id="close" class="icon-button"><i class="fa-solid fa-xmark"></i></button>
+        <div class="topbar-actions"><button id="admin-back-to-list" class="secondary hidden"><i class="fa-solid fa-arrow-left"></i>Til jobliste</button><button id="close" class="icon-button"><i class="fa-solid fa-xmark"></i></button></div>
       </header>
 
       <div class="layout">
         <aside class="jobs-panel">
+          <div id="admin-toolbar" class="admin-toolbar hidden">
+            <div>
+              <p class="eyebrow">ADMINISTRATION</p>
+              <strong>Jobcenter Admin</strong>
+            </div>
+            <button id="admin-new-job" class="secondary"><i class="fa-solid fa-plus"></i>Nyt job</button>
+          </div>
           <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search" placeholder="Søg efter job..."></div>
           <div id="categories" class="categories"></div>
           <div id="jobs" class="jobs"></div>
@@ -35,6 +42,7 @@
               <div><span class="small-label">LOKATION</span><h2 id="map-title">Vælg et job</h2></div>
               <div class="map-actions hidden" id="map-actions">
                 <button id="waypoint" class="secondary"><i class="fa-solid fa-location-arrow"></i>Sæt GPS</button>
+                <button id="admin-calibrate-marker" class="secondary hidden"><i class="fa-solid fa-crosshairs"></i>Placér markør</button>
               </div>
             </div>
             <div id="interactive-map" class="city-map" aria-label="Interaktivt GTA V-kort">
@@ -66,6 +74,42 @@
             <i class="fa-solid fa-map-location-dot"></i>
             <h2>Vælg et job i menuen</h2>
             <p>Her kan du læse mere om jobbet og se, hvor arbejdspladsen ligger.</p>
+          </div>
+
+
+          <div id="admin-editor" class="admin-editor hidden">
+            <div class="admin-editor-header">
+              <div>
+                <span class="small-label">ADMIN</span>
+                <h2 id="admin-form-title">Opret job</h2>
+                <p>Administrér jobcenter-jobs direkte i dit eget UI.</p>
+              </div>
+              <div class="admin-editor-actions-top">
+                <button id="admin-use-position" class="secondary"><i class="fa-solid fa-location-crosshairs"></i>Brug min position</button>
+                <button id="admin-delete" class="secondary danger"><i class="fa-solid fa-trash"></i>Slet</button>
+              </div>
+            </div>
+            <div class="admin-form-grid">
+              <label><span>Job-ID</span><input id="admin-id" type="text" placeholder="taxi"></label>
+              <label><span>ESX jobnavn</span><input id="admin-job" type="text" placeholder="taxi"></label>
+              <label><span>Job grade</span><input id="admin-grade" type="number" min="0" value="0"></label>
+              <label><span>Visningsnavn</span><input id="admin-label" type="text" placeholder="Taxachauffør"></label>
+              <label><span>Kategori</span><input id="admin-category" type="text" placeholder="Transport"></label>
+              <label><span>Løntekst</span><input id="admin-salary" type="text" placeholder="$4.500 / tur"></label>
+              <label><span>Ikon</span><input id="admin-icon" type="text" placeholder="fa-solid fa-taxi"></label>
+              <label><span>Farve</span><input id="admin-color" type="color" value="#35df75"></label>
+              <label><span>Rækkefølge</span><input id="admin-sort" type="number" value="0"></label>
+              <label class="full"><span>Beskrivelse</span><textarea id="admin-description" rows="4" placeholder="Beskriv jobbet..."></textarea></label>
+              <label class="full"><span>Krav (ét pr. linje)</span><textarea id="admin-requirements" rows="4" placeholder="Kørekort B
+Mødestabil"></textarea></label>
+            </div>
+            <div class="admin-location-row">
+              <div class="admin-location-card"><span>Joblokation</span><strong id="admin-location-display">Ikke sat endnu</strong></div>
+              <div class="admin-location-card"><span>Kortmarkør</span><strong id="admin-map-display">Automatisk beregning</strong></div>
+            </div>
+            <div class="admin-form-actions">
+              <button id="admin-save" class="primary"><i class="fa-solid fa-floppy-disk"></i>Gem job</button>
+            </div>
           </div>
 
           <div id="job-details" class="job-details hidden">
