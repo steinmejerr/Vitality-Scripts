@@ -144,7 +144,7 @@ function renderJobs() {
   `).join('') || '<p style="color:#92a098;font-size:13px">Ingen jobs fundet.</p>';
 
   jobsEl.querySelectorAll('.job-card').forEach(card => {
-    card.onclick = () => selectJob(card.dataset.id);
+    card.onclick = () => selectJob(card.dataset.id, true);
   });
 }
 
