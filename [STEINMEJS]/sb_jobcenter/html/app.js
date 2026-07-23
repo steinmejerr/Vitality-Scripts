@@ -5,7 +5,7 @@ const markersEl=document.getElementById('markers');
 const searchEl=document.getElementById('search');
 const mapViewport=document.getElementById('interactive-map');
 const mapCanvas=document.getElementById('map-canvas');
-let state={jobs:[],selected:null,category:'Alle',search:'',currentJob:'unemployed'};
+let state={jobs:[],selected:null,category:'Alle',search:'',currentJob:'unemployed',calibrationJob:null};
 let mapState={scale:1,x:0,y:0,dragging:false,moved:false,pointerId:null,startX:0,startY:0,originX:0,originY:0,minScale:1,maxScale:4.5};
 
 const post=(name,data={})=>fetch(`https://${GetParentResourceName()}/${name}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -132,6 +132,33 @@ mapViewport.addEventListener('wheel',e=>{
   setMapZoom(mapState.scale+(e.deltaY<0?.22:-.22),e.clientX,e.clientY);
 },{passive:false});
 
+function setCalibrationMode(jobId){
+  const job=state.jobs.find(j=>j.id===jobId);
+  if(!job)return;
+  state.calibrationJob=job;
+  document.getElementById('map-calibration').classList.remove('hidden');
+  selectJob(jobId,true);
+}
+
+function stopCalibration(){
+  state.calibrationJob=null;
+  document.getElementById('map-calibration').classList.add('hidden');
+}
+
+function calibrateAtPointer(e){
+  if(!state.calibrationJob||mapState.moved)return false;
+  const rect=mapCanvas.getBoundingClientRect();
+  const x=clamp(((e.clientX-rect.left)/rect.width)*100,0,100);
+  const y=clamp(((e.clientY-rect.top)/rect.height)*100,0,100);
+  const job=state.calibrationJob;
+  job.map={x,y};
+  state.selected=job;
+  renderMarkers();
+  post('saveMapOverride',{id:job.id,x,y});
+  stopCalibration();
+  return true;
+}
+
 mapViewport.addEventListener('pointerdown',e=>{
   if(e.button!==0)return;
   mapState.dragging=true;mapState.moved=false;mapState.pointerId=e.pointerId;
@@ -154,15 +181,20 @@ function endMapDrag(e){
   mapViewport.classList.remove('dragging');
   try{mapViewport.releasePointerCapture(e.pointerId)}catch(_){ }
 }
-mapViewport.addEventListener('pointerup',endMapDrag);
+mapViewport.addEventListener('pointerup',e=>{
+  const wasCalibrationClick=calibrateAtPointer(e);
+  endMapDrag(e);
+  if(wasCalibrationClick)e.stopPropagation();
+});
 mapViewport.addEventListener('pointercancel',endMapDrag);
 document.getElementById('map-zoom-in').onclick=e=>{e.stopPropagation();setMapZoom(mapState.scale+.3)};
 document.getElementById('map-zoom-out').onclick=e=>{e.stopPropagation();setMapZoom(mapState.scale-.3)};
 document.getElementById('map-reset').onclick=e=>{e.stopPropagation();resetMap(true)};
+document.getElementById('cancel-calibration').onclick=e=>{e.stopPropagation();stopCalibration()};
 window.addEventListener('resize',()=>{updateMapMinScale();clampMapPosition();applyMapTransform()});
 
 function open(data){
-  state={jobs:data.jobs||[],selected:null,category:'Alle',search:'',currentJob:data.currentJob||'unemployed'};
+  state={jobs:data.jobs||[],selected:null,category:'Alle',search:'',currentJob:data.currentJob||'unemployed',calibrationJob:null};
   searchEl.value='';
   document.getElementById('empty-state').classList.remove('hidden');
   document.getElementById('job-details').classList.add('hidden');
@@ -171,8 +203,8 @@ function open(data){
   app.classList.remove('hidden');resetMap();renderCategories();renderJobs();renderMarkers();
 }
 
-function close(){app.classList.add('hidden');post('close')}
-window.addEventListener('message',e=>{if(e.data.action==='open')open(e.data);if(e.data.action==='close')app.classList.add('hidden');if(e.data.action==='previewJob'&&e.data.id)selectJob(e.data.id,true)});
+function close(){stopCalibration();app.classList.add('hidden');post('close')}
+window.addEventListener('message',e=>{if(e.data.action==='open')open(e.data);if(e.data.action==='close'){stopCalibration();app.classList.add('hidden')}if(e.data.action==='previewJob'&&e.data.id)selectJob(e.data.id,true);if(e.data.action==='calibrateJob'&&e.data.id)setCalibrationMode(e.data.id)});
 document.getElementById('close').onclick=close;
 searchEl.oninput=e=>{state.search=e.target.value;renderJobs()};
 document.getElementById('waypoint').onclick=()=>state.selected&&post('setWaypoint',{id:state.selected.id});

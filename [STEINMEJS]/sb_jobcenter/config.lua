@@ -1,5 +1,14 @@
 Config = {}
 
+Config.AdminGroups = {
+    'admin',
+    'superadmin'
+}
+
+-- Alle jobcenter-jobs gemmes i databasen og administreres med /jobcenteradmin.
+-- Config.Jobs bruges kun én gang til automatisk import af eksisterende jobs,
+-- hvis databasetabellen er tom.
+
 
 -- Kortkalibrering til html/gta_map.png.
 -- Jobmarkører beregnes automatisk fra job.location, så du ikke længere skal gætte map.x/map.y.
@@ -21,7 +30,8 @@ Config.MapCalibration = {
 
 Config.MapCommands = {
     coordinates = 'jobmapcoords', -- Stå på lokationen og brug /jobmapcoords
-    preview = 'jobmappreview'     -- /jobmappreview [job-id]
+    preview = 'jobmappreview',    -- /jobmappreview [job-id]
+    calibrate = 'jobmapcalibrate' -- /jobmapcalibrate [job-id]
 }
 
 Config.JobCenter = {
