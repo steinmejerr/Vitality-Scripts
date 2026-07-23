@@ -4,6 +4,11 @@ Config.Debug = false
 
 Config.FeePercent = 25
 
+
+-- Sorte penge skal ligge som et fysisk item i ox_inventory.
+-- Skift navnet her, hvis dit item hedder noget andet.
+Config.BlackMoneyItem = 'black_money'
+
 Config.MinimumAmount = 500
 Config.MaximumAmount = 250000
 

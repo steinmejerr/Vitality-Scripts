@@ -243,6 +243,11 @@ local function closeUi()
     SendNUIMessage({ action = 'close' })
 end
 
+local function hasBlackMoneyItem()
+    local count = exports.ox_inventory:Search('count', Config.BlackMoneyItem) or 0
+    return count > 0
+end
+
 local function canUsePed(entity)
     if not entity or entity == 0 or not DoesEntityExist(entity) then return false end
     if not IsEntityAPed(entity) or IsPedAPlayer(entity) then return false end
@@ -257,6 +262,9 @@ end
 
 local function openLaundering(entity)
     if uiOpen or not canUsePed(entity) then return end
+    if not hasBlackMoneyItem() then
+        return notify('Du har ingen sorte penge i dit inventory.', 'error')
+    end
 
     -- The selected ambient ped is validated locally. Many map peds are not
     -- networked, so the server cannot reliably resolve their entity/network id.
@@ -289,7 +297,7 @@ CreateThread(function()
             label = 'Sælg sorte penge',
             distance = Config.TargetDistance,
             canInteract = function(entity)
-                return not uiOpen and not tradeInProgress and canUsePed(entity)
+                return not uiOpen and not tradeInProgress and hasBlackMoneyItem() and canUsePed(entity)
             end,
             onSelect = function(data)
                 openLaundering(data.entity)

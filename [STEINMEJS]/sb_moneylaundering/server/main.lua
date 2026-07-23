@@ -19,9 +19,8 @@ local function randomToken()
     return ('%s:%s:%s'):format(math.random(100000, 999999), os.time(), math.random(100000, 999999))
 end
 
-local function getBlackMoney(xPlayer)
-    local account = xPlayer.getAccount('black_money')
-    return account and account.money or 0
+local function getBlackMoney(source)
+    return exports.ox_inventory:Search(source, 'count', Config.BlackMoneyItem) or 0
 end
 
 local function getPlayerCoords(source)
@@ -47,7 +46,7 @@ lib.callback.register('sb_moneylaundering:getData', function(source)
         expires = os.time() + Config.SessionDurationSeconds
     }
 
-    local balance = getBlackMoney(xPlayer)
+    local balance = getBlackMoney(source)
     local payoutPercent = 100 - Config.FeePercent
 
     return {
@@ -100,7 +99,7 @@ lib.callback.register('sb_moneylaundering:launder', function(source, token, amou
         }
     end
 
-    local blackMoney = getBlackMoney(xPlayer)
+    local blackMoney = getBlackMoney(source)
     if blackMoney < amount then
         return { success = false, message = 'Du har ikke nok sorte penge.' }
     end
@@ -114,7 +113,12 @@ lib.callback.register('sb_moneylaundering:launder', function(source, token, amou
 
     transactionLocks[source] = now + Config.TransactionCooldownSeconds
 
-    xPlayer.removeAccountMoney('black_money', amount, 'Money laundering')
+    local removed = exports.ox_inventory:RemoveItem(source, Config.BlackMoneyItem, amount)
+    if not removed then
+        transactionLocks[source] = nil
+        return { success = false, message = 'De sorte penge kunne ikke fjernes fra dit inventory.' }
+    end
+
     xPlayer.addMoney(payout, 'Money laundering payout')
 
     return {
