@@ -162,7 +162,6 @@ end
 
 local function playMessageSound()
     PlaySoundFrontend(-1, 'Text_Arrive_Tone', 'Phone_SoundSet_Default', true)
-    SendNUIMessage({ action = 'messageSound' })
 end
 
 local function performDeal()
