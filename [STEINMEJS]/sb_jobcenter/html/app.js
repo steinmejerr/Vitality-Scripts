@@ -6,7 +6,7 @@ const searchEl=document.getElementById('search');
 const mapViewport=document.getElementById('interactive-map');
 const mapCanvas=document.getElementById('map-canvas');
 let state={jobs:[],selected:null,category:'Alle',search:'',currentJob:'unemployed'};
-let mapState={scale:1,x:0,y:0,dragging:false,moved:false,pointerId:null,startX:0,startY:0,originX:0,originY:0,minScale:.72,maxScale:4};
+let mapState={scale:1,x:0,y:0,dragging:false,moved:false,pointerId:null,startX:0,startY:0,originX:0,originY:0,minScale:1,maxScale:4};
 
 const post=(name,data={})=>fetch(`https://${GetParentResourceName()}/${name}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
 
@@ -56,6 +56,16 @@ function selectJob(id,focusMap=false){
 
 function clamp(value,min,max){return Math.min(max,Math.max(min,value))}
 
+function updateMapMinScale(){
+  const viewport=mapViewport.getBoundingClientRect();
+  const baseWidth=mapCanvas.offsetWidth || viewport.width;
+  const baseHeight=mapCanvas.offsetHeight || viewport.height;
+  const minScaleX=viewport.width / baseWidth;
+  const minScaleY=viewport.height / baseHeight;
+  mapState.minScale=Math.max(1, minScaleX, minScaleY);
+  if(mapState.scale < mapState.minScale) mapState.scale = mapState.minScale;
+}
+
 function applyMapTransform(animated=false){
   mapCanvas.classList.toggle('animated',animated);
   mapCanvas.style.transform=`translate(calc(-50% + ${mapState.x}px),calc(-50% + ${mapState.y}px)) scale(${mapState.scale})`;
@@ -78,11 +88,13 @@ function clampMapPosition(){
   mapState.y=clamp(mapState.y,-bounds.y,bounds.y);
 }
 function resetMap(animated=false){
-  mapState.scale=.9;mapState.x=0;mapState.y=0;
+  updateMapMinScale();
+  mapState.scale=mapState.minScale;mapState.x=0;mapState.y=0;
   applyMapTransform(animated);
 }
 
 function setMapZoom(nextScale,clientX,clientY){
+  updateMapMinScale();
   const previous=mapState.scale;
   const scale=clamp(nextScale,mapState.minScale,mapState.maxScale);
   if(scale===previous)return;
@@ -98,7 +110,8 @@ function setMapZoom(nextScale,clientX,clientY){
 
 function focusSelectedJob(){
   if(!state.selected)return;
-  mapState.scale=1.7;
+  updateMapMinScale();
+  mapState.scale=Math.max(1.7, mapState.minScale);
   const canvasWidth=mapCanvas.offsetWidth*mapState.scale;
   const canvasHeight=mapCanvas.offsetHeight*mapState.scale;
   mapState.x=(50-state.selected.map.x)/100*canvasWidth;
@@ -138,7 +151,7 @@ mapViewport.addEventListener('pointercancel',endMapDrag);
 document.getElementById('map-zoom-in').onclick=e=>{e.stopPropagation();setMapZoom(mapState.scale+.3)};
 document.getElementById('map-zoom-out').onclick=e=>{e.stopPropagation();setMapZoom(mapState.scale-.3)};
 document.getElementById('map-reset').onclick=e=>{e.stopPropagation();resetMap(true)};
-window.addEventListener('resize',()=>{clampMapPosition();applyMapTransform()});
+window.addEventListener('resize',()=>{updateMapMinScale();clampMapPosition();applyMapTransform()});
 
 function open(data){
   state={jobs:data.jobs||[],selected:null,category:'Alle',search:'',currentJob:data.currentJob||'unemployed'};
