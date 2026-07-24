@@ -513,3 +513,16 @@ html, body, #root {
 
 /* FiveM CEF fix: backdrop-filter can render as a large black rectangle behind TextUI. */
 html, body, #root { background: transparent !important; }
+
+/* Vitality redesign – ox_lib context menu */
+body { font-family: Inter, Roboto, Arial, sans-serif !important; }
+
+/* Keep Mantine context-menu tooltips consistent with the rest of the UI. */
+.mantine-Tooltip-tooltip,
+.mantine-Popover-dropdown {
+  color: #f4f7f5 !important;
+  background: linear-gradient(145deg, rgba(26,32,30,.99), rgba(10,14,12,.99)) !important;
+  border: 1px solid rgba(53,223,117,.24) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 18px 45px rgba(0,0,0,.5) !important;
+}
