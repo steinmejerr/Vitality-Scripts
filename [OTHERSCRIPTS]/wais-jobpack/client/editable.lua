@@ -474,3 +474,55 @@ if Config.JobHelper ~= nil and Config.JobHelper.use then
 
     TriggerEvent('chat:addSuggestion', ('/%s'):format(Config.JobHelper.command), Config.JobHelper.help, {})
 end
+
+-----------------------------------------------------------------------------------------
+-- SB: Disable only the built-in WAIS job centre
+-----------------------------------------------------------------------------------------
+
+-- The main client file is escrow protected, so this removes only the configured
+-- job-centre ped, target entity and blip after WAIS creates them. Config.Jobs and
+-- every individual job location remain untouched.
+CreateThread(function()
+    if not Config.JobCentre or Config.JobCentre.enabled ~= false then return end
+
+    local centre = Config.JobCentre.interaction_ped
+    if not centre or not centre.coords or not centre.model then return end
+
+    local centreCoords = vector3(centre.coords.x, centre.coords.y, centre.coords.z)
+    local centreModel = joaat(centre.model)
+    local centreSprite = Config.JobCentre.blip and Config.JobCentre.blip.sprite or 407
+
+    local function removeCentrePed()
+        local peds = GetGamePool('CPed')
+        for i = 1, #peds do
+            local ped = peds[i]
+            if DoesEntityExist(ped) and not IsPedAPlayer(ped) and GetEntityModel(ped) == centreModel then
+                local coords = GetEntityCoords(ped)
+                if #(coords - centreCoords) <= 12.0 then
+                    SetEntityAsMissionEntity(ped, true, true)
+                    DeletePed(ped)
+                    if DoesEntityExist(ped) then DeleteEntity(ped) end
+                end
+            end
+        end
+    end
+
+    local function removeCentreBlip()
+        local blip = GetFirstBlipInfoId(centreSprite)
+        while DoesBlipExist(blip) do
+            local coords = GetBlipInfoIdCoord(blip)
+            if #(vector3(coords.x, coords.y, coords.z) - centreCoords) <= 12.0 then
+                RemoveBlip(blip)
+            end
+            blip = GetNextBlipInfoId(centreSprite)
+        end
+    end
+
+    -- WAIS may create the centre shortly after player/framework initialization.
+    -- Keep cleaning only this exact configured centre without touching job peds.
+    while true do
+        removeCentrePed()
+        removeCentreBlip()
+        Wait(3000)
+    end
+end)

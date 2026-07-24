@@ -1,0 +1,20 @@
+{
+    "select_screw": {
+        "title": "Vælg en skrue, der skal løsnes",
+        "options": {
+            "1": "Øverste venstre skrue",
+            "2": "Nederste venstre skrue",
+            "3": "Øverste højre skrue",
+            "4": "Nederste højre skrue"
+        },
+        "select": "Vælg",
+        "cancel": "Annuller",
+        "change_selection": "Skift valg"
+    },
+    "screw_minigame": {
+        "instructions_escape": "[E] - Flygt   \n [X] - Annuller",
+        "hint": "Hold venstre museknap nede på skruen for at løsne den.  \n Hold R nede for at skifte kameravinkel.  \n Tryk på X for at annullere"
+    },
+    "interaction_label": "Sæt dig på toilettet"
+}
+

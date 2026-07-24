@@ -30,9 +30,10 @@ Config.DrawMarker = {
 }
 
 Config.JobCentre = {
+    ["enabled"] = false, -- false = deaktiver kun det indbyggede jobcenter. Alle jobs i Config.Jobs fortsætter normalt.
     ["interaction_type"] = "target", -- "target" || "textUI" => If you select the "Target" option, you can interact with the qb or ox target by clicking on the pad. "textUI" option will allow you to interact by pressing the E key.
     ["blip"] = {
-        ["show"] = true,
+        ["show"] = false,
         ["label"] = "Jobcenter",
         ["sprite"] = 407,
         ["color"] = 5,
