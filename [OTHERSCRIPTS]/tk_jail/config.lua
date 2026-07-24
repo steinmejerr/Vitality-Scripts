@@ -7,9 +7,9 @@ Config.ImagePath = 'nui://ox_inventory/web/images' -- path for images used in tr
 Config.DebugMode = false -- false/true
 
 Config.Inventory = 'ox' -- default / ox / quasar
-Config.JailCigaretteItem = 'jail_cigarette'
+Config.JailCigaretteItem = 'cigarette'
 
-Config.HelpNotification = false -- false / true, use help notification (top left) instead of the 3D text (only used if ox_lib and ox_target set to false) !! if set to true, go to locales/en.lua and change interact_button = '[E] ' to interact_button = '~INPUT_CONTEXT~ '
+Config.HelpNotification = true -- false / true, use help notification (top left) instead of the 3D text (only used if ox_lib and ox_target set to false) !! if set to true, go to locales/en.lua and change interact_button = '[E] ' to interact_button = '~INPUT_CONTEXT~ '
 Config.UseOxLib = true -- false / true, remember to add " shared_script '@ox_lib/init.lua' " to fxmanifest.lua if set to true
 Config.UseOxTarget = true -- false / true
 
@@ -60,45 +60,42 @@ Config.PoliceJobs = {
 
 Config.Coords = {
     jail = {
-        inside = vec4(1772.89, 2492.36, 45.74, 118.0),
-        outside = vec4(1846.2214, 2585.8623, 45.6726, 272.8506),
+        inside = vec4(1773.96, 2552.05, 45.57, 91.68),
+        outside = vec4(1846.60, 2585.85, 45.67, 269.72),
         beds = {
-            vec4(1761.9, 2597.57, 45.8, 85.55),
-            vec4(1761.9, 2594.52, 45.8, 85.55),
-            vec4(1761.9, 2591.51, 45.8, 85.55),
-            vec4(1772.1, 2591.77, 45.8, 271.24),
-            vec4(1772.1, 2595.01, 45.8, 271.24),
-            vec4(1772.1, 2598.02, 45.8, 271.24),
+            vec4(1762.34, 2584.95, 46.82, 92.30),
+            vec4(1761.82, 2582.77, 46.82, 98.70),
+            vec4(1761.52, 2587.26, 46.82, 101.87),
+            vec4(1757.22, 2587.39, 46.81, 268.94),
+            vec4(1757.43, 2585.51, 46.76, 267.44),
+            vec4(1757.21, 2583.26, 46.81, 270.27),
+            vec4(1757.38, 2581.23, 46.81, 265.16),
         },
         search = {
-            vec3(1776.8221, 2562.8843, 45.3099),
-            vec3(1764.4167, 2566.9897, 45.3023),
-            vec3(1763.4050, 2572.0200, 45.2097),
-            vec3(1767.1844, 2599.0605, 45.7834),
-            vec3(1763.8901, 2569.5757, 45.2690),
-            vec3(1736.3815, 2541.7976, 43.4069),
-            vec3(1738.3336, 2537.9814, 43.3589),
-            vec3(1740.2850, 2534.2139, 43.3941),
-            vec3(1687.3887, 2550.9116, 45.5389),
-            vec3(1688.8385, 2551.9128, 45.9692),
-            vec3(1768.8286, 2489.9512, 45.6504),
-            vec3(1763.6466, 2486.9514, 45.5007),
-            vec3(1759.0250, 2484.2949, 45.5028),
-            vec3(1753.5374, 2474.1794, 45.7511),
-            vec3(1747.0890, 2484.9143, 45.3524),
-            vec3(1632.3378, 2546.3098, 45.3820),
-            vec3(1637.3354, 2551.6101, 45.3826),
-            vec3(1631.0641, 2549.4153, 45.3690),
-            vec3(1659.0682, 2553.9102, 45.3723),
-            vec3(1664.6868, 2548.4031, 45.3742),
-            vec3(1670.3734, 2553.9272, 45.3788),
-            vec3(1664.8718, 2554.2913, 45.3869),
-            vec3(1715.4652, 2554.5100, 45.3874),
-            vec3(1706.6936, 2550.4895, 45.4205),
-            vec3(1704.1810, 2553.9080, 45.3863),
+            vec3(1622.97, 2482.71, 45.65),
+            vec3(1625.87, 2480.39, 45.65),
+            vec3(1628.40, 2478.01, 45.65),
+            vec3(1631.19, 2468.78, 45.65),
+            vec3(1628.85, 2466.15, 45.65),
+            vec3(1624.45, 2461.07, 45.65),
+            vec3(1617.52, 2459.72, 45.65),
+            vec3(1614.89, 2461.75, 45.65),
+            vec3(1612.01, 2464.10, 45.65),
+            vec3(1609.47, 2466.55, 45.65),
+            vec3(1604.00, 2470.75, 45.65),
+            vec3(1601.45, 2473.23, 45.65),
+            vec3(1598.71, 2475.57, 45.65),
+            vec3(1596.00, 2477.48, 45.65),
+            vec3(1595.61, 2484.64, 45.65),
+            vec3(1597.91, 2487.33, 45.65),
+            vec3(1600.06, 2489.98, 45.65),
+            vec3(1602.14, 2492.59, 45.65),
+            vec3(1611.61, 2491.38, 45.65),
+            vec3(1614.79, 2489.64, 45.65),
+            vec3(1617.35, 2487.41, 45.65),
         },
         chooseTask = {
-            {coords = vec4(1774.0673, 2493.4102, 45.7407, 300.0), obj = `tr_prop_tr_planning_board_01a`}
+            {coords = vec4(1609.87, 2472.57, 45.65, 141.40), obj = `tr_prop_tr_planning_board_01a`}
         },
         trading = {
             {coords = vec4(1665.0571, 2568.6677, 45.5648, 180.2381), ped = `s_m_y_prisoner_01`}
@@ -320,7 +317,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25, -- change to find an item when task completed
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}}, -- name, chance to find this item, amount
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}}, -- name, chance to find this item, amount
                     {name = 'burger', chance = 25, amount = {min = 1, max = 1}},
                     {name = 'water', chance = 25, amount = {min = 1, max = 1}},
                     {name = 'jail_chemicals', chance = 5, amount = {min = 1, max = 2}},
@@ -348,7 +345,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25,
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}},
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}},
                     {name = 'jail_chemicals', chance = 5, amount = {min = 1, max = 3}},
                     {name = 'phone', chance = 5, amount = {min = 1, max = 1}},
                     {name = 'battery', chance = 0.5, amount = {min = 1, max = 1}},
@@ -375,7 +372,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25,
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}},
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}},
                     {name = 'electric_cable', chance = 25, amount = {min = 1, max = 2}},
                     {name = 'battery', chance = 1, amount = {min = 1, max = 1}},
                     {name = 'tape', chance = 10, amount = {min = 1, max = 2}},
@@ -404,7 +401,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25,
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}},
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}},
                     {name = 'plastic_spoon', chance = 25, amount = {min = 1, max = 1}},
                     {name = 'plastic_knife', chance = 25, amount = {min = 1, max = 1}},
                     {name = 'plastic_fork', chance = 25, amount = {min = 1, max = 1}},
@@ -432,7 +429,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25,
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}},
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}},
                     {name = 'battery', chance = 1, amount = {min = 1, max = 1}},
                     {name = 'jail_lighter', chance = 0.01, amount = {min = 1, max = 1}},
                     {name = 'metal_scrap', chance = 25, amount = {min = 1, max = 1}},
@@ -464,7 +461,7 @@ Config.Tasks = { -- settings for tasks
             item = {
                 chance = 25,
                 items = {
-                    {name = 'jail_cigarette', chance = 25, amount = {min = 1, max = 3}},
+                    {name = 'cigarette', chance = 25, amount = {min = 1, max = 3}},
                     {name = 'weapon_knife', chance = 0.5, amount = {min = 1, max = 1}},
                     {name = 'tape', chance = 10, amount = {min = 1, max = 1}},
                     {name = 'gunpowder', chance = 10, amount = {min = 1, max = 1}},
@@ -729,56 +726,56 @@ Config.TradingItems = { -- items in the trading shop
     {
         name = 'burger', amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 1},
+            {name = 'cigarette', amount = 1},
         }
     },
     {
         name = 'water',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 1},
+            {name = 'cigarette', amount = 1},
         }
     },
     {
         name = 'money',
         amount = 5,
         neededItems = {
-            {name = 'jail_cigarette', amount = 1},
+            {name = 'cigarette', amount = 1},
         }
     },
     {
         name = 'WEAPON_KNIFE',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 500},
+            {name = 'cigarette', amount = 500},
         }
     },
     {
         name = 'WEAPON_CROWBAR',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 250},
+            {name = 'cigarette', amount = 250},
         }
     },
     {
         name = 'jail_lab_tools',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 500},
+            {name = 'cigarette', amount = 500},
         }
     },
     {
         name = 'jail_lighter',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 2500},
+            {name = 'cigarette', amount = 2500},
         }
     },
     {
         name = 'jail_explosive',
         amount = 1,
         neededItems = {
-            {name = 'jail_cigarette', amount = 5000},
+            {name = 'cigarette', amount = 5000},
         }
     },
     {
@@ -911,7 +908,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'slammer', amount = 10},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 10},
+                                    {name = 'cigarette', amount = 10},
                                 },
                                 event = 'sellItems',
                             },
@@ -949,7 +946,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                         {
                                             label = 'Give cigarettes',
                                             need = { -- items needed to run event
-                                                {name = 'jail_cigarette', amount = 50},
+                                                {name = 'cigarette', amount = 50},
                                             },
                                             event = 'guardName', -- nui callback name to run
                                             close = true,
@@ -995,7 +992,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                         {
                                             label = 'Give cigarettes',
                                             need = {
-                                                {name = 'jail_cigarette', amount = 50},
+                                                {name = 'cigarette', amount = 50},
                                             },
                                             event = 'drugLocation',
                                             close = true,
@@ -1072,7 +1069,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                             {
                                 label = 'Give cigarettes',
                                 need = {
-                                    {name = 'jail_cigarette', amount = 2500},
+                                    {name = 'cigarette', amount = 2500},
                                 },
                                 get = {
                                     {name = 'jail_explosive', amount = 1},
@@ -1111,7 +1108,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'plastic_spoon', amount = 3},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1121,7 +1118,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'plastic_fork', amount = 3},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1131,7 +1128,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'plastic_knife', amount = 3},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1167,7 +1164,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'electric_cable', amount = 2},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1177,7 +1174,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'battery', amount = 1},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1213,7 +1210,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'metal_scrap', amount = 5},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 5},
+                                    {name = 'cigarette', amount = 5},
                                 },
                                 event = 'sellItems',
                             },
@@ -1223,7 +1220,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'plastic_scrap', amount = 5},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 5},
+                                    {name = 'cigarette', amount = 5},
                                 },
                                 event = 'sellItems',
                             },
@@ -1233,7 +1230,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'electronic_scrap', amount = 5},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 5},
+                                    {name = 'cigarette', amount = 5},
                                 },
                                 event = 'sellItems',
                             },
@@ -1269,7 +1266,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'phone', amount = 1},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 event = 'sellItems',
                             },
@@ -1279,7 +1276,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'weapon_flashlight', amount = 1},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 5},
+                                    {name = 'cigarette', amount = 5},
                                 },
                                 event = 'sellItems',
                             },
@@ -1289,7 +1286,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                     {name = 'weapon_knife', amount = 1},
                                 },
                                 get = {
-                                    {name = 'jail_cigarette', amount = 10},
+                                    {name = 'cigarette', amount = 10},
                                 },
                                 event = 'sellItems',
                             },
@@ -1670,7 +1667,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                 label = 'Sharpen 1x knife',
                                 need = {
                                     {name = 'plastic_knife', amount = 1},
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 get = {
                                     {name = 'sharpened_plastic_knife', amount = 1},
@@ -1681,7 +1678,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                 label = 'Sharpen 1x spoon',
                                 need = {
                                     {name = 'plastic_spoon', amount = 1},
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 get = {
                                     {name = 'sharpened_plastic_spoon', amount = 1},
@@ -1692,7 +1689,7 @@ Config.MissionPeds = { -- settings for the peds that you can talk to
                                 label = 'Sharpen 1x fork',
                                 need = {
                                     {name = 'plastic_fork', amount = 1},
-                                    {name = 'jail_cigarette', amount = 1},
+                                    {name = 'cigarette', amount = 1},
                                 },
                                 get = {
                                     {name = 'sharpened_plastic_fork', amount = 1},
@@ -1837,7 +1834,7 @@ Config.Roulette = { -- roulette settings
         {coords = vec4(1738.7531, 2543.9873, 43.5855, 116.0), obj = `vw_prop_casino_roulette_01b`},
         {coords = vec4(1743.0519, 2546.2114, 43.5854, 116.0), obj = `vw_prop_casino_roulette_01b`},
     },
-    item = 'jail_cigarette',
+    item = 'cigarette',
     maxAmount = 50, -- max bet
     cooldown = 1000 * 3, -- how fast should roulette table roll when first bet placed
     rollDisplayTime = 1000 * 3, -- how long should the table show the "rolling..." text
@@ -1982,7 +1979,7 @@ Config.Search = {
     },
     findChance = 50,
     items = {
-        {name = 'jail_cigarette', amount = {min = 1, max = 2}, chance = 50},
+        {name = 'cigarette', amount = {min = 1, max = 2}, chance = 50},
         {name = 'phone', amount = {min = 1, max = 1}, chance = 1},
         {name = 'radio', amount = {min = 1, max = 1}, chance = 0.01},
         {name = 'metal_pipe', amount = {min = 1, max = 1}, chance = 0.01},
