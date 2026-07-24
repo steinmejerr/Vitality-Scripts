@@ -526,3 +526,15 @@ body { font-family: Inter, Roboto, Arial, sans-serif !important; }
   border-radius: 12px !important;
   box-shadow: 0 18px 45px rgba(0,0,0,.5) !important;
 }
+
+/* Vitality 2026 context menu refinement */
+.mantine-Button-root { font-family: Inter, Roboto, Arial, sans-serif !important; }
+.mantine-Progress-root { background: rgba(255,255,255,.06) !important; }
+.mantine-Progress-bar { background: linear-gradient(90deg,#22bd5c,#35df75) !important; }
+.mantine-Tooltip-tooltip,
+.mantine-Popover-dropdown {
+  background: #121815 !important;
+  border-color: rgba(255,255,255,.09) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 18px 45px rgba(0,0,0,.48) !important;
+}
