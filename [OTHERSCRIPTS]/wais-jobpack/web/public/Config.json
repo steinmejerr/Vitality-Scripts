@@ -1,0 +1,13 @@
+{
+    "languages": {
+        "electrician": {
+            "important_work": "Important Work",
+            "danger": "Attention Electricial Danger!",
+            "danger_desc": "Electricity is dangerous and deadly! Be careful when working with it.",
+            "steps_title": "Repair Order",
+            "step_unscrew": "Unscrew the 4 screws",
+            "step_replace": "Insert the new fuse",
+            "step_tighten": "Tighten the 4 screws"
+        }
+    }
+}
