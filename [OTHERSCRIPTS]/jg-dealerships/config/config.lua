@@ -14,11 +14,11 @@ Config.VehicleKeys = "Renewed" -- or "qb-vehiclekeys", "MrNewbVehicleKeys", "jak
 Config.Notifications = "ox_lib" -- or "default", "RxNotify", "okokNotify", "ox_lib", "ps-ui"
 
 -- Interactions
-Config.InteractionMethod = "textui" -- or "textui", "target", "3dtextui", "radial"
-Config.DrawText = "auto" -- or "jg-textui", "qb-DrawText", "okokTextUI", "ox_lib", "ps-ui"
-Config.Target = "auto" -- or "ox_target"
+Config.InteractionMethod = "target" -- or "textui", "target", "3dtextui", "radial"
+Config.DrawText = "ox_lib" -- or "jg-textui", "qb-DrawText", "okokTextUI", "ox_lib", "ps-ui"
+Config.Target = "ox_target" -- or "ox_target"
 Config.DrawText3d = "auto" -- or "sleepless_interact"
-Config.RadialMenu = "auto" -- or "ox_lib"
+Config.RadialMenu = "ox_lib" -- or "ox_lib"
 
 -- Framework jobs
 Config.UseFrameworkJobs = true
