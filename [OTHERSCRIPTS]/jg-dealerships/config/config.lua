@@ -1,9 +1,9 @@
 Config = {}
 
 -- Localisation
-Config.Locale = "da"
+Config.Locale = "en"
 Config.NumberAndDateFormat = "da-DK"
-Config.Currency = "$%s" -- Format string for currency display. Use %s for the amount (e.g., "$%s" -> "$1,000", "%s coins" -> "1,000 coins")
+Config.Currency = "DKK %s" -- Format string for currency display. Use %s for the amount (e.g., "$%s" -> "$1,000", "%s coins" -> "1,000 coins")
 Config.SpeedUnit = "mph" -- or "kph"
 Config.DistanceUnit = "mi" -- or "km"
 
@@ -89,7 +89,7 @@ Config.Categories = {
   coupes = "Coupé",
   muscle = "Muskel",
   boats = "Både",
-  vans = "Varevogne",
+  vans = "Vans",
   sports = "Sports",
   suvs = "SUVs",
   commercial = "Erhverskøretøjer",
